@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# pre-push hook - Validates tests before allowing push
+# Installed globally via: git config --global core.hooksPath <path-to-this-dir>
+
+set -euo pipefail
+
+# Opt-out mechanism
+if [[ -f "$(git rev-parse --show-toplevel)/.git-allow-direct-push" ]]; then
+  exit 0
+fi
+
+# Only validate Java projects (Spring Boot backends)
+if [[ ! -f "pom.xml" ]] && [[ ! -f "build.gradle" ]]; then
+  exit 0
+fi
+
+# Only validate if src/test/java exists
+if [[ ! -d "src/test/java" ]]; then
+  exit 0
+fi
+
+echo "🧪 Validating test quality before push..."
+
+# Find validate-tests.sh script
+VALIDATE_SCRIPT=""
+# Auto-detect validate-tests.sh (works in any environment)
+VALIDATE_SCRIPT=$(find ~ -path "*/buy-nature-backend-coding-guide/scripts/validate-tests.sh" -type f 2>/dev/null | head -1 || true)
+
+if [[ -z "$VALIDATE_SCRIPT" ]]; then
+  echo "⚠️  Warning: validate-tests.sh not found. Skipping test validation."
+  exit 0
+fi
+
+# Run validation
+result=$("$VALIDATE_SCRIPT" "$(git rev-parse --show-toplevel)" 2>&1) || exit_code=$?
+
+if [[ ${exit_code:-0} -ne 0 ]]; then
+  echo ""
+  echo "❌ Test validation failed. Fix violations before pushing:"
+  echo "$result" | jq -r '.details[] | "  [\(.severity)] \(.rule)"' 2>/dev/null || echo "$result"
+  echo ""
+  echo "To bypass this check (NOT RECOMMENDED):"
+  echo "  touch .git-allow-direct-push"
+  exit 1
+fi
+
+echo "✅ Test validation passed"
+exit 0

@@ -1,0 +1,56 @@
+#!/bin/bash
+# buy-nature-git-hook v1.0 -- DO NOT EDIT (managed by git-install-hooks.sh)
+# Lightweight pre-commit hook for Buy Nature repositories.
+# Checks: protected branches, debug statements, secret patterns, large files.
+
+# --- 1. Protected branch check ---
+# Repos with .git-allow-direct-commit are exempt (e.g. config/skills repos)
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+branch=$(git branch --show-current 2>/dev/null || echo "")
+if [[ ! -f "$repo_root/.git-allow-direct-commit" ]]; then
+  case "$branch" in
+    develop|main|master)
+      echo "ERROR: Direct commits to '$branch' are not allowed."
+      echo "Create a feature branch first: git checkout -b feature/BNAT-XXX-description"
+      exit 1
+      ;;
+  esac
+fi
+
+# --- 2. Debug statements check ---
+debug_found=$(git diff --cached --diff-filter=ACM -p 2>/dev/null \
+  | grep '^+' | grep -v '^+++' \
+  | grep -inE '(console\.log\(|System\.out\.println\(|System\.err\.println\(|debugger;)' \
+  | head -5)
+
+if [[ -n "$debug_found" ]]; then
+  echo "WARNING: Debug statements detected in staged changes:"
+  echo "$debug_found"
+  echo ""
+  echo "Remove debug statements before committing, or use --no-verify to bypass."
+fi
+
+# --- 3. Secret patterns check ---
+secrets_found=$(git diff --cached --diff-filter=ACM -p 2>/dev/null \
+  | grep '^+' | grep -v '^+++' \
+  | grep -inE '(password\s*=\s*"|secret\s*=\s*"|api[_-]?key\s*=\s*"|-----BEGIN .* KEY-----)' \
+  | head -5)
+
+if [[ -n "$secrets_found" ]]; then
+  echo "ERROR: Potential secrets detected in staged changes:"
+  echo "$secrets_found"
+  echo ""
+  echo "Remove secrets before committing. If this is a false positive, use --no-verify."
+  exit 1
+fi
+
+# --- 4. Large files check (warning only) ---
+while IFS= read -r file; do
+  [[ -z "$file" ]] && continue
+  size=$(git cat-file -s ":$file" 2>/dev/null || echo 0)
+  if [[ $size -gt 524288 ]]; then
+    echo "WARNING: Large file staged: $file ($(( size / 1024 ))KB)"
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACM 2>/dev/null)
+
+exit 0
