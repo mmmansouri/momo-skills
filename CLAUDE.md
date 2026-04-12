@@ -58,78 +58,7 @@ Available to all projects on this machine. Project-specific skills belong in eac
 |---|---|
 | `skill-creator` | Skill authoring guide: structure, frontmatter, severity markers, anti-patterns, testing |
 
-## Boundary Map — Where to Route Updates
-
-Use this table when adding or modifying content. Route to the first matching skill.
-
-### "Where does this go?"
-
-| Topic | Route to | Not to |
-|---|---|---|
-| SOLID, DRY, KISS, YAGNI | `common-developer` | `common-architecture` |
-| Hexagonal, CQRS, DDD, ADRs | `common-architecture` | `common-developer` |
-| Test strategy (what to test, coverage) | `common-developer` | `common-*-testing` |
-| JUnit/Mockito/AssertJ patterns | `common-java-testing` | `common-developer` |
-| Jasmine/Angular Testing Library | `common-frontend-testing` | `common-developer` |
-| E2E tests, Playwright | `common-e2e-playwright` | `common-frontend-testing` |
-| Spring REST controllers, CORS, error handling | `common-rest-api` | `common-security` |
-| JWT, OAuth2, RBAC, Spring Security | `common-security` | `common-rest-api` |
-| Angular Signals, NgRx, DI | `common-frontend-angular` | `common-typescript` |
-| TypeScript generics, utility types | `common-typescript` | `common-frontend-angular` |
-| Entity mapping, Hibernate, N+1 | `common-java-jpa` | `common-java-developer` |
-| Records, pattern matching, streams | `common-java-developer` | `common-java-jpa` |
-| Changelog structure, rollback | `common-liquibase` | `common-java-jpa` |
-| Build execution (`build.py`) | `common-builder` | `common-developer` |
-| Build rules (when to build) | `common-developer` Section 7 | `common-builder` |
-| Branch naming, commit format, PR | `common-git` | `common-dev-ops` |
-| Docker, CI/CD pipelines, K8s | `common-dev-ops` | `common-git` |
-| Epic/Story section content | `spec-templates` | `spec-workflow-*` |
-| Planning/refinement process | `spec-workflow-*` | `spec-templates` |
-
-## Cross-References Between Skills
-
-Some skills explicitly reference others. Maintain these links when renaming or restructuring.
-
-| Source | References | How |
-|---|---|---|
-| `common-developer` Section 7 | `common-builder` | Delegates build execution to `build.py` |
-| `common-builder` SKILL.md | `common-developer` | Points back to Section 7 for build rules |
-| `spec-workflow-*` | `spec-templates` | Loads content guidance during workflow execution |
-| `common-code-reviewer` | Stack-specific skills | Loads review criteria from agent's skill list |
-
-## Writing Conventions
-
-Follow `skill-creator` as the single source of truth for all authoring rules. Key reminders:
-
-### Structure
-- Organize sections with "When X" naming (`## When Writing New Code`)
-  - Place critical rules at the top of each section
-  - Add severity markers: 🔴 BLOCKING → 🟡 WARNING → 🟢 BEST PRACTICE
-    - Mark rules that fail code review as 🔴
-    - Mark recommendations as 🟢
-
-### Style
-- Write all instructions in imperative mood (`Validate input` instead of `You should validate input`)
-- Pair every negation with a concrete alternative (`Don't use var. Use const by default, or let when reassignment is needed`)
-  - When the right alternative is unclear, ask the user before deciding
-- Use hierarchical indented structure (Section > Rule > Detail > Example)
-  - Avoid flat bullet lists that lose relationships between concepts. Indent sub-rules under their parent rule
-
-### Content Placement
-- Place content in SKILL.md OR `references/`, never both
-  - SKILL.md: rules, WRONG/CORRECT pairs, quick-reference tables
-  - `references/`: detailed documentation, extended examples, catalogs
-- Link references at section start with 📚 (`📚 **References:** [file.md](references/file.md)`)
-
-### Size Targets
-
-| Skill type | SKILL.md lines | References |
-|---|---|---|
-| Focused (single topic) | 100-200 | Optional |
-| Standard (domain area) | 200-350 | 1-3 files |
-| Comprehensive (full guide) | 300-400 | 3-6 files |
-
-## Maintenance Rules
+## 🔴 Maintenance Rules
 
 ### Before Adding Content
 1. Check the Boundary Map to identify the target skill
@@ -137,18 +66,22 @@ Follow `skill-creator` as the single source of truth for all authoring rules. Ke
    - `grep -r "keyword" skill-name/`
 3. Check `references/` too — content may already exist there
 
-### Before Creating a New Skill
+### 🔴 When a Skill Exceeds 400 Lines
+1. Warn the user and propose splitting the skill into focused sub-skills,
+2. If the skill covers two distinct domains, split it into two skills and update this file
+
+### 🔴 Before Creating a New Skill
 1. Verify no existing skill covers the topic (check Boundary Map)
-2. Define 2-3 concrete use cases per `skill-creator` guidelines
-3. Follow the `common-*` naming convention for reusable skills
-4. Add the new skill to the Taxonomy and Boundary Map sections of this file
 
-### When a Skill Exceeds 400 Lines
-1. Extract detailed examples and catalogs to `references/`
-2. Keep only rules and WRONG/CORRECT pairs in SKILL.md
-3. If the skill covers two distinct domains, split it into two skills and update this file
-
-### When Renaming or Deleting a Skill
+### 🔴 When Renaming or Deleting a Skill
 1. Check the Cross-References table for dependent skills
+2. Warn the user about the related skills or references,
 2. Update all consumer projects that reference this skill in agent frontmatter
-3. Update this file (Taxonomy, Boundary Map, Cross-References)
+3. Update this CLAUDE.md: remove or rename in Taxonomy, Boundary Map, and Cross-References
+
+### When Adding Agent (in a consumer project)
+1. Check the Taxonomy to select the correct skills for the agent's frontmatter
+2. Update this CLAUDE.md Cross-References table if the agent introduces a new inter-skill dependency
+
+### 🔴 CLAUDE.md Update Is Mandatory
+Every change to the skill library (create, rename, delete, split, merge, new cross-reference) requires a corresponding update to this file. Treat a skill change without a CLAUDE.md update as incomplete work.
