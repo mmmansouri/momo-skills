@@ -170,6 +170,52 @@ metadata:                      # Optional: custom key-value pairs
 | **Inline references** (📚 at section start) | Agent finds details without scrolling |
 | **Critical instructions at top** | Agent reads top-down; buried rules get missed |
 
+### 🔴 BLOCKING — Writing Style
+
+**Imperative mood** — Write all instructions as direct commands.
+
+```markdown
+# 🔴 WRONG — passive/conditional voice
+You should validate input before processing
+It is recommended to use dependency injection
+
+# ✅ CORRECT — imperative mood
+Validate input before processing
+Use dependency injection
+```
+
+**Negation with alternative** — Every negation ("Don't", "Never", "Avoid") must include a concrete alternative. If the right alternative is unclear, ask the user before deciding.
+
+```markdown
+# 🔴 WRONG — negation without alternative
+Don't use var for variable declarations
+Avoid inline styles
+
+# ✅ CORRECT — negation with concrete alternative
+Don't use var for variable declarations. Use const by default, or let when reassignment is needed
+Avoid inline styles. Use CSS modules or styled-components instead
+```
+
+**Hierarchical indented structure** — Organize instructions as Section > Subsection > Rule > Detail > Example. Flat lists lose relationships between concepts.
+
+```markdown
+# 🔴 WRONG — flat list, no hierarchy
+- Use dependency injection
+- Constructor injection preferred
+- Avoid service locator pattern
+- Always define interfaces for services
+
+# ✅ CORRECT — indented hierarchy showing relationships
+- Use dependency injection
+  - Prefer constructor injection
+  - Don't use service locator pattern. Use constructor or method injection instead
+    ```java
+    // ✅ CORRECT
+    public MyService(UserRepository repo) {}
+    ```
+  - Define interfaces for all injected services
+```
+
 ### Section Naming: Use "When X" Format
 
 ```markdown
@@ -285,9 +331,15 @@ description: >-
 
 ### 🔴 BLOCKING
 - Rule 1 with **brief explanation**
+  - Detail or sub-condition
+  - Detail or sub-condition
+    \`\`\`language
+    // example code
+    \`\`\`
 
 ### 🟡 WARNING
 - Warning 1
+  - Detail or context
 
 ### 🟢 BEST PRACTICE
 - Recommendation 1
@@ -324,6 +376,9 @@ good_code();
 | **Duplicate content** (SKILL.md AND references/) | Wasted tokens, content drifts apart | Content in ONE place only |
 | **Generic section names** ("Best Practices") | Agent doesn't know when to apply | Use "When X" naming |
 | **Vague instructions** ("validate properly") | Claude interprets loosely | Be specific, use scripts |
+| **Passive/conditional voice** ("You should...", "It is recommended...") | Agent treats it as optional, not mandatory | Use imperative mood ("Validate...", "Add...") |
+| **Negation without alternative** ("Don't use X") | Agent knows what NOT to do but not what TO do | Always provide a concrete alternative |
+| **Flat lists without hierarchy** | Relationships between concepts are lost | Use indented structure (Rule > Detail > Example) |
 
 ---
 
@@ -353,6 +408,9 @@ good_code();
 - [ ] Severity markers (🔴/🟡/🟢) on rules
 - [ ] WRONG/CORRECT code examples
 - [ ] Inline references (📚) at section start
+- [ ] Instructions use imperative mood
+- [ ] Every negation includes a concrete alternative
+- [ ] Content uses hierarchical indented structure (Section > Rule > Detail)
 
 ### 🟡 WARNING
 - [ ] Trigger tests pass (should/should NOT trigger)
