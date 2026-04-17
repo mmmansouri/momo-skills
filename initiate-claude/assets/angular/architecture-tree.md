@@ -1,6 +1,6 @@
 # Architecture Tree — Angular Frontend
 
-Copy and adapt this tree. Each node = group/module name + role after a dash. Show only groups, not individual files.
+Stack-specific template for Section 1. Format rules (indented tree, groups only, omit empty layers) are in `SKILL.md` Section 1.
 
 ## Template
 

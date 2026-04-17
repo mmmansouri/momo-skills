@@ -1,17 +1,33 @@
 # Startup Modes — Angular Frontend
 
-## Table Template
-
-| Mode | Command | Description | Specifics |
-|---|---|---|---|
-| `dev` | `ng serve` | Dev server with HMR | API proxy to localhost:8080 |
-| `prod build` | `ng build --configuration=production` | Production build | Optimized, AOT compiled |
-| `e2e` | `npx playwright test` | E2E tests | Against running dev server |
+Stack-specific detection + example. Format rules (structured list, no tables, no anchors, per-mode template) are in `SKILL.md` Section 2.
 
 ## Detection Checklist
 
-- Check `angular.json` → `projects.*.architect.build.configurations` for build configurations
-- Check `package.json` → `scripts` for serve/build/test commands
-- Check `proxy.conf.json` or `proxy.conf.js` for API proxy configuration
-- Check `src/environments/` for environment files
-- Check project root for Docker Compose files, Makefile, or README with run commands
+- Read `package.json` → `scripts` block — every script is a potential mode
+- Read `angular.json` → `projects.<app>.architect.{serve,build,test}.configurations.*`
+- Read every `src/environments/environment.*.ts` — one per configuration
+- Check `proxy.conf.json` / `proxy.conf.js` for backend proxying
+- Check `docker-compose*.yml` if the app is containerized
+- Check project root for E2E runners (Playwright, Cypress) — their configs live in `playwright.config.ts` / `cypress.config.ts`
+- 🔴 Confirm each booting command with the user if uncertain
+
+## Typical Field Values for Angular
+
+- **Category**: `dev` | `build` | `test` | `e2e` | `serve` | `script`
+- **Command patterns**: `npm start` · `ng serve --configuration=<name>` · `npm run build -- --configuration=<name>` · `npm test` · `npm run e2e`
+- **Env required** (typical): runtime env vars are rare; configuration lives in `environment.*.ts` files instead
+- **Notes** (typical): which `environment.*.ts` is used, proxy config path, output dir (`dist/<app>/`), port, headless/watch mode in CI
+
+## Concrete Example
+
+```markdown
+**Globals** — cwd: `<project-root>` · package manager: `npm` · default dev port: `4200` · env files: `environment.*.ts`.
+
+### dev
+- **Category**: dev
+- **Command**: `npm start` (alias of `ng serve --configuration=development`)
+- **Purpose**: Local dev server with live reload
+- **When**: day-to-day coding
+- **Notes**: uses `environment.ts`; proxy config in `proxy.conf.json` routes `/api` → backend
+```

@@ -54,12 +54,28 @@ Use an indented tree showing application layers from entry point to storage.
 
 ## Section 2 — Startup Modes
 
-One table listing every detected profile/mode with: Mode, Command, Description, Specifics (DB, mocks, seeds).
-- Detect all profiles from: Spring `application-*.yml`, Angular `environment.*.ts`, Docker Compose files, `package.json` scripts
-- Include every detected profile, even if undocumented
-- 🔴 Detect application booting commands or scripts for each mode. Ask the user if any are missing or if you have any doubts about the correct command
+🔴 **Format: structured list : A structured list with explicit field labels that parses identically across all models.
 
-📄 **Asset:** `assets/{stack}/startup-modes.md` — table template with detection checklist
+Each startup mode gets its own `### <mode-id>` heading followed by labeled bullet fields:
+
+```markdown
+### <mode-id>
+- **Category**: <pipeline|deploy|script|service|infra|maintenance|bootstrap|introspection>
+- **Cwd**: <path>                        (omit if matches project root)
+- **Command**: `<exact command with <placeholder> substitutions>`
+- **Required flags**: `<flag1>`, `<flag2>`   (omit if none)
+- **Env required**: `<VAR1>`, `<VAR2>`       (omit if none)
+- **Purpose**: <one line — what it does>
+- **When**: <one line — when to invoke>
+- **Notes**: <optional — invariants, caveats, side-effects>
+```
+
+🔴 **Detection**:
+- Detect all profiles from: Spring `application-*.yml`, Angular `environment.*.ts`, Docker Compose files, `package.json` scripts, shell scripts (`*.sh`), Dagger functions (`dagger functions`), Makefile targets
+- Include every detected profile, even if undocumented
+- Detect the exact booting command for each mode. Ask the user if any are missing or uncertain
+
+📄 **Asset:** `assets/{stack}/startup-modes.md` — structured-list template with detection checklist
 
 ---
 
@@ -70,7 +86,8 @@ One table listing every detected profile/mode with: Mode, Command, Description, 
   - If the project is too large, increase granularity (group by sub-domain) instead of exceeding the limit
 
 ### 🔴 Content Rules
-- Use standard markdown only (headings `##`, tables, code blocks)
+- Use standard markdown only (headings `##`/`###`, bulleted lists, code blocks)
+- 🔴 NO tables in `## Startup Modes` — structured list only (see Section 2)
 - Write summaries, not source code copies
   - Extract role and purpose from reading the code, then describe in your own words
 - If a section already exists in the CLAUDE.md, merge updates without losing existing useful content
@@ -84,10 +101,14 @@ One table listing every detected profile/mode with: Mode, Command, Description, 
 - [ ] Read the project structure before generating content
 - [ ] All 2 sections present in the output
 - [ ] Architecture tree matches the real project structure
-- [ ] Startup modes table includes all detected profiles
+- [ ] Startup Modes uses structured-list format (`### <mode-id>` + labeled bullets) — NO markdown table
+- [ ] Every detected profile is included (Spring profiles, Angular configurations, Docker Compose files, npm scripts, shell scripts, Dagger functions)
+- [ ] No YAML anchors (`&` / `*`) used anywhere
+- [ ] Placeholders in commands use literal `<angle-brackets>`
 - [ ] Total sections 1-2 under 200 lines
 
 ### 🟡 WARNING
 - [ ] Existing CLAUDE.md content preserved where still valid
 - [ ] No source code copied — summaries only
-- [ ] Tables use consistent column format
+- [ ] Empty fields omitted from mode entries
+- [ ] Shared defaults factored into a single **Globals** paragraph, not repeated per mode
