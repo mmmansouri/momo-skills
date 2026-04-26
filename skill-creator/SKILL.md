@@ -1,8 +1,8 @@
 ---
 name: skill-creator
 description: >-
-  Guide for creating and reviewing AI agent skills. Use when: (1) creating a new SKILL.md
-  file, (2) editing or rewriting an existing SKILL.md, (3) writing or fixing skill
+  Guide for creating and/or reviewing AI agent skills. Use when: (1) creating a new SKILL.md
+  file, (2) editing, reviewing or rewriting an existing SKILL.md, (3) writing or fixing skill
   frontmatter (name, description), (4) creating references/ files for a skill,
   (5) auditing or reviewing skill quality, (6) adding severity markers or restructuring
   skill sections. Triggers on any work involving files in a skills/ directory.
@@ -10,36 +10,39 @@ description: >-
 ---
 
 # Skill Creator Guide
+> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
-> **Goal:** Create skills that agents can **apply immediately**, not just read.
+> **Goals:** 
+>- Create skills that agents can **apply immediately**, not just read.
+>- Review skills for **actionability, clarity, optimization and maintainability**.
 
----
-
-## When Starting a New Skill
-
-📚 **References:** [workflows.md](references/workflows.md) | [output-patterns.md](references/output-patterns.md)
-
-### 🔴 Start With Use Cases, Not Code
-
-Before writing anything, define **2-3 concrete use cases**:
-
-```
-Use Case: [Name]
-Trigger: User says "[specific phrases]"
-Steps:
-1. [Action]
-2. [Action]
-Result: [What success looks like]
-```
-
-For each use case, identify:
-- **Scripts** needed (deterministic operations)
-- **References** that save rediscovery (schemas, docs, domain knowledge)
-- **Assets** for output (templates, icons)
-
-### Composability
-
-Skills can load simultaneously. Design yours to work alongside others — don't assume it's the only capability available.
+> **Algorithm Overview**
+>
+> **Creating a new skill** — follow `When Starting a New Skill` in this exact order :
+> 1. Capture Intent
+> 2. Interview & Research
+> 3. Define Use Cases
+> 4. Build Evaluations
+> 5. Write SKILL.md
+> 6. Test the Skill
+>
+> **Reviewing or auditing an existing skill** — skip the creation flow ; check the skill against these points (full details of each points is the dedicated sections below):
+> 1. Skill Description Rules
+> 2. Skill Content Rules
+> 3. Define the Output Contract
+> 4. Writing Style
+> 5. Section Naming
+> 6. Severity Markers
+> 7. Explain the Why
+> 8. Bundled scripts well built — see `## When Bundling Scripts` + `references/scripts-guide.md`
+> 9. Anti-Patterns
+> 10. Size — under 500 lines (`## Skill Size Guidelines`)
+> 11. Checklist for New Skills (final cross-check)
+> 12. Core Principles (Concise / Degrees of Freedom / Progressive Disclosure / Lack of Surprise)
+> 13. Test Coverage — see `## When Testing Skills`
+> 14. File hygiene — no orphan files in `references/` / `scripts/` / `assets/` ; references one level deep from SKILL.md
+>
+> **Bundling scripts** with the skill — also load `When Bundling Scripts` and its `scripts-guide.md` reference.
 
 ---
 
@@ -57,11 +60,15 @@ Challenge each piece of information:
 
 ### 🔴 Set Appropriate Degrees of Freedom
 
-| Freedom Level | Use When | Format |
-|---------------|----------|--------|
-| **High** | Multiple approaches valid, context-dependent | Text instructions |
-| **Medium** | Preferred pattern exists, some variation OK | Pseudocode with parameters |
-| **Low** | Operations fragile, consistency critical | Specific scripts, few params |
+- **High freedom**
+  - *Use when* : multiple approaches valid, context-dependent
+  - *Format* : text instructions
+- **Medium freedom**
+  - *Use when* : preferred pattern exists, some variation OK
+  - *Format* : pseudocode with parameters
+- **Low freedom**
+  - *Use when* : operations fragile, consistency critical
+  - *Format* : specific scripts, few params
 
 ### 🔴 Progressive Disclosure
 
@@ -71,11 +78,98 @@ Three-level loading system:
 2. **SKILL.md body** — When skill triggers (<5K words ideal)
 3. **Bundled resources** — As needed by Claude (unlimited via file reads)
 
-Keep SKILL.md focused. Move detailed docs to `references/` and link at section start with 📚.
+These word counts are approximate and you can feel free to go longer if needed.
+
+**Key patterns:**
+- Keep SKILL.md under 500 lines; if you're approaching this limit, add an additional layer of hierarchy along with clear pointers about where the model using the skill should go next to follow up.
+- Keep SKILL.md focused. Move detailed docs to `references/` and link at section start with 📚.
+- Reference files clearly from SKILL.md with guidance on when to read them
+- For large reference files (>300 lines), include a table of contents
+- **Keep references one level deep from SKILL.md.** Nested links (SKILL.md → A.md → B.md) cause Claude to preview deeper files with `head -100` and miss content. Every reference must be linkable directly from SKILL.md.
+- **Add a Table of Contents to any reference file >100 lines.** Claude often previews long files; without a TOC, scope is invisible.
+
+**Domain organization**: When a skill supports multiple domains/frameworks, organize by variant:
+```
+cloud-deploy/
+├── SKILL.md (workflow + selection)
+└── references/
+    ├── aws.md
+    ├── gcp.md
+    └── azure.md
+```
+Claude reads only the relevant reference file.
+
+### 🔴 Principle of Lack of Surprise
+
+This goes without saying, but skills must not contain malware, exploit code, or any content that could compromise system security. A skill's contents should not surprise the user in their intent if described. Don't go along with requests to create misleading skills or skills designed to facilitate unauthorized access, data exfiltration, or other malicious activities. Things like a "roleplay as an XYZ" are OK though.
+
+### Composability
+
+Skills can load simultaneously. Design yours to work alongside others — don't assume it's the only capability available.
 
 ---
 
-## Skill Structure
+## When Starting a New Skill
+
+Follow these steps in order. Each step prevents a failure mode in later steps.
+
+### Step 1 — 🔴 Capture Intent
+
+Start by understanding the user's intent. The current conversation might already contain a workflow the user wants to capture (e.g., they say "turn this into a skill"). If so, extract answers from the conversation history first — the tools used, the sequence of steps, corrections the user made, input/output formats observed. The user may need to fill the gaps, and should confirm before proceeding to the next step.
+
+1. What should this skill enable Claude to do?
+2. When should this skill trigger? (what user phrases/contexts)
+3. What's the expected output format?
+4. Should we set up test cases to verify the skill works? Skills with objectively verifiable outputs (file transforms, data extraction, code generation, fixed workflow steps) benefit from test cases. Skills with subjective outputs (writing style, art) often don't need them. Suggest the appropriate default based on the skill type, but let the user decide.
+
+**Why** : without explicit intent capture, the skill encodes the agent's *interpretation* of the request rather than the user's actual need. The gap surfaces only at use time, when the skill misfires.
+
+### Step 2 — 🔴 Interview & Research
+
+Proactively ask about : edge cases, I/O formats, example files, success criteria, dependencies. Wait to write test prompts until this is ironed out.
+
+Check available MCPs and similar existing skills — research in parallel via subagents when possible, otherwise inline. Come back with context, don't burden the user.
+
+### Step 3 — 🔴 Define Use Cases
+
+Define **2-3 concrete use cases** :
+
+```
+Use Case: [Name]
+Trigger: User says "[specific phrases]"
+Steps:
+1. [Action]
+2. [Action]
+Result: [What success looks like]
+```
+
+For each use case, identify :
+- **Scripts** needed (deterministic operations)
+- **References** that save rediscovery (schemas, docs, domain knowledge)
+- **Assets** for output (templates, icons)
+
+### Step 4 — 🔴 Build Evaluations BEFORE Writing the Skill
+
+Eval-driven development prevents skills that solve imagined problems.
+
+1. Run Claude on representative tasks **without** the skill — log specific failures.
+2. Build ≥3 eval scenarios from the gaps observed.
+3. Establish a baseline (Claude vanilla score against the rubric).
+4. Write the **minimal** SKILL.md needed to pass the evals.
+5. Iterate against the baseline ; stop when marginal gains plateau.
+
+**Why** : without baselines, skill quality is invisible — you can't tell if content adds value or is just decoration.
+
+### Step 5 — 🔴 Write the SKILL.md
+
+Based on the user interview, fill in these components :
+
+- **name**:  kebab-case, **gerund form** (verb + -ing), must match folder name
+- **description**: When to trigger, what it does. This is the primary triggering mechanism - include both what the skill does AND specific contexts for when to use it. All "when to use" info goes here, not in the body. Note: currently Claude has a tendency to "undertrigger" skills -- to not use them when they'd be useful. To combat this, please make the skill descriptions a little bit "pushy". So for instance, instead of "How to build a simple fast dashboard to display internal Anthropic data.", you might write "How to build a simple fast dashboard to display internal Anthropic data. Make sure to use this skill whenever the user mentions dashboards, data visualization, internal metrics, or wants to display any kind of company data, even if they don't explicitly ask for a 'dashboard.'"
+- **compatibility**: Required tools, dependencies (optional, rarely needed)
+- **the rest of the skill :)**
+
+#### Skill directory Structure
 
 ```
 skill-name/
@@ -89,88 +183,49 @@ skill-name/
     └── template.pptx
 ```
 
-### Bundled Resources
+🔴 **Content in SKILL.md OR references/, not both.**
 
-| Directory | Purpose | When to Include |
-|-----------|---------|-----------------|
-| **scripts/** | Deterministic, token-efficient operations | Same code rewritten repeatedly; fragile operations |
-| **references/** | Documentation loaded on-demand | Claude needs to reference while working; >10K words → add grep hints in SKILL.md |
-| **assets/** | Files used in output, NOT loaded into context | Templates, images, boilerplate for final output |
+### Step 6 — 🔴 Test the Skill
 
-**Content in SKILL.md OR references/, not both.**
+📚 **See section** : `When Testing Skills` (below) for full test patterns (Trigger / Functional / Multi-model / Claude A-B).
 
----
+**Iteration loop** :
+1. Run tests (Trigger first ; then Functional / Multi-model / Claude A-B as applicable).
+2. On failure → diagnose the gap → return to Step 5 to refine SKILL.md.
+3. Re-run failing tests.
+4. Stop when all 🔴 Trigger Tests pass AND the skill matches or beats the Step 4 baseline.
 
-## When Writing Frontmatter
-
-### 🔴 Description is the PRIMARY Trigger
-
-The description determines **when Claude loads your skill**. It's the first level of progressive disclosure.
-
-**Structure:** `[What it does] + [When to use it] + [Key capabilities]`
-
-```yaml
-# ✅ GOOD — specific, with trigger phrases
-description: >-
-  Analyzes Figma design files and generates developer handoff documentation.
-  Use when user uploads .fig files, asks for "design specs", "component
-  documentation", or "design-to-code handoff".
-
-# ✅ GOOD — includes negative triggers
-description: >-
-  Advanced data analysis for CSV files. Use for statistical modeling,
-  regression, clustering. Do NOT use for simple data exploration
-  (use data-viz skill instead).
-
-# 🔴 WRONG — too vague
-description: Helps with projects.
-
-# 🔴 WRONG — missing triggers
-description: Creates sophisticated multi-page documentation systems.
-```
-
-### 🔴 BLOCKING — Description Rules
-
-| Rule | Why |
-|------|-----|
-| Include trigger phrases users would say | Claude matches description to user input |
-| Add negative triggers ("Do NOT use for...") if needed | Prevents over-triggering |
-| Under **1024 characters** | Hard limit |
-| **No XML tags** (`<` `>`) | Security: frontmatter appears in system prompt |
-| **No "claude" or "anthropic"** in skill name | Reserved by Anthropic |
-
-### Required and Optional Fields
-
-```yaml
----
-name: skill-name              # Required: kebab-case, must match folder name
-description: >-               # Required: what + when + capabilities
-  [description here]
-license: MIT                   # Optional: for open-source skills
-compatibility: >-              # Optional (1-500 chars): environment requirements
-  Requires Claude Code with Bash access
-allowed-tools: "Bash(python:*) WebFetch"  # Optional: restrict tool access
-metadata:                      # Optional: custom key-value pairs
-  author: Buy Nature
-  version: 1.0.0
----
-```
+**Why** : without explicit post-write validation, skills ship with under-/over-triggering bugs that surface only at use-time, when the cost of fixing them is highest.
 
 ---
 
-## When Writing Instructions
+## Skill Writing rules
 
-### 🔴 BLOCKING — Content Rules
+### 🔴 Skill Description Rules
+- Write in third person ("Processes…", "Generates…") : Write in third person ("Processes…", "Generates…")
+- Include trigger phrases users would say : Claude matches description to user input
+- Add negative triggers ("Do NOT use for...") if needed : Prevents over-triggering
+- Under 1024 characters : Hard limit
+- No XML tags (`<` `>`) : Security: frontmatter appears in system prompt
 
-| Principle | Why |
-|-----------|-----|
-| **Workflow-oriented sections** ("When X") | Agent knows WHEN to apply, not just WHAT exists |
-| **Severity markers** (🔴/🟡/🟢) | Agent prioritizes blocking issues first |
-| **WRONG/CORRECT examples** | Agent recognizes patterns to fix |
-| **Inline references** (📚 at section start) | Agent finds details without scrolling |
-| **Critical instructions at top** | Agent reads top-down; buried rules get missed |
+#### 🔴**Combat under-triggering with a pushy description**
+Claude tends to *not* load skills when they would actually be useful. Counter this with explicit context-of-use phrasing. **Why** : the description is the only signal Claude has at trigger-time. A neutral description loses to silence ; a pushy one loads the skill in adjacent contexts where it would help.
 
-### 🔴 BLOCKING — Define the Output Contract
+### 🔴 Skill Content Rules
+
+- Workflow-oriented sections ("When X"): agent knows WHEN to apply, not just WHAT exists
+- Use severity markers so agent prioritizes blocking issues first
+- Provide WRONG/CORRECT examples: agent recognizes patterns to fix
+- Inline references (📚 at section start): agent finds details without scrolling
+- Critical instructions at top: agent reads top-down; buried rules get missed
+- **Use `CRITICAL:` or `## Important` headers** — visual priority
+- **Use scripts for deterministic validation** — code is deterministic, language interpretation isn't
+- **Be specific, not ambiguous:**
+- "Use When" descriptions for patterns : agent knows when to apply, not just that the pattern exists
+- Use Quick reference tables for fast lookup during coding, no need to re-read paragraphs
+- No duplication: content must in either SKILL.md OR references, not both: saves tokens, prevents stale content
+
+### 🔴 Define the Output Contract
 
 If your skill **produces, transforms, or audits content** (validators, generators, reviewers, extractors), define the exact form of output:
 
@@ -182,65 +237,16 @@ Add an `## Output Format` section to SKILL.md OR document the schema in `referen
 
 **Why** : without an explicit contract, agents drift toward inconsistent outputs. The contract is what makes the skill's output reusable downstream.
 
-### 🔴 BLOCKING — Writing Style
+### 🔴 Writing Style
 
 **Imperative mood** — Write all instructions as direct commands.
-
-```markdown
-# 🔴 WRONG — passive/conditional voice
-You should validate input before processing
-It is recommended to use dependency injection
-
-# ✅ CORRECT — imperative mood
-Validate input before processing
-Use dependency injection
-```
-
 **Negation with alternative** — Every negation ("Don't", "Never", "Avoid") must include a concrete alternative. If the right alternative is unclear, ask the user before deciding.
-
-```markdown
-# 🔴 WRONG — negation without alternative
-Don't use var for variable declarations
-Avoid inline styles
-
-# ✅ CORRECT — negation with concrete alternative
-Don't use var for variable declarations. Use const by default, or let when reassignment is needed
-Avoid inline styles. Use CSS modules or styled-components instead
-```
-
 **Hierarchical indented structure** — Organize instructions as Section > Subsection > Rule > Detail > Example. Flat lists lose relationships between concepts.
 
-```markdown
-# 🔴 WRONG — flat list, no hierarchy
-- Use dependency injection
-- Constructor injection preferred
-- Avoid service locator pattern
-- Always define interfaces for services
 
-# ✅ CORRECT — indented hierarchy showing relationships
-- Use dependency injection
-  - Prefer constructor injection
-  - Don't use service locator pattern. Use constructor or method injection instead
-    ```java
-    // ✅ CORRECT
-    public MyService(UserRepository repo) {}
-    ```
-  - Define interfaces for all injected services
-```
+### 🔴 Section Naming
 
-**End-to-end examples** — In addition to rule-level WRONG/CORRECT pairs, include ≥1 complete `Input → Process → Output` trace showing the skill applied to a realistic prompt.
-
-```markdown
-# ✅ End-to-end example
-**Input prompt** : "validate this title: feat(auth)!: add login"
-**Process**     : parse type / scope / breaking-marker / description
-**Output**      :
-{"valid": true, "type": "feat", "scope": "auth", "breaking": true}
-```
-
-WRONG/CORRECT shows *patterns*. End-to-end shows the *transformation*. Both are required when the skill produces content.
-
-### Section Naming: Use "When X" Format
+Use "When X" Format, not generic labels. This tells the agent WHEN to apply the rules, not just WHAT the rules are.
 
 ```markdown
 ## When Writing New Code       # ✅ Actionable
@@ -249,15 +255,21 @@ WRONG/CORRECT shows *patterns*. End-to-end shows the *transformation*. Both are 
 ## Overview                    # 🔴 WRONG — agent skips this
 ```
 
-### Severity Markers
+### 🔴 Severity Markers
 
-| Marker | Meaning | Agent Behavior |
-|--------|---------|----------------|
-| 🔴 **BLOCKING** | Fails code review, must fix | Agent fixes BEFORE other work |
-| 🟡 **WARNING** | Should fix, not blocking | Agent fixes if time permits |
-| 🟢 **BEST PRACTICE** | Recommended improvement | Agent applies when writing new code |
+Use these to signal which rules are non-negotiable, which are important but not deal-breakers, and which are nice-to-haves. This helps the agent prioritize what to fix when applying the skill.
 
-### 🔴 BLOCKING — Explain the Why
+- 🔴 **BLOCKING**
+  - *Meaning* : fails code review, must fix
+  - *Agent behavior* : fixes BEFORE other work
+- 🟡 **WARNING**
+  - *Meaning* : should fix, not blocking
+  - *Agent behavior* : fixes if time permits
+- 🟢 **BEST PRACTICE**
+  - *Meaning* : recommended improvement
+  - *Agent behavior* : applies when writing new code
+
+### 🔴 Explain the Why
 
 Every 🔴 BLOCKING rule MUST be followed by a one-line `**Why:**` justification anchored in domain reasoning.
 
@@ -274,96 +286,15 @@ Every 🔴 BLOCKING rule MUST be followed by a one-line `**Why:**` justification
 
 The `Why:` forces the agent applying your skill to reason about the domain *before* applying the rule. Without it, rigid rules propagate to contexts where they shouldn't.
 
-### 🟡 WARNING — Instruction Compliance Tips
-
-When instructions aren't followed:
-
-1. **Put critical rules at the top** — not buried in the middle
-2. **Use `CRITICAL:` or `## Important` headers** — visual priority
-3. **Use scripts for deterministic validation** — code is deterministic, language interpretation isn't
-4. **Be specific, not ambiguous:**
-
-```markdown
-# 🔴 WRONG — vague
-Make sure to validate things properly
-
-# ✅ CORRECT — specific
-CRITICAL: Before calling create_project, verify:
-- Project name is non-empty
-- At least one team member assigned
-- Start date is not in the past
-```
-
-### 🟡 WARNING — Other Content Guidelines
-
-| Principle | Why |
-|-----------|-----|
-| **"Use When" descriptions** for patterns | Agent knows when pattern applies |
-| **Quick reference tables** | Fast lookup during coding |
-| **No duplication** — content in SKILL.md OR references, not both | Saves tokens, prevents stale content |
-| **Code Review Checklist at end** | Agent validates work before finishing |
 
 ---
 
-## When Building Validator/Linter Skills
+## When Bundling Scripts
 
-If your skill produces a validator, linter, or any tool that classifies inputs as valid/invalid, classify violations by RFC 2119 severity **before writing code**.
-
-### 🔴 BLOCKING — Map Spec Language to Severity
-
-| Spec language | Severity in your validator |
-|---|---|
-| MUST / MUST NOT | error (validation fails) |
-| SHOULD / SHOULD NOT | warning (flagged but accepted) |
-| MAY | accepted (no flag) |
-| Convention/style outside the spec | warning at most — never error |
-
-**Why** : popular tools (commitlint Angular preset, Black, ESLint :recommended) often add rules stricter than the underlying spec. Encoding them as errors makes your validator reject spec-compliant input.
-
-### 🔴 BLOCKING — Test Scripts Against Spec-Cited Examples
-
-Before shipping any bundled script:
-- Test against ≥5 examples cited verbatim from the spec
-- Include positive (must pass) AND negative (must fail) cases
-- Cover edge cases the spec explicitly mentions (merge commits, breaking changes, escaping)
-
-If you can't run the script (no Python locally, etc.), document this limitation and ask the user to validate before shipping. **Do not ship untested validators.**
-
-### 🟡 WARNING — Offer Strict vs Lenient Modes
-
-When a popular convention is stricter than the spec, expose both via configuration. Default to spec-faithful; let users opt into stricter conventions explicitly via `--strict` or similar.
+📚 Load the following reference when your skill includes scripts that the agent needs to execute as part of the workflow. This ensures the agent knows how write, run and validate them and what to expect : [scripts-guide.md](references/scripts-guide.md)
 
 ---
 
-## When Auditing or Reviewing Existing Skills
-
-When the task is to AUDIT/REVIEW an existing SKILL.md (not create from scratch), apply these rules **INSTEAD of** checklist-style enumeration.
-
-### 🔴 BLOCKING — Lead with the Single Deepest Defect
-
-Identify the **one deepest structural defect** before enumerating violations.
-
-**Why** : checklist enumeration (15 parallel findings) masks the diagnostic root cause. Leading with the deepest defect produces actionable rewrites; parallel lists produce treadmill compliance.
-
-Example: if a skill has both vague description AND content-free body, the deepest defect is **undefined scope** — every other issue traces back. Frame the audit around scope; treat the rest as consequences.
-
-### 🔴 BLOCKING — The Rewrite Must Define an Output Contract
-
-If you produce a rewritten skill, the rewrite MUST include a concrete output contract (schema/template/worked example). The original's vagueness is usually THE problem; a rewrite without an output contract preserves the bug. See *Define the Output Contract* rule above.
-
-### 🔴 BLOCKING — Include ≥1 End-to-End Example in the Rewrite
-
-Rule-level WRONG/CORRECT alone is insufficient when reviewing. Include at least one complete Input → Process → Output trace showing the rewritten skill in action.
-
-### 🟡 WARNING — Cap Audit Items at ≤10 Distinct Issues
-
-Penalize redundancy: if 2 findings flag the same defect, merge them. Volume of findings is not a quality signal — diagnostic depth is.
-
-### 🟡 WARNING — Narrow Ambiguous Scope Explicitly
-
-If the original has ambiguous scope ("data" — which data? "files" — which formats?), narrow it explicitly before rewriting AND state the assumption. Don't silently assume.
-
----
 
 ## When Testing Skills
 
@@ -385,7 +316,7 @@ Should NOT trigger:
 
 **Debugging:** Ask Claude: *"When would you use the [skill name] skill?"* — it will quote the description back. Adjust based on what's missing.
 
-### 🟡 Functional Tests
+### 🔴 Functional Tests
 
 Verify the skill produces correct outputs:
 
@@ -399,49 +330,101 @@ Then:
   - No errors
 ```
 
+### 🟡 Test Across Models
+
+Run the skill against every model that may load it :
+
+- **Haiku** — does it have enough guidance to act?
+- **Sonnet** — are instructions clear and efficient?
+- **Opus** — is the skill over-explaining things Opus already knows?
+
+Skills tuned only for Opus often under-guide Haiku.
+
+### 🟡 Iterate with Claude A / Claude B
+
+- **Claude A** (skill author session) — uses your domain context to draft and refine the skill.
+- **Claude B** (fresh session, skill loaded) — executes real tasks; reveals gaps.
+- Loop : observe Claude B failure → bring back to Claude A with the specific failure → refine SKILL.md → re-test.
+
+**Why** : Claude A can't see its own blind spots. Claude B's behavior on real tasks is the only ground truth.
+
 ### Iteration Signals
 
-| Signal | Problem | Fix |
-|--------|---------|-----|
-| Skill doesn't load when it should | **Under-triggering** | Add keywords and trigger phrases to description |
-| Users manually enabling it | **Under-triggering** | Add more "Use when" variations |
-| Skill loads for unrelated queries | **Over-triggering** | Add negative triggers ("Do NOT use for..."), be more specific |
-| Inconsistent results | **Execution issue** | Improve instructions, add error handling, use scripts |
-| Responses degraded / slow | **Context too large** | Move content to references/, keep SKILL.md under 5K words |
+- **Skill doesn't load when it should**
+  - *Problem* : under-triggering
+  - *Fix* : add keywords and trigger phrases to description
+- **Users manually enabling it**
+  - *Problem* : under-triggering
+  - *Fix* : add more "Use when" variations
+- **Skill loads for unrelated queries**
+  - *Problem* : over-triggering
+  - *Fix* : add negative triggers ("Do NOT use for..."), be more specific
+- **Inconsistent results**
+  - *Problem* : execution issue
+  - *Fix* : improve instructions, add error handling, use scripts
+- **Responses degraded / slow**
+  - *Problem* : context too large
+  - *Fix* : move content to references/, keep SKILL.md under 5K words
 
 ---
 
-## SKILL.md Template
+## SKILL.md Reference Example
 
-📦 **Asset:** [template.md](assets/template.md) — copy-paste scaffold including frontmatter, severity tiers, WRONG/CORRECT examples, end-to-end trace block, output format section, Code Review Checklist. Adapted variants for validator/audit skills.
+Use **this very file** (`skill-creator/SKILL.md`) as the canonical example to mimic. It demonstrates : frontmatter, severity tiers, "When X" sections, WRONG/CORRECT examples, Output Contract rule, Anti-Patterns list, Checklist. Read its structure, copy its patterns.
 
 ---
 
 ## Anti-Patterns
 
-| Anti-Pattern | Why It Fails | Fix |
-|---|---|---|
-| **Information dump** (500 lines of prose) | Agent gets lost, skips content | Use tables, bullets, WRONG/CORRECT pairs |
-| **No priority indicators** | Everything looks equally important | Add 🔴/🟡/🟢 severity markers |
-| **References only at bottom** | Agent doesn't see link until too late | Put 📚 at section start |
-| **Duplicate content** (SKILL.md AND references/) | Wasted tokens, content drifts apart | Content in ONE place only |
-| **Generic section names** ("Best Practices") | Agent doesn't know when to apply | Use "When X" naming |
-| **Vague instructions** ("validate properly") | Claude interprets loosely | Be specific, use scripts |
-| **Passive/conditional voice** ("You should...", "It is recommended...") | Agent treats it as optional, not mandatory | Use imperative mood ("Validate...", "Add...") |
-| **Negation without alternative** ("Don't use X") | Agent knows what NOT to do but not what TO do | Always provide a concrete alternative |
-| **Flat lists without hierarchy** | Relationships between concepts are lost | Use indented structure (Rule > Detail > Example) |
+- **Information dump** (500 lines of prose)
+  - *Why it fails* : agent gets lost, skips content
+  - *Fix* : use tables, bullets, WRONG/CORRECT pairs
+- **No priority indicators**
+  - *Why it fails* : everything looks equally important
+  - *Fix* : add 🔴/🟡/🟢 severity markers
+- **References only at bottom**
+  - *Why it fails* : agent doesn't see link until too late
+  - *Fix* : put 📚 at section start
+- **Duplicate content** (SKILL.md AND references/)
+  - *Why it fails* : wasted tokens, content drifts apart
+  - *Fix* : content in ONE place only
+- **Generic section names** ("Best Practices")
+  - *Why it fails* : agent doesn't know when to apply
+  - *Fix* : use "When X" naming
+- **Vague instructions** ("validate properly")
+  - *Why it fails* : Claude interprets loosely
+  - *Fix* : be specific, use scripts
+- **Passive/conditional voice** ("You should...", "It is recommended...")
+  - *Why it fails* : agent treats it as optional, not mandatory
+  - *Fix* : use imperative mood ("Validate...", "Add...")
+- **Negation without alternative** ("Don't use X")
+  - *Why it fails* : agent knows what NOT to do but not what TO do
+  - *Fix* : always provide a concrete alternative
+- **Flat lists without hierarchy**
+  - *Why it fails* : relationships between concepts are lost
+  - *Fix* : use indented structure (Rule > Detail > Example)
+- **Windows-style paths** (`scripts\helper.py`)
+  - *Why it fails* : breaks on Unix ; Claude often runs in Linux sandbox
+  - *Fix* : always forward slashes (`scripts/helper.py`)
+- **Time-sensitive content** ("after August 2025…")
+  - *Why it fails* : becomes wrong silently
+  - *Fix* : move legacy details into a `## Old patterns` section with `<details>` collapsibles
+- **Inconsistent terminology** (alternating "endpoint" / "URL" / "path")
+  - *Why it fails* : pattern matching fails when wording drifts
+  - *Fix* : pick one term per concept and keep it everywhere
+- **Too many options** ("use X or Y or Z…")
+  - *Why it fails* : decision paralysis, agent picks randomly
+  - *Fix* : provide a default + one escape hatch ("Use X. For edge case Y, use Z")
 
 ---
 
 ## Skill Size Guidelines
 
-| Skill Type | SKILL.md Lines | References |
-|------------|----------------|------------|
-| Focused (single topic) | 100-200 | Optional |
-| Standard (domain area) | 200-350 | 1-3 files |
-| Comprehensive (full guide) | 300-400 | 3-6 files |
+- **Focused** (single topic) — 100–200 lines ; references optional
+- **Standard** (domain area) — 200–350 lines ; 1–3 reference files
+- **Comprehensive** (full guide) — 300–500 lines ; 3–6 reference files
 
-### If SKILL.md > 400 lines
+### If SKILL.md > 500 lines
 1. Extract detailed examples to references/
 2. Keep only WRONG/CORRECT pairs in SKILL.md
 3. Consider splitting into multiple skills
@@ -451,32 +434,44 @@ Then:
 ## Checklist for New Skills
 
 ### 🔴 BLOCKING
+- [ ] Built ≥3 evaluations BEFORE writing the skill, with a baseline
 - [ ] Defined 2-3 concrete use cases before writing
 - [ ] YAML frontmatter with `name` and `description`
+- [ ] Description written in **third person** ("Processes…", not "I can…")
 - [ ] Description includes trigger phrases ("Use when...")
 - [ ] Description under 1024 characters, no XML tags
 - [ ] Sections use "When X" naming
 - [ ] Severity markers (🔴/🟡/🟢) on rules
 - [ ] WRONG/CORRECT code examples
 - [ ] Inline references (📚) at section start
+- [ ] **References one level deep from SKILL.md** (no nested chains)
+- [ ] Reference files >100 lines have a Table of Contents
 - [ ] Instructions use imperative mood
 - [ ] Every negation includes a concrete alternative
 - [ ] Content uses hierarchical indented structure (Section > Rule > Detail)
 - [ ] Every 🔴 BLOCKING rule has a `**Why:**` line anchored in domain reasoning
 - [ ] Output contract defined (schema/template/worked example) if skill produces content
 - [ ] End-to-end Input→Output example included (not only rule-level WRONG/CORRECT)
+- [ ] If skill bundles scripts: each handles errors explicitly + no voodoo constants + execute-vs-read intent stated
 - [ ] If skill bundles a validator script: tested against ≥5 spec-cited examples (positive + negative)
 - [ ] If skill is an audit/review skill: leads with single deepest defect (not flat enumeration)
+- [ ] Trigger tests pass (should/should NOT trigger)
 
 ### 🟡 WARNING
-- [ ] Trigger tests pass (should/should NOT trigger)
+- [ ] Tested with **Haiku, Sonnet, AND Opus**
 - [ ] No duplicate content between SKILL.md and references
-- [ ] SKILL.md under 400 lines
+- [ ] SKILL.md under 500 lines
 - [ ] Quick reference tables for common lookups
+- [ ] **Forward slashes in all paths** (no `\`)
+- [ ] No time-sensitive references in the body (legacy → `## Old patterns` w/ `<details>`)
+- [ ] Consistent terminology throughout (one term per concept)
+- [ ] No "too many options" — provide a default + one escape hatch
+- [ ] MCP tool refs use fully qualified `ServerName:tool_name`
 - [ ] No extraneous files (README, CHANGELOG)
 
 ### 🟢 BEST PRACTICE
 - [ ] Functional tests defined (Given/When/Then)
+- [ ] Iterated using Claude A / Claude B loop
 - [ ] Code Review Checklist at end
 - [ ] Examples match target language/framework conventions
 - [ ] Progressive disclosure used for large content
