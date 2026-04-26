@@ -170,6 +170,18 @@ metadata:                      # Optional: custom key-value pairs
 | **Inline references** (📚 at section start) | Agent finds details without scrolling |
 | **Critical instructions at top** | Agent reads top-down; buried rules get missed |
 
+### 🔴 BLOCKING — Define the Output Contract
+
+If your skill **produces, transforms, or audits content** (validators, generators, reviewers, extractors), define the exact form of output:
+
+- **Schema** — e.g., JSON envelope `{value, source, confidence, errors: []}`
+- **Template** — fixed markdown structure with named sections
+- **Worked example** — input → command → exact output
+
+Add an `## Output Format` section to SKILL.md OR document the schema in `references/output-schema.md`.
+
+**Why** : without an explicit contract, agents drift toward inconsistent outputs. The contract is what makes the skill's output reusable downstream.
+
 ### 🔴 BLOCKING — Writing Style
 
 **Imperative mood** — Write all instructions as direct commands.
@@ -216,6 +228,18 @@ Avoid inline styles. Use CSS modules or styled-components instead
   - Define interfaces for all injected services
 ```
 
+**End-to-end examples** — In addition to rule-level WRONG/CORRECT pairs, include ≥1 complete `Input → Process → Output` trace showing the skill applied to a realistic prompt.
+
+```markdown
+# ✅ End-to-end example
+**Input prompt** : "validate this title: feat(auth)!: add login"
+**Process**     : parse type / scope / breaking-marker / description
+**Output**      :
+{"valid": true, "type": "feat", "scope": "auth", "breaking": true}
+```
+
+WRONG/CORRECT shows *patterns*. End-to-end shows the *transformation*. Both are required when the skill produces content.
+
 ### Section Naming: Use "When X" Format
 
 ```markdown
@@ -232,6 +256,23 @@ Avoid inline styles. Use CSS modules or styled-components instead
 | 🔴 **BLOCKING** | Fails code review, must fix | Agent fixes BEFORE other work |
 | 🟡 **WARNING** | Should fix, not blocking | Agent fixes if time permits |
 | 🟢 **BEST PRACTICE** | Recommended improvement | Agent applies when writing new code |
+
+### 🔴 BLOCKING — Explain the Why
+
+Every 🔴 BLOCKING rule MUST be followed by a one-line `**Why:**` justification anchored in domain reasoning.
+
+```markdown
+# 🔴 WRONG — rule without rationale
+### 🔴 BLOCKING — Reject titles ending with a period
+- Treat as validation error
+
+# ✅ CORRECT — rule with Why
+### 🔴 BLOCKING — Trailing period is a warning, not an error
+**Why** : Conventional Commits 1.0 doesn't prohibit it normatively. Failing on style would reject spec-compliant titles.
+- Treat as warning; don't fail validation
+```
+
+The `Why:` forces the agent applying your skill to reason about the domain *before* applying the rule. Without it, rigid rules propagate to contexts where they shouldn't.
 
 ### 🟡 WARNING — Instruction Compliance Tips
 
@@ -261,6 +302,66 @@ CRITICAL: Before calling create_project, verify:
 | **Quick reference tables** | Fast lookup during coding |
 | **No duplication** — content in SKILL.md OR references, not both | Saves tokens, prevents stale content |
 | **Code Review Checklist at end** | Agent validates work before finishing |
+
+---
+
+## When Building Validator/Linter Skills
+
+If your skill produces a validator, linter, or any tool that classifies inputs as valid/invalid, classify violations by RFC 2119 severity **before writing code**.
+
+### 🔴 BLOCKING — Map Spec Language to Severity
+
+| Spec language | Severity in your validator |
+|---|---|
+| MUST / MUST NOT | error (validation fails) |
+| SHOULD / SHOULD NOT | warning (flagged but accepted) |
+| MAY | accepted (no flag) |
+| Convention/style outside the spec | warning at most — never error |
+
+**Why** : popular tools (commitlint Angular preset, Black, ESLint :recommended) often add rules stricter than the underlying spec. Encoding them as errors makes your validator reject spec-compliant input.
+
+### 🔴 BLOCKING — Test Scripts Against Spec-Cited Examples
+
+Before shipping any bundled script:
+- Test against ≥5 examples cited verbatim from the spec
+- Include positive (must pass) AND negative (must fail) cases
+- Cover edge cases the spec explicitly mentions (merge commits, breaking changes, escaping)
+
+If you can't run the script (no Python locally, etc.), document this limitation and ask the user to validate before shipping. **Do not ship untested validators.**
+
+### 🟡 WARNING — Offer Strict vs Lenient Modes
+
+When a popular convention is stricter than the spec, expose both via configuration. Default to spec-faithful; let users opt into stricter conventions explicitly via `--strict` or similar.
+
+---
+
+## When Auditing or Reviewing Existing Skills
+
+When the task is to AUDIT/REVIEW an existing SKILL.md (not create from scratch), apply these rules **INSTEAD of** checklist-style enumeration.
+
+### 🔴 BLOCKING — Lead with the Single Deepest Defect
+
+Identify the **one deepest structural defect** before enumerating violations.
+
+**Why** : checklist enumeration (15 parallel findings) masks the diagnostic root cause. Leading with the deepest defect produces actionable rewrites; parallel lists produce treadmill compliance.
+
+Example: if a skill has both vague description AND content-free body, the deepest defect is **undefined scope** — every other issue traces back. Frame the audit around scope; treat the rest as consequences.
+
+### 🔴 BLOCKING — The Rewrite Must Define an Output Contract
+
+If you produce a rewritten skill, the rewrite MUST include a concrete output contract (schema/template/worked example). The original's vagueness is usually THE problem; a rewrite without an output contract preserves the bug. See *Define the Output Contract* rule above.
+
+### 🔴 BLOCKING — Include ≥1 End-to-End Example in the Rewrite
+
+Rule-level WRONG/CORRECT alone is insufficient when reviewing. Include at least one complete Input → Process → Output trace showing the rewritten skill in action.
+
+### 🟡 WARNING — Cap Audit Items at ≤10 Distinct Issues
+
+Penalize redundancy: if 2 findings flag the same defect, merge them. Volume of findings is not a quality signal — diagnostic depth is.
+
+### 🟡 WARNING — Narrow Ambiguous Scope Explicitly
+
+If the original has ambiguous scope ("data" — which data? "files" — which formats?), narrow it explicitly before rewriting AND state the assumption. Don't silently assume.
 
 ---
 
@@ -312,57 +413,7 @@ Then:
 
 ## SKILL.md Template
 
-```markdown
----
-name: skill-name
-description: >-
-  What this skill does AND when to use it. Include trigger phrases.
----
-
-# Skill Title
-
-> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
-
----
-
-## When [Situation 1]
-
-📚 **References:** [detailed-file.md](references/detailed-file.md)
-
-### 🔴 BLOCKING
-- Rule 1 with **brief explanation**
-  - Detail or sub-condition
-  - Detail or sub-condition
-    \`\`\`language
-    // example code
-    \`\`\`
-
-### 🟡 WARNING
-- Warning 1
-  - Detail or context
-
-### 🟢 BEST PRACTICE
-- Recommendation 1
-
-### Examples
-\`\`\`language
-// 🔴 WRONG - explanation
-bad_code();
-
-// ✅ CORRECT - explanation
-good_code();
-\`\`\`
-
----
-
-## Code Review Checklist
-
-### 🔴 BLOCKING
-- [ ] Item 1
-
-### 🟢 BEST PRACTICE
-- [ ] Item 2
-```
+📦 **Asset:** [template.md](assets/template.md) — copy-paste scaffold including frontmatter, severity tiers, WRONG/CORRECT examples, end-to-end trace block, output format section, Code Review Checklist. Adapted variants for validator/audit skills.
 
 ---
 
@@ -411,6 +462,11 @@ good_code();
 - [ ] Instructions use imperative mood
 - [ ] Every negation includes a concrete alternative
 - [ ] Content uses hierarchical indented structure (Section > Rule > Detail)
+- [ ] Every 🔴 BLOCKING rule has a `**Why:**` line anchored in domain reasoning
+- [ ] Output contract defined (schema/template/worked example) if skill produces content
+- [ ] End-to-end Input→Output example included (not only rule-level WRONG/CORRECT)
+- [ ] If skill bundles a validator script: tested against ≥5 spec-cited examples (positive + negative)
+- [ ] If skill is an audit/review skill: leads with single deepest defect (not flat enumeration)
 
 ### 🟡 WARNING
 - [ ] Trigger tests pass (should/should NOT trigger)
