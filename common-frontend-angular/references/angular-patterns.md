@@ -1,5 +1,17 @@
 # Angular Patterns Reference
 
+> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+
+## Table of Contents
+
+- [NgRx Signal Store (Angular 17+)](#ngrx-signal-store-angular-17)
+- [Typed Reactive Forms](#typed-reactive-forms)
+- [HTTP with Signals](#http-with-signals)
+- [Routing (Standalone)](#routing-standalone)
+- [Resource API (Angular 21+)](#resource-api-angular-21)
+
+---
+
 ## NgRx Signal Store (Angular 17+)
 
 ```typescript

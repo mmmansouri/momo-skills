@@ -1,6 +1,22 @@
 # Refactoring Patterns
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+> **Examples use Java and TypeScript** for concreteness — the refactoring techniques apply to any object-oriented language. For language-specific guidance see `common-java-developer` (Java) or `common-typescript` (TypeScript).
+
+## Table of Contents
+
+- [Extract Method](#extract-method)
+- [Extract Class](#extract-class)
+- [Replace Conditional with Polymorphism](#replace-conditional-with-polymorphism)
+- [Introduce Parameter Object](#introduce-parameter-object)
+- [Replace Magic Number with Constant](#replace-magic-number-with-constant)
+- [Decompose Conditional](#decompose-conditional)
+- [TypeScript Refactoring Examples](#typescript-refactoring-examples)
+- [Refactoring Checklist](#refactoring-checklist)
+- [When to Refactor](#when-to-refactor)
+- [Refactoring Safety Net](#refactoring-safety-net)
+
+---
 
 Refactoring is restructuring existing code without changing its external behavior.
 
@@ -610,7 +626,7 @@ export class ProductService {
 
 ---
 
-## Buy Nature Refactoring Checklist
+## Refactoring Checklist
 
 Before committing refactored code:
 

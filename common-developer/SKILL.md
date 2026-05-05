@@ -1,448 +1,307 @@
 ---
 name: common-developer
 description: >-
-  Load this skill for architecture decisions, system design, feature design, software design and cross-project work also for ANY code contribution (feature, fix, refactoring, test writing). 
-  Contains mandatory best practices (SOLID, DRY, KISS, YAGNI), Clean Code rules, Pragmatic Programmer principles, and testing strategies. Required for all backend, frontend, and fullstack development agents.
+  Software craftsmanship principles for any code contribution: SOLID, DRY,
+  KISS, YAGNI, Clean Code, and a self-review protocol. Use this skill whenever
+  the user asks to write a feature, fix a bug, refactor a class, design an
+  interface, evaluate code quality, or improve existing code — even when they
+  don't explicitly say "best practices". Contains the foundational discipline
+  that applies before any language- or framework-specific guidance.
 ---
 
-## ⚠️ Critical Rules (MUST FOLLOW)
+# Software Craftsmanship Skill
 
-These rules are NON-NEGOTIABLE and take precedence over all other guidelines:
-
-- **CRITICAL: Never speculate about code you haven't seen.** Read files you are about to modify. For code you're NOT modifying, trust your provided context (codebase-state.md, Implementation Context, handoff data).
-- **CRITICAL: Always mutualize and reuse code.** DRY is enforced through your context layers — check codebase-state.md and Implementation Context for existing patterns before creating new ones. If you suspect duplication but context doesn't cover it, report a CONTEXT GAP.
-- **CRITICAL: Never claim success without validation.** Run tests, build the project, check logs. If you cannot validate yourself, say "Please test this and confirm it works."
-- **CRITICAL: BUILD MUST PASS BEFORE PR.** Before pushing code or creating a PR, you MUST run a full build locally using the `build.py` wrapper (see Section 7). ALL tests must pass. NO EXCEPTIONS. A failing build = no PR.
-- **CRITICAL: Follow the principles below.** SOLID, DRY, KISS, YAGNI, Clean Code, testing strategies,  modern development practices,  are mandatory, not suggestions.
-- **Think first**: Read provided context and the files you will modify before making changes
-- **Explain changes**: Give high-level explanations of what you changed at every step
-- **Simplicity**: Make every change as simple as possible. Avoid massive or complex changes.
-- **Refactor proactively**: Don't hesitate to refactor bad code to put in place good practices
-- **Detect versions**: Always detect language and framework versions to use their new features
-- **Analyze context**: Check provided context for existing patterns, conventions, and reusable code before starting
-- **Clean unused code**: Always clean unused code or libraries
-- **Elegant solutions**: Use the most simple, elegant, and best-practice approaches
+> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+> **Note on examples:** Code samples below use neutral pseudocode (no language-specific syntax). Language-specific worked examples (Java, TypeScript) live in `references/`.
 
 ---
 
-## 1. SOLID Principles
+## When Reasoning About Software Quality
 
-### S - Single Responsibility Principle
-- A class/function should have only ONE reason to change
-- Split large classes into focused, cohesive units
-- Ask: "What is this class/function responsible for?"
+Apply these foundational stances to every contribution:
 
-### O - Open/Closed Principle
-- Open for extension, closed for modification
-- Use abstractions (interfaces, inheritance) to extend behavior
-- New features = new code, not modified existing code
+1. **Read what you change** — never speculate about a method or file you have not opened.
+2. **Validate before reporting** — tests run, build green, behavior observed.
+3. **Pick the simplest design** that satisfies the actual requirement.
+4. **Refactor opportunistically** — leave code cleaner than you found it (Boy Scout Rule).
+5. **Tests are part of the contribution**, not a follow-up.
 
-### L - Liskov Substitution Principle
-- Subtypes must be substitutable for their base types
-- Don't break contracts when extending
-- If it looks like a duck but needs batteries, wrong abstraction
+### 🔴 BLOCKING
 
-### I - Interface Segregation Principle
-- Many specific interfaces > one general-purpose interface
-- Clients shouldn't depend on methods they don't use
-- Split fat interfaces into focused ones
+#### Read every file you intend to modify before editing it
+**Why:** changes based on assumptions are the dominant cause of regressions and silently broken contracts. The seconds of reading prevent the hours of debugging that come from "I thought this method returned X."
 
-### D - Dependency Inversion Principle
-- Depend on abstractions, not concretions
-- High-level modules shouldn't depend on low-level modules
-- Inject dependencies, don't instantiate them
+#### Never claim success without validation
+**Why:** "compiles" is not "works". A reported success that turns out broken erodes trust faster than an honest "I couldn't test this." If you cannot run the code, say "Please test this and confirm it works."
+
+##### WRONG
+```
+"Feature implemented and build passes."
+[no test run, no logs checked, no behavior verified]
+```
+##### CORRECT
+```
+"Feature implemented. Ran the test suite: 48 passed, 0 failed.
+Manually verified the new endpoint returns 201 + Location header on POST /orders."
+```
+
+#### Every production code change ships with tests in the same change
+**Why:** code without tests has no executable specification. Every subsequent modification has to re-derive what the code is supposed to do. Untested code commits the team to investigative debt for every later edit.
+
+##### WRONG
+```
+"Added processOrder() to OrderService. No test file exists for OrderService
+so I didn't add tests."
+```
+##### CORRECT
+```
+"Added processOrder(). Created the corresponding test suite with 4 cases:
+happy path, empty cart, invalid customer, payment declined. All 4 pass."
+```
 
 ---
 
-## 2. Core Principles
+## When Applying SOLID
 
-### DRY - Don't Repeat Yourself
-- Every piece of knowledge must have a single, authoritative representation
-- Extract common logic into reusable functions/components
-- Applies to: code, documentation, schemas, configs
-- But: Don't over-abstract prematurely (see YAGNI)
+📚 **References:** [solid-examples.md](references/solid-examples.md)
 
-#### When Enforcing DRY (Context-Based)
+| Principle | One-line rule |
+|-----------|---------------|
+| **S** — Single Responsibility | A class/function changes for one reason only. |
+| **O** — Open/Closed | Extend behavior via new code, not by modifying existing code. |
+| **L** — Liskov Substitution | Subtypes must honor the contract of their parent. |
+| **I** — Interface Segregation | Many specific interfaces beat one fat interface. |
+| **D** — Dependency Inversion | Depend on abstractions, inject them — don't `new` concretions. |
 
-DRY requires knowing what exists. Use your **context layers** — not broad exploration:
+### 🔴 BLOCKING
 
-| Source | What it tells you about reuse |
-|--------|-------------------------------|
-| **codebase-state.md** | All existing modules, services, entities, patterns — check here first |
-| **Implementation Context** | Specific reusable code identified by orchestrator for your task |
-| **Files you read to modify** | Patterns and utilities visible in the files you're editing |
+#### Never instantiate dependencies inside the class that uses them — inject them
+**Why:** internal `new` couples the class to a concrete implementation, makes unit testing impossible without container bootstrap, and blocks environment-based swapping. Inversion is what keeps the domain testable and the infrastructure replaceable.
 
+##### WRONG
 ```
-🔴 WRONG — Exploring to enforce DRY:
-Glob **/*.java "to check if a similar service exists"
-Grep "calculateTotal" across entire codebase "to find reusable logic"
-
-✅ CORRECT — Context-based DRY:
-1. Check codebase-state.md → sees PasswordResetRateLimiter exists
-2. Follow same pattern for new EmailChangeRateLimiter
-3. Read PasswordResetRateLimiter.java (file being used as reference)
-
-✅ CORRECT — Reporting a gap:
-"CONTEXT GAP: I'm creating a rate limiter but codebase-state.md
-doesn't mention if a generic RateLimiter base class exists.
-Impact: proceeding with standalone implementation."
+class OrderService {
+    email = new EmailService()           // hard-wired
+    repo  = new SqlOrderRepository()     // hard-wired
+}
+```
+##### CORRECT
+```
+class OrderService {
+    constructor(notifier: NotificationPort,
+                repo: OrderRepository) {
+        // dependencies injected — swappable, mockable in tests
+    }
+}
 ```
 
-### KISS - Keep It Simple, Stupid
-- The simplest solution is usually the best
-- Avoid unnecessary complexity and cleverness
-- If it's hard to explain, it's probably too complex
-- "Debugging is twice as hard as writing code. If you write code as cleverly as possible, you are by definition not smart enough to debug it." - Kernighan
+#### Don't extend a parent type to "get" its fields/methods if your subtype breaks the contract
+**Why:** Liskov violations turn polymorphism into a minefield — any caller that legitimately uses the parent type can crash on a subtype. Use composition or a separate interface instead of inheriting incompatible behavior.
 
-### YAGNI - You Ain't Gonna Need It
-- Don't implement features until they're actually needed
-- Avoid speculative generality and "future-proofing"
-- Build for today's requirements, not imaginary future ones
-- Delete dead code ruthlessly
+##### WRONG
+```
+class GiftCard extends Product {
+    applyDiscount(pct) {
+        throw "Gift cards cannot be discounted"
+        // any caller iterating List<Product> and calling applyDiscount crashes
+    }
+}
+```
+##### CORRECT
+```
+interface Priceable    { getPrice() }
+interface Discountable { applyDiscount(pct) }
+
+class PhysicalProduct  implements Priceable, Discountable
+class GiftCard         implements Priceable                // no discount API
+```
 
 ---
 
-## 3. Clean Code (Robert C. Martin)
+## When Avoiding Duplication and Over-engineering
 
-### Naming
-- Names should reveal intent
-- Avoid abbreviations and cryptic names
-- Use pronounceable, searchable names
-- Class names = nouns (`Customer`, `OrderService`)
-- Method names = verbs (`calculateTotal`, `sendEmail`)
+### 🔴 BLOCKING
 
-### Functions
-- Small (ideally < 20 lines)
-- Do one thing only
-- One level of abstraction per function
-- Minimal arguments (0-2 ideal, 3 max)
-- No side effects - do what the name says, nothing more
+#### DRY — every piece of knowledge has one authoritative representation
+**Why:** duplicated logic drifts. The two copies start identical, diverge under independent edits, and produce inconsistent behavior at the boundary where they meet. Centralization is what prevents the "we fixed it in service A but forgot service B" class of bugs.
 
-### Comments
-- Code should be self-documenting
-- Comments explain WHY, not WHAT
-- Don't comment bad code - rewrite it
-- Keep comments updated or delete them
-- Good: `// Compensates for browser timezone offset`
-- Bad: `// Increment counter by 1`
+#### KISS — pick the simplest design that satisfies the requirement
+**Why:** complexity is borrowed time. Every cleverness costs the next reader (often you, in 6 months) more time than it saved when written. "Debugging is twice as hard as writing code. If you write it as cleverly as possible, you are by definition not smart enough to debug it." (Kernighan)
 
-### Error Handling
-- Use exceptions, not error codes
-- Don't return null - use Optional/empty collections
-- Fail fast, fail loud
-- Provide context in error messages
-- Don't catch generic exceptions silently
+#### YAGNI — don't build for hypothetical future requirements
+**Why:** speculative generality consistently misses where real flexibility ends up being needed. Features built for an imagined future create maintenance burden today and rarely fit the actual future when it arrives — by which time the unused code has rotted.
 
-### Code Smells to Avoid
-- Long methods (> 30 lines)
-- Large classes (> 300 lines)
-- Duplicate code
-- Dead code (unused functions, commented code)
-- Magic numbers/strings (use constants)
-- Deep nesting (> 3 levels)
-- God objects (classes that do everything)
+##### WRONG
+```
+// Building a "PluginRegistry" because we might want plugins someday
+interface Plugin<T> {
+    register(ctx: PluginContext<T>)
+}
+abstract class AbstractPluginLoader<T> { /* 200 lines */ }
+```
+##### CORRECT
+```
+// Direct call. Add the abstraction when a second concrete need actually appears.
+orderProcessor.process(order)
+```
+
+### 🟡 WARNING
+
+#### Don't extract an abstraction from a single use case
+**Why:** abstractions need 2-3 concrete instances to identify the right shape. Extracting from one produces interfaces that fit only the first case and force the second case into contortions.
 
 ---
 
-## 4. The Pragmatic Programmer (Hunt & Thomas)
+## When Writing Clean Code
 
-### Care About Your Craft
-- Take pride in your work
-- Think critically about what you're building
-- Be a catalyst for change
+📚 **References:** [clean-code-catalog.md](references/clean-code-catalog.md) | [refactoring-patterns.md](references/refactoring-patterns.md) | [design-patterns-catalog.md](references/design-patterns-catalog.md)
 
-### Orthogonality
-- Keep components independent
-- Changes in one area shouldn't affect others
-- Eliminate effects between unrelated things
+### 🔴 BLOCKING
 
-### Tracer Bullets
-- Build end-to-end skeleton first
-- Get feedback early and often
-- Iterate on a working system
+#### Names reveal intent — no abbreviations, no cryptic prefixes
+**Why:** code is read 10× more than it is written. A name that takes 3 seconds to grasp instead of one compounds across thousands of reads. Cryptic naming is a tax on every future reader (including yourself).
 
-### Don't Assume - Verify
-- Test assumptions explicitly
-- "Select isn't broken" - the bug is probably in your code
-- When debugging, prove your assumptions
+##### WRONG
+```
+d              // elapsed time in days
+ls             // ?
+tmp            // ?
+flg
+```
+##### CORRECT
+```
+elapsedDays
+activeOrders
+customerEmail
+shippingAddressValidated
+```
 
-### Refactor Early, Refactor Often
-- Don't let technical debt accumulate
-- Leave code cleaner than you found it (Boy Scout Rule)
-- Refactoring is not rewriting
+#### Functions do one thing at one level of abstraction
+**Why:** a function that does N things has up to 2^N execution paths to test and a name that lies at the call site. Splitting by responsibility produces call sites that read like prose and tests that need few inputs each.
 
-### Design by Contract
-- Preconditions: what must be true before
-- Postconditions: what will be true after
-- Invariants: what always stays true
-- Be explicit about what functions expect and guarantee
+##### WRONG
+```
+processOrder(order) {
+    // validate
+    if (order.items.isEmpty) throw ...
+    // calculate
+    total = sum(order.items.map(price))
+    // persist
+    db.execute("INSERT INTO orders ...")
+    // notify
+    smtp.send(order.customer.email, "...")
+}
+```
+##### CORRECT
+```
+processOrder(order) {
+    validate(order)
+    priced = price(order)
+    saved  = repository.save(priced)
+    notifier.confirm(saved)
+    return saved
+}
+```
 
-### Don't Outrun Your Headlights
-- Take small steps
-- Avoid fortune-telling (predicting future requirements)
-- Get feedback before going too far
+### 🟡 WARNING
 
-### Broken Windows Theory
-- Don't leave "broken windows" (bad code, hacks)
-- One broken window leads to more
-- Fix or at least mark technical debt
+#### Comments explain WHY, not WHAT
+**Why:** the WHAT is in the code below the comment — duplicating it produces drift the moment the code changes. The WHY (spec quirk, compensating workaround, non-obvious invariant) is what cannot be recovered from the code itself.
+
+##### WRONG
+```
+// Increment counter by 1
+counter++
+```
+##### CORRECT
+```
+// Tax engine returns gross prices for B2C and net for B2B; normalize to net here.
+return invoice.isB2C ? raw - (raw * VAT_RATE) : raw
+```
+
+### 🟢 BEST PRACTICE
+
+- Functions ideally < 20 lines, classes < 300 lines.
+- Maximum 3 arguments per function — beyond that, introduce a parameter object.
+- Nesting depth ≤ 3 — extract methods or use early returns past that.
+- No magic numbers/strings — name constants.
+- Use exceptions over error codes; never return `null` for collections — return an empty collection instead.
 
 ---
 
-## 5. Testing Strategy
+## When Performing Self-Code-Review (Definition of Done)
 
-> ⛔ **CRITICAL — EVERY PRODUCTION CODE CHANGE MUST HAVE TESTS** ⛔
->
-> This is NON-NEGOTIABLE. Code without tests is incomplete code.
+### 🔴 BLOCKING
 
-### 🔴 BLOCKING — Mandatory Test Coverage
-
-```
-Rule 1: New method/function/component → WRITE new tests
-Rule 2: Modified method/function → VERIFY existing tests cover it, ADD tests if not
-Rule 3: No test file exists → CREATE one ("no existing test" is NOT an excuse to skip)
-Rule 4: All tests MUST run and PASS before reporting success
-Rule 5: Report MUST include test count (e.g., "Tests: 48 passed, 0 failed")
-```
-
-```
-🔴 WRONG — Shipping code without tests:
-"Feature implemented. Build compiles."
-"No test file exists for this component, so none to update."
-"Added tests for the listener but not for the refactored service."
-
-✅ CORRECT — Full coverage:
-"Created UserSpringServicePasswordTest.java (4 tests: happy path, wrong current password,
- weak new password, event published). Created edit-credentials-dialog.component.spec.ts
- (3 tests: success toast, error toast, dialog close). All 1048 tests pass."
-```
-
-### Test Pyramid
-```
-        /\
-       /E2E\        ← Few, slow, expensive
-      /------\
-     /Integration\  ← Some, medium speed
-    /------------\
-   / Unit Tests   \ ← Many, fast, cheap
-  /________________\
-```
-
-### Unit Tests
-- Test single units in isolation
-- Fast execution (milliseconds)
-- High coverage of business logic
-- Mock external dependencies
-
-### Integration Tests
-- Test component interactions
-- Real dependencies (DB, services)
-- Focus on boundaries and contracts
-- No-mock philosophy when possible
-
-### E2E Tests
-- Test complete user flows
-- Most realistic but slowest
-- Cover critical paths
-- Catch integration issues
-
-### Test Quality
-- Tests are documentation
-- One assertion per test (ideally)
-- Arrange-Act-Assert pattern
-- Test behavior, not implementation
-- Name tests clearly: `when_condition_should_expectedResult`
-
-### What to Test
-- Happy paths
-- Edge cases (null, empty, boundaries)
-- Error cases
-- Security constraints
-
----
-
-## 6. Modern Development Practices
-
-### Use Latest Language Features
-- Stay current with your stack versions
-- Modern syntax is often clearer and safer
-- Check changelogs for new capabilities
-- Leverage new APIs and patterns
-
-### Version Control
-- See `common-git` skill for full git workflow, branching rules, and commit conventions
-
-### Code Review Culture
-- Review for learning, not blame
-- Focus on design and logic, not style
-- Automate style checks (linters, formatters)
-- Be kind, be specific, be helpful
-
-### Continuous Integration
-- Automated builds on every push
-- Tests must pass before merge
-- Fast feedback loop
-- Fix broken builds immediately
-
----
-
-## 7. When Building Projects
-
-> ⛔ **Running `mvn`, `npm test`, or build commands DIRECTLY will flood your context and crash your session (200K token limit).**
-
-### 🔴 BLOCKING — Always Use build.py Wrapper
-
-```bash
-# 🔴 WRONG — Will crash your session with 100K+ lines of output
-mvn clean verify
-npm run build
-npm test
-
-# ✅ CORRECT — Returns small JSON summary, logs captured to file
-BUILDER="$(find D:/Work/projects/buy-nature -path '*/common-builder/scripts/build.py' -type f 2>/dev/null | head -1)"
-result=$(python3 "$BUILDER" --path /path/to/project --timeout 300)
-echo "$result"
-```
-
-**JSON output:** `{status, type, exitCode, phases: {requested, executed, skipped, timing}, tests: {run, passed, failed}, duration, logFile}`
-
-**Options:** `--path` (required) | `--type maven|npm` (auto-detected) | `--timeout 600` (default) | `--phases install,build,test` | `--test-include "glob"` (npm) | `--test-class "Name"` (maven) | `--force-install` | `--offline` (maven: skip repo checks)
-
-| On success | On failure |
-|------------|------------|
-| Push code, then `python3 cleanup.py <logFile>` | Read `<logFile>` (last 100 lines) to diagnose errors, fix, rebuild |
-
-### Fast Feedback Recipes
-
-```bash
-# Compile-only check (fastest — ~30-40s)
-python3 "$BUILDER" --path $(pwd) --phases build
-
-# Specific tests only (Angular — ~20-30s)
-python3 "$BUILDER" --path $(pwd) --phases test --test-include "src/app/pages/checkout/**"
-
-# Specific test class (Maven — ~30-60s)
-python3 "$BUILDER" --path $(pwd) --phases test --test-class "OrderServiceTest"
-
-# Maven offline (skip repo checks — ~5-15s faster)
-python3 "$BUILDER" --path $(pwd) --offline
-
-# Full build before PR (default — unchanged)
-python3 "$BUILDER" --path $(pwd)
-```
-
-**Note:** `build.py` auto-detects `mvnd` (Maven Daemon) when available — ~40-60% faster repeated builds.
-
-**Use `--phases build` during iteration, full build only before PR/push.**
-
----
-
-## 8. Quick Reference Checklist
-
-Before committing, ask yourself:
-
-- [ ] Is the code as simple as possible? (KISS)
-- [ ] Did I avoid duplication? (DRY)
-- [ ] Did I only build what's needed? (YAGNI)
-- [ ] Are functions/classes focused? (SRP)
-- [ ] Are names clear and meaningful?
-- [ ] **🔴 Did I write tests for EVERY new/modified method?** (see Section 5)
-- [ ] **🔴 Do ALL tests pass?** (report exact count)
-- [ ] Would a new team member understand this?
-- [ ] Did I use modern language features?
-- [ ] Did I remove dead code?
-- [ ] Did I handle errors properly?
-
----
-
-## 9. Self-Code-Review Protocol (Definition of Done)
-
-> 🔴 **BLOCKING — Mandatory before declaring task complete**
->
-> You MUST perform a self-review of ALL your changes before committing.
-> A task is NOT complete until self-review is done and issues are fixed.
+#### Self-review is mandatory before declaring a task complete
+**Why:** every author is more critical of their own code right after writing it than at any other moment. Skipping self-review pushes defects into the team review cycle, where they cost ~10× more to find and fix. The 5-category pass below catches what fresh eyes won't.
 
 ### When to Perform
 
-After all code changes and tests pass — BEFORE commit. This is the last step of the VERIFY phase.
+After all code changes are written and tests pass — **before** commit. This is the last step of the VERIFY phase.
 
 ### 5-Category Review
 
-Review your changes systematically through each category:
+Review your changes through each category:
 
 | # | Category | What to Look For |
 |---|----------|------------------|
-| 1 | **Optimization** | Unnecessary computations, redundant DB queries, N+1 patterns, inefficient loops, missing pagination, unnecessary object creation, repeated API calls |
-| 2 | **Refactoring / Elegance** | Long methods (>20 lines), deep nesting (>3 levels), unclear names, missing modern language features (Java: records, pattern matching, sealed classes; Angular: @if/@for, signal inputs, new control flow), complex conditionals that should be extracted |
-| 3 | **DRY / Mutualization** | Duplicated logic within your changes, existing utilities in codebase-state.md you should have reused, repeated patterns that should be extracted into shared methods/components |
-| 4 | **Bug Detection** | Null/undefined not handled, missing edge cases, off-by-one errors, race conditions, unclosed resources, missing error handling, incorrect state transitions, wrong return types |
-| 5 | **Security** | User input not validated, injection vectors (SQL, XSS, command), secrets/credentials in code, missing auth checks, sensitive data in logs/responses, CORS misconfiguration |
+| 1 | **Optimization** | Unnecessary computations, redundant queries, N+1 patterns, inefficient loops, missing pagination, repeated API calls |
+| 2 | **Refactoring / Elegance** | Long methods (>20 l), deep nesting (>3 levels), unclear names, missing modern language features, complex conditionals to extract |
+| 3 | **DRY / Mutualization** | Duplicated logic within your changes, existing utilities you should have reused, repeated patterns to extract |
+| 4 | **Bug Detection** | Null/undefined not handled, missing edge cases, off-by-one, race conditions, unclosed resources, missing error handling, wrong return types |
+| 5 | **Security** | User input not validated, injection vectors (SQL, XSS, command), secrets in code, missing auth checks, sensitive data in logs/responses |
 
 ### Token-Efficient Review Rules
 
-| DO | DO NOT                                        |
-|----|-----------------------------------------------|
-| Review from memory — you just wrote the code, it's in your context | Re-read modified files from disk              |
-| Fix immediately with Edit tool  | Grep broadly for duplicates                   |
-| Do one targeted read if suspecting DRY with an existing file | Write a verbose review document               |
+| DO | DO NOT |
+|----|--------|
+| Review from memory — you just wrote the code | Re-read modified files from disk |
+| Fix immediately with the editor | Grep broadly for duplicates |
+| One targeted read if you suspect DRY with a known file | Write a verbose review document |
 | Note large refactors as "Deferred" | Spend more than ~30 tool uses on review fixes |
-| Check codebase-state.md for existing patterns to reuse | Glob `**/*.java` to "check for similar code"  |
 
 ### Fix vs Defer
 
-| Issue Found | Action |
-|-------------|--------|
-| Quick fix (rename, extract method, add null check, use modern syntax) | Fix immediately |
-| Moderate fix (extract shared utility, refactor conditional logic) | Fix immediately |
-| Large refactor beyond task scope (rearchitect module, cross-domain change) | Note as **Deferred** in output |
-| Issue in existing code you didn't write | Note under **Key Discoveries** in output |
-
-### Self-Review Output
-
-After completing the review, include this block in your task output (Handoff Summary):
-
-```
-### Self-Review
-- **Checked**: 5/5 categories (Optimization, Refactoring, DRY, Bugs, Security)
-- **Fixed**: [N issues — one-line description each]
-- **Deferred**: [N items — one-line description each, or "none"]
-```
-
-### Examples
-
-```
-🔴 WRONG — Skipping self-review:
-"Tests pass. Build successful. Task complete."
-
-🔴 WRONG — Rubber-stamping:
-"Self-review: no issues found." (without actually reviewing)
-
-✅ CORRECT — Thorough self-review with fixes:
-"### Self-Review
-- Checked: 5/5 categories
-- Fixed: 2 issues
-  - Refactoring: extracted repeated validation logic into validateOrderTransition() helper
-  - Security: added @Valid annotation on request DTO parameter
-- Deferred: none"
-
-✅ CORRECT — Self-review with deferred items:
-"### Self-Review
-- Checked: 5/5 categories
-- Fixed: 1 issue
-  - Optimization: replaced N+1 query with JOIN FETCH in findOrdersWithItems()
-- Deferred: 1 item
-  - DRY: OrderService and ReturnService share similar state machine logic — candidate for shared AbstractStateMachine base"
-```
+| Issue | Action |
+|-------|--------|
+| Quick fix (rename, extract method, add null check) | Fix immediately |
+| Moderate fix (extract shared utility, refactor conditional) | Fix immediately |
+| Large refactor beyond task scope (rearchitect a module) | Note as **Deferred** |
+| Issue in pre-existing code you didn't write | Note under **Discoveries** |
 
 ---
 
-## 10. Golden Rules
+## Output Contract
 
-> "Any fool can write code that a computer can understand. Good programmers write code that humans can understand." - Martin Fowler
+When producing artifacts, deliver each in this exact form:
 
-> "Premature optimization is the root of all evil." - Donald Knuth
+| Artifact | Required Form |
+|----------|---------------|
+| **Self-Review Output** | Markdown block with three lines (`Checked`, `Fixed`, `Deferred`). See template below. |
+| **Test report** | Single line: `Tests: <N> passed, <M> failed`, plus a one-line summary if any failed. |
+| **WRONG/CORRECT explanation** | Two fenced code blocks labeled `##### WRONG` and `##### CORRECT`, no prose in between. |
 
-> "Make it work, make it right, make it fast." - Kent Beck
+### Self-Review Template
+```
+### Self-Review
+- **Checked**: 5/5 categories (Optimization, Refactoring, DRY, Bugs, Security)
+- **Fixed**: <N issues — one-line description each>, or "none"
+- **Deferred**: <N items — one-line description each>, or "none"
+```
 
-> "Programs must be written for people to read, and only incidentally for machines to execute." - Abelson & Sussman
-
+##### WRONG
+```
+"Tests pass. Build successful. Task complete."
+[no self-review performed]
+```
+##### CORRECT
+```
+### Self-Review
+- Checked: 5/5 categories
+- Fixed: 2 issues
+  - Refactoring: extracted repeated validation logic into validateOrderTransition()
+  - Security: added input validation on the request DTO at the controller boundary
+- Deferred: 1 item
+  - DRY: OrderService and ReturnService share state-machine logic — candidate for a shared base
+```

@@ -1,6 +1,17 @@
 # SOLID Principles - Complete Examples
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+> **Examples use Java and TypeScript** for concreteness — the principles apply to any object-oriented language. For language-specific guidance see `common-java-developer` (Java) or `common-typescript` (TypeScript).
+
+## Table of Contents
+
+- [S - Single Responsibility Principle (SRP)](#s---single-responsibility-principle-srp)
+- [O - Open/Closed Principle (OCP)](#o---openclosed-principle-ocp)
+- [L - Liskov Substitution Principle (LSP)](#l---liskov-substitution-principle-lsp)
+- [I - Interface Segregation Principle (ISP)](#i---interface-segregation-principle-isp)
+- [D - Dependency Inversion Principle (DIP)](#d---dependency-inversion-principle-dip)
+- [Summary: When to Apply Each Principle](#summary-when-to-apply-each-principle)
+- [Quick Checklist](#quick-checklist)
 
 ---
 
@@ -443,7 +454,7 @@ public class Square implements Shape {
 }
 ```
 
-### Buy Nature Example
+### Domain Example
 
 ```java
 // ❌ WRONG: Violating substitution
@@ -764,8 +775,8 @@ class OrderServiceTest {
 
 ## Summary: When to Apply Each Principle
 
-| Principle | Apply When | Buy Nature Example |
-|-----------|------------|-------------------|
+| Principle | Apply When | Example |
+|-----------|------------|---------|
 | **SRP** | Class has multiple reasons to change | Separate Order entity, OrderRepository, OrderService, EmailService |
 | **OCP** | New features require modifying existing code | Payment methods via PaymentMethod interface |
 | **LSP** | Subtypes break parent contracts | Product hierarchy (Physical, Digital, Subscription) |

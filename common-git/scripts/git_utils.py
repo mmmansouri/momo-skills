@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
-"""Shared Git utility functions for Buy Nature scripts.
+"""Shared Git utility functions for common-git scripts.
 
-Used by git_safe_commit.py, git_safe_push.py, git_safe_branch.py,
-git_status_report.py, git_cleanup_branches.py, git_install_hooks.py.
+Used by git_status_report.py, git_safe_push.py, git_cleanup_branches.py.
+
+Configuration via environment variables (with safe defaults):
+  - BASE_BRANCH   : integration branch (default: "develop")
+  - JIRA_PREFIX   : ticket prefix used in branch names (default: "TICKET")
+                    Multiple prefixes may be passed as a comma-separated list,
+                    e.g. JIRA_PREFIX="PROJ,TICKET".
+
+Branch naming regex is built from JIRA_PREFIX, so projects with a custom
+prefix only need to export the env var (no code change required).
 """
 import json
 import os
@@ -11,18 +19,30 @@ import subprocess
 import sys
 
 
-PROTECTED_BRANCHES = {"develop", "main", "master"}
+# Integration branch protection: configurable + always-protected names.
+DEFAULT_BASE_BRANCH = os.environ.get("BASE_BRANCH", "develop")
+ALWAYS_PROTECTED = {"main", "master"}
+
+
+def _jira_prefix_pattern():
+    """Build an alternation regex group from JIRA_PREFIX env var.
+
+    Default: TICKET. Comma-separated list supported (e.g. "PROJ,TICKET").
+    """
+    raw = os.environ.get("JIRA_PREFIX", "TICKET")
+    prefixes = [p.strip() for p in raw.split(",") if p.strip()]
+    if not prefixes:
+        prefixes = ["TICKET"]
+    # Escape each prefix to be safe against accidental regex metachars.
+    return "(?:" + "|".join(re.escape(p) for p in prefixes) + ")"
 
 
 def run_git(*args, cwd=None):
     """Run a git command and return (exit_code, stdout_text).
 
-    Args:
-        *args: Git subcommand and arguments (e.g., "status", "--porcelain")
-        cwd: Working directory (default: current directory)
-
     Returns:
-        Tuple of (exit_code, stdout_string)
+        (exit_code, stdout_string). stderr is dropped on purpose; callers
+        that need it should re-run with capture or use subprocess directly.
     """
     try:
         result = subprocess.run(
@@ -33,29 +53,33 @@ def run_git(*args, cwd=None):
         )
         return result.returncode, result.stdout.strip()
     except FileNotFoundError:
+        # Hard fail: every script in this skill assumes git is on PATH.
         print("git not found. Install Git or ensure it's in PATH.", file=sys.stderr)
         sys.exit(1)
 
 
 def get_repo_root(path=None):
-    """Get the git repository root directory."""
+    """Get the git repository root directory, or None if not in a repo."""
     code, root = run_git("rev-parse", "--show-toplevel", cwd=path)
-    if code != 0:
-        return None
-    return root
+    return root if code == 0 else None
 
 
 def get_current_branch(cwd=None):
-    """Get the current branch name."""
+    """Get the current branch name, or None if detached / not in a repo."""
     code, branch = run_git("rev-parse", "--abbrev-ref", "HEAD", cwd=cwd)
-    if code != 0:
-        return None
-    return branch
+    return branch if code == 0 else None
 
 
-def is_protected_branch(branch):
-    """Check if a branch name is protected."""
-    if branch in PROTECTED_BRANCHES:
+def is_protected_branch(branch, base_branch=None):
+    """Check if a branch name is protected (no direct commits, no rebase).
+
+    A branch is protected if it is:
+      - the configured base branch (default: develop)
+      - main / master
+      - any release/* branch
+    """
+    base = base_branch or DEFAULT_BASE_BRANCH
+    if branch == base or branch in ALWAYS_PROTECTED:
         return True
     if branch.startswith("release/"):
         return True
@@ -71,7 +95,7 @@ def has_remote_tracking(cwd=None):
 def get_divergence(cwd=None):
     """Get ahead/behind counts relative to upstream.
 
-    Returns dict: {'ahead': N, 'behind': N} or None if no tracking.
+    Returns dict {'ahead': N, 'behind': N} or None if no tracking branch.
     """
     if not has_remote_tracking(cwd):
         return None
@@ -99,34 +123,30 @@ def find_repos(base_dir):
 
 
 def validate_branch_name(name):
-    """Validate branch naming convention: type/BNAT-XXX-description.
+    """Validate branch naming convention: type/PREFIX-NNN-description.
+
+    Prefix is read from JIRA_PREFIX env var (default: TICKET, comma-separated
+    list supported). Release branches (release/vX.Y.Z) are also accepted.
 
     Returns (is_valid, error_message).
     """
-    pattern = r"^(feature|bugfix|hotfix|release)/[A-Z]+-\d+(-[a-z0-9-]+)?$"
+    prefix_group = _jira_prefix_pattern()
+    pattern = rf"^(feature|bugfix|hotfix|release)/{prefix_group}-\d+(-[a-z0-9-]+)?$"
     if re.match(pattern, name):
         return True, ""
 
-    # Check for release branch
     if re.match(r"^release/v\d+\.\d+\.\d+$", name):
         return True, ""
 
+    expected = f"{prefix_group.replace('(?:', '').replace(')', '')}-NNN-description"
     return False, (
         f"Invalid branch name: {name}. "
-        f"Expected: feature/BNAT-XXX-description or release/vX.Y.Z"
+        f"Expected: feature/{expected} or release/vX.Y.Z"
     )
 
 
 def scan_for_patterns(content, patterns):
-    """Scan content for patterns (debug statements, secrets, etc.).
-
-    Args:
-        content: File content string
-        patterns: List of (pattern_regex, description) tuples
-
-    Returns:
-        List of (line_number, line, description) tuples for matches
-    """
+    """Scan content for regex patterns; return (line_no, line, description) tuples."""
     findings = []
     for i, line in enumerate(content.split("\n"), 1):
         for pattern, desc in patterns:
@@ -135,6 +155,7 @@ def scan_for_patterns(content, patterns):
     return findings
 
 
+# Common debug-statement signatures across languages used in typical projects.
 DEBUG_PATTERNS = [
     (r"\bconsole\.(log|debug|warn|error)\b", "console.log/debug/warn/error"),
     (r"\bSystem\.(out|err)\.print", "System.out/err.print"),
@@ -144,6 +165,8 @@ DEBUG_PATTERNS = [
     (r"debugger\b", "debugger statement"),
 ]
 
+# High-signal secret signatures. Conservative on purpose: false negatives are
+# preferred over false positives for a generic checker.
 SECRET_PATTERNS = [
     (r"(password|secret|token|api_key|apikey)\s*=\s*['\"][^'\"]+['\"]", "Hardcoded secret"),
     (r"-----BEGIN (RSA )?PRIVATE KEY-----", "Private key"),

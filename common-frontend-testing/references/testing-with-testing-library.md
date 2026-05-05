@@ -1,4 +1,19 @@
-# Angular Component Testing Patterns
+# Testing Components with Angular Testing Library
+
+> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+
+## Table of Contents
+
+- [Testing Library Setup](#testing-library-setup)
+- [Query Priority](#query-priority)
+- [Standalone Component Testing](#standalone-component-testing)
+- [Component with Dependencies](#component-with-dependencies)
+- [Testing Directives](#testing-directives)
+- [Testing Pipes](#testing-pipes)
+- [Snapshot Testing](#snapshot-testing)
+- [Common Patterns](#common-patterns)
+
+---
 
 ## Testing Library Setup
 

@@ -1,6 +1,18 @@
 # Design Tokens in Angular
 
+> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 > See also: `common-frontend-design` skill for token definitions and design system principles.
+
+## Table of Contents
+
+- [Use CSS Variables, Not Hardcoded Values](#use-css-variables-not-hardcoded-values)
+- [Token Categories](#token-categories)
+- [Integration with Angular Material](#integration-with-angular-material)
+- [Component with Design Tokens](#component-with-design-tokens)
+- [Responsive Design with Tokens](#responsive-design-with-tokens)
+- [Theming Support (Light/Dark)](#theming-support-lightdark)
+
+---
 
 ## Use CSS Variables, Not Hardcoded Values
 

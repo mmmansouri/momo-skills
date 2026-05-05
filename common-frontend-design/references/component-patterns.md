@@ -2,6 +2,18 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+## Table of Contents
+
+- [Button Hierarchy](#button-hierarchy)
+- [BLOCKING - Button Rules](#-blocking---button-rules)
+- [Button Implementation](#button-implementation)
+- [Form Components](#form-components)
+- [Card Components](#card-components)
+- [State Patterns](#state-patterns)
+- [Modal/Dialog Pattern](#modaldialog-pattern)
+- [Accessibility Requirements](#accessibility-requirements)
+- [Component Checklist](#component-checklist)
+
 ---
 
 ## Button Hierarchy

@@ -1,5 +1,16 @@
 # Architectural Styles Reference
 
+## Table of Contents
+
+- [Layered Architecture](#layered-architecture)
+- [Hexagonal Architecture (Ports & Adapters)](#hexagonal-architecture-ports--adapters)
+- [Clean Architecture](#clean-architecture)
+- [CQRS (Command Query Responsibility Segregation)](#cqrs-command-query-responsibility-segregation)
+- [Microservices](#microservices)
+- [Event-Driven Architecture](#event-driven-architecture)
+
+---
+
 ## Layered Architecture
 
 ```

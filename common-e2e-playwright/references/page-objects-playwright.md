@@ -2,6 +2,20 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+## Table of Contents
+
+- [Overview](#overview)
+- [When to Use Page Objects](#when-to-use-page-objects)
+- [Class-Based Page Objects](#class-based-page-objects)
+- [Component-Based Page Objects](#component-based-page-objects)
+- [Function-Based Page Objects](#function-based-page-objects)
+- [Locator Strategies in Page Objects](#locator-strategies-in-page-objects)
+- [Action Methods](#action-methods)
+- [Two-Tier Authentication Integration](#two-tier-authentication-integration)
+- [Quick Reference](#quick-reference)
+- [Common Patterns](#common-patterns)
+- [Anti-Patterns](#anti-patterns)
+
 ---
 
 ## Overview
@@ -244,7 +258,7 @@ export class SignupPage {
   readonly passwordInput = this.page.getByLabel('Password');
 
   // 🟡 OK - Text-based (use for static content only)
-  readonly welcomeText = this.page.getByText('Welcome to Buy Nature');
+  readonly welcomeText = this.page.getByText('Welcome to the application');
 
   // 🔴 WRONG - CSS classes
   readonly submitButton = this.page.locator('.btn-primary'); // ❌
@@ -333,12 +347,12 @@ interface CheckoutData {
 
 ---
 
-## Buy Nature Integration: Two-Tier Authentication
+## Two-Tier Authentication Integration
 
 ### OAuth2 Client + User Login
 
 ```typescript
-// pages/buy-nature/authenticated.page.ts
+// pages/auth/authenticated.page.ts
 import { Page } from '@playwright/test';
 import { LoginPage } from './login.page';
 
@@ -346,7 +360,7 @@ export class AuthenticatedPage {
   constructor(private readonly page: Page) {}
 
   /**
-   * Two-tier authentication for Buy Nature:
+   * Two-tier authentication:
    * 1. OAuth2 client authentication (automatic via interceptor)
    * 2. User login via UI
    */
@@ -363,7 +377,7 @@ export class AuthenticatedPage {
   }
 
   async loginAsAdmin(): Promise<void> {
-    await this.loginAsCustomer('admin@buynature.com', 'admin123');
+    await this.loginAsCustomer('admin@example.com', 'admin123');
   }
 }
 ```
@@ -385,7 +399,7 @@ export class AuthHelper {
     const clientTokenResponse = await this.request.post('/oauth/token', {
       data: {
         grant_type: 'client_credentials',
-        client_id: 'buynature-front',
+        client_id: 'your-client-id',
         client_secret: 'client-secret-123',
       },
     });

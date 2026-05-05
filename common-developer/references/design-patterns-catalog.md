@@ -1,8 +1,20 @@
 # Design Patterns Catalog
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+> **Examples use Java and TypeScript** for concreteness — the patterns apply to any object-oriented language. For language-specific guidance see `common-java-developer` (Java) or `common-typescript` (TypeScript).
 
-Gang of Four (GoF) patterns with modern Java/TypeScript examples from the Buy Nature domain.
+## Table of Contents
+
+- [Creational Patterns](#creational-patterns)
+- [Behavioral Patterns](#behavioral-patterns)
+- [Structural Patterns](#structural-patterns)
+- [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
+- [Pattern Decision Guide](#pattern-decision-guide)
+- [Quick Checklist](#quick-checklist)
+
+---
+
+Gang of Four (GoF) patterns with modern Java/TypeScript examples from an e-commerce domain.
 
 ---
 
@@ -13,7 +25,7 @@ Gang of Four (GoF) patterns with modern Java/TypeScript examples from the Buy Na
 **Purpose:** Create objects without specifying exact class
 **Use When:** Object creation logic is complex or varies based on context
 
-#### Buy Nature Example: Payment Method Factory
+#### Domain Example: Payment Method Factory
 
 ```java
 // Factory interface
@@ -119,7 +131,7 @@ class ProductFactory {
 **Purpose:** Construct complex objects step by step
 **Use When:** Object has many optional parameters or complex construction
 
-#### Buy Nature Example: Order Builder
+#### Domain Example: Order Builder
 
 ```java
 // Builder for Order
@@ -240,7 +252,7 @@ Order order = Order.builder()
 **Purpose:** Define family of algorithms, make them interchangeable
 **Use When:** Multiple ways to perform same operation, chosen at runtime
 
-#### Buy Nature Example: Discount Strategies
+#### Domain Example: Discount Strategies
 
 ```java
 // Strategy interface
@@ -338,7 +350,7 @@ public class PricingService {
 **Purpose:** Notify multiple objects when state changes
 **Use When:** One-to-many dependency, event-driven architecture
 
-#### Buy Nature Example: Order Events
+#### Domain Example: Order Events
 
 ```java
 // Event
@@ -480,7 +492,7 @@ export class CheckoutComponent {
 **Purpose:** Define skeleton of algorithm, let subclasses override steps
 **Use When:** Common algorithm with varying steps
 
-#### Buy Nature Example: Order Processing Template
+#### Domain Example: Order Processing Template
 
 ```java
 // Abstract template
@@ -601,7 +613,7 @@ public class SubscriptionOrderProcessor extends OrderProcessor {
 **Purpose:** Convert interface to another interface clients expect
 **Use When:** Integrating with external APIs or legacy code
 
-#### Buy Nature Example: Payment Gateway Adapter
+#### Domain Example: Payment Gateway Adapter
 
 ```java
 // Target interface (what our app expects)
@@ -691,7 +703,7 @@ public class PayPalPaymentAdapter implements PaymentGateway {
 **Purpose:** Add responsibilities to objects dynamically
 **Use When:** Extend functionality without modifying original class
 
-#### Buy Nature Example: Product Price Decorators
+#### Domain Example: Product Price Decorators
 
 ```java
 // Component interface
@@ -802,8 +814,8 @@ public class OrderService {
 
 ## Pattern Decision Guide
 
-| Need | Pattern | Buy Nature Example |
-|------|---------|-------------------|
+| Need | Pattern | Example |
+|------|---------|---------|
 | Create objects flexibly | Factory | PaymentMethodFactory |
 | Build complex objects | Builder | Order.builder() |
 | Multiple algorithms | Strategy | DiscountStrategy |

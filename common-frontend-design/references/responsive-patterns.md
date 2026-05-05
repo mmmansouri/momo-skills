@@ -2,6 +2,22 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+## Table of Contents
+
+- [Breakpoints](#breakpoints)
+- [BLOCKING Rules](#-blocking-rules)
+- [Mobile-First Approach](#mobile-first-approach)
+- [Responsive Layout Patterns](#responsive-layout-patterns)
+- [Touch Targets](#touch-targets)
+- [Responsive Typography](#responsive-typography)
+- [Responsive Images](#responsive-images)
+- [Container Queries (Modern Approach)](#container-queries-modern-approach)
+- [Testing Responsive Design](#testing-responsive-design)
+- [Common Responsive Patterns](#common-responsive-patterns)
+- [Performance Considerations](#performance-considerations)
+- [Responsive Design Checklist](#responsive-design-checklist)
+- [E-Commerce Responsive Patterns](#e-commerce-responsive-patterns)
+
 ---
 
 ## Breakpoints
@@ -545,7 +561,7 @@ Before shipping:
 
 ---
 
-## Buy Nature Specific Patterns
+## E-Commerce Responsive Patterns
 
 ### Product Grid
 

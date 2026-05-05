@@ -1,6 +1,18 @@
 # Clean Code Catalog
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+> **Examples use Java and TypeScript** for concreteness — the principles apply to any object-oriented language. For language-specific guidance see `common-java-developer` (Java) or `common-typescript` (TypeScript).
+
+## Table of Contents
+
+- [Naming Conventions](#naming-conventions)
+- [Function Design](#function-design)
+- [Comments](#comments)
+- [Error Handling](#error-handling)
+- [Code Smells to Avoid](#code-smells-to-avoid)
+- [TypeScript Specific Patterns](#typescript-specific-patterns)
+- [Domain-Specific Examples](#domain-specific-examples)
+- [Quick Checklist](#quick-checklist)
 
 ---
 
@@ -55,7 +67,7 @@ String productName;
 List<Order> pendingOrders;
 ```
 
-### Buy Nature Naming Examples
+### Domain Example
 
 ```java
 // DTO Naming
@@ -282,7 +294,6 @@ Optional<Appointment> findById(UUID id);
 ```java
 // ✅ GOOD: Legal/licensing information
 /*
- * Copyright (c) 2025 Buy Nature
  * Licensed under MIT License
  */
 
@@ -581,7 +592,7 @@ function processPayment(payment: CreditCard | PayPal | Crypto) {
 
 ---
 
-## Buy Nature Specific Examples
+## Domain-Specific Examples
 
 ### DTO Naming
 

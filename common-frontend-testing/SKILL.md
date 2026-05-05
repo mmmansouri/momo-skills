@@ -1,676 +1,75 @@
 ---
 name: common-frontend-testing
 description: >-
-  Frontend testing best practices with Jasmine (Angular default) and Angular Testing Library.
-  Use when: writing unit tests for Angular components/services, mocking dependencies,
-  testing async operations, setting up test fixtures, or choosing between Jasmine and Jest.
-  Contains component testing patterns, service testing, and common pitfalls to avoid.
-  Jasmine-first approach (Buy Nature standard), with Jest migration guidance.
+  Frontend unit and component testing for Angular projects using Jasmine + the
+  Angular TestBed (with Angular Testing Library as an alternative). Use this
+  skill whenever the user asks to write a unit test for a component, service,
+  pipe or directive, spy on a service, mock an HTTP call, test an async
+  observable, test a signal or effect, set up TestBed, or pick between Jasmine
+  and Jest — even when they don't explicitly say "test". Always loaded alongside
+  `common-developer` (foundational craftsmanship) and, for Angular projects,
+  `common-frontend-angular` (component / service shapes under test).
 ---
 
-# Frontend Testing Best Practices
+# Frontend Testing Skill
 
-> **Severity Levels:** 🔴 BLOCKING (must fix) | 🟡 WARNING (should fix) | 🟢 BEST PRACTICE (recommended)
+> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+> **Foundational rules** (SOLID, Clean Code, Self-Review, "every change ships with tests") live in `common-developer`. **Component / service shapes** under test live in `common-frontend-angular`. **E2E discipline** (browser-level user journeys) lives in `common-e2e-playwright`. This skill covers **unit & component tests only**.
 
 ---
 
-## Testing Framework: Jasmine vs Jest
+## When Reasoning About Frontend Tests
 
-> **Buy Nature Projects:** Use **Jasmine** (Angular default). All code examples in this skill use Jasmine syntax.
+Apply these foundational stances:
 
-### Why Jasmine for Buy Nature?
+1. **Test behavior**, not implementation details.
+2. **Isolation** — each test sets up its own state, no shared mutable globals.
+3. **Fast** — milliseconds per test; no real HTTP, no real timers.
+4. **Readable** — `should X when Y` test names; AAA structure.
+5. **Boundaries first** — mock external collaborators, exercise the real internals.
 
-| Reason | Explanation |
-|--------|-------------|
-| **Angular Default** | Comes pre-configured with Angular CLI |
-| **Zero Configuration** | Works out-of-the-box with Angular |
-| **Mature Integration** | Deep integration with Angular testing utilities |
-| **Team Standard** | Consistent across all Buy Nature projects |
+### 🔴 BLOCKING
 
-### Syntax Comparison
+#### Test observable behavior, never private internals
+**Why:** tests on private methods couple the suite to the current implementation. The first refactor that renames `_calculateTotal()` breaks every test that spied on it, even when the externally-visible behavior is unchanged. Tests on rendered output (DOM, return value, emitted event) survive any refactor that preserves the contract.
 
-| Operation | Jasmine (Buy Nature) | Jest (Alternative) |
-|-----------|----------------------|-------------------|
-| **Create spy** | `jasmine.createSpy('name')` | `jest.fn()` |
-| **Spy on object** | `jasmine.createSpyObj('Service', ['method'])` | `jest.spyOn(obj, 'method')` |
-| **Return value** | `spy.and.returnValue(value)` | `spy.mockReturnValue(value)` |
-| **Return promise** | `spy.and.returnValue(Promise.resolve(value))` | `spy.mockResolvedValue(value)` |
-| **Throw error** | `spy.and.throwError('error')` | `spy.mockImplementation(() => { throw new Error('error') })` |
-| **Call through** | `spy.and.callThrough()` | `spy.mockImplementation()` |
-| **Verify calls** | `expect(spy).toHaveBeenCalled()` | `expect(spy).toHaveBeenCalled()` (same) |
-
-### 🟡 WARNING - Don't Mix Syntax
-
+##### WRONG
 ```typescript
-// 🔴 WRONG - Mixing Jasmine and Jest syntax
-const spy = jest.fn(); // Jest
-spy.and.returnValue(data); // Jasmine - won't work!
-
-// ✅ CORRECT - Consistent Jasmine
-const spy = jasmine.createSpy('getData');
-spy.and.returnValue(data);
-```
-
-### When to Consider Jest
-
-Consider migrating to Jest if:
-- You're starting a new non-Angular project
-- You need better TypeScript support
-- You want snapshot testing
-- You need parallel test execution
-
-**For Buy Nature:** Stick with Jasmine for consistency.
-
----
-
-## Test Philosophy
-
-### 🔴 BLOCKING — Test Behavior, Not Implementation
-
-```typescript
-// ❌ WRONG: Testing implementation details
 it('should call private method _calculateTotal', () => {
   const spy = spyOn(component as any, '_calculateTotal');
   component.updateCart();
   expect(spy).toHaveBeenCalled();
 });
-
-// ✅ CORRECT: Test observable behavior
+```
+##### CORRECT
+```typescript
 it('should display updated total when cart changes', () => {
   component.addItem({ id: '1', price: 10 });
   fixture.detectChanges();
-  
+
   const total = fixture.nativeElement.querySelector('[data-testid="cart-total"]');
   expect(total.textContent).toContain('10');
 });
 ```
 
-### 🟢 BEST PRACTICE — Test Pyramid
+#### Each test is independent — fresh state in `beforeEach`, cleanup in `afterEach`
+**Why:** order-dependent tests fail unpredictably under parallelism, hide the real defect when one breaks (N false positives downstream), and make the suite hostile to flake investigation. Independence is the property that makes the suite trustworthy.
 
-```
-         /\
-        /  \        E2E Tests (few)
-       /----\       - Critical user journeys
-      /      \      - Use Playwright
-     /--------\     Integration Tests (some)
-    /          \    - Component + dependencies
-   /------------\   Unit Tests (many)
-  /              \  - Isolated logic
- /________________\ - Fast feedback
-```
-
----
-
-## Component Testing
-
-### 🔴 BLOCKING — Always Use TestBed for Angular Components
-
+##### WRONG
 ```typescript
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ProductCardComponent } from './product-card.component';
-
-describe('ProductCardComponent', () => {
-  let component: ProductCardComponent;
-  let fixture: ComponentFixture<ProductCardComponent>;
-
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [ProductCardComponent], // Standalone component
-      // declarations: [ProductCardComponent], // Module-based component
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(ProductCardComponent);
-    component = fixture.componentInstance;
-  });
-
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-});
-```
-
-### 🔴 BLOCKING — Call detectChanges() After State Changes
-
-```typescript
-// ❌ WRONG: Checking DOM before change detection
-it('should display product name', () => {
-  component.product = { name: 'Test Product', price: 99 };
-  // Missing detectChanges()!
-  const name = fixture.nativeElement.querySelector('.product-name');
-  expect(name.textContent).toBe('Test Product'); // FAILS
-});
-
-// ✅ CORRECT: Trigger change detection
-it('should display product name', () => {
-  component.product = { name: 'Test Product', price: 99 };
-  fixture.detectChanges(); // Required!
-  
-  const name = fixture.nativeElement.querySelector('.product-name');
-  expect(name.textContent).toContain('Test Product');
-});
-```
-
-### 🟡 WARNING — Use data-testid for Test Selectors
-
-```typescript
-// ❌ FRAGILE: CSS class or structure-based selectors
-const button = fixture.nativeElement.querySelector('.btn.btn-primary.submit');
-const title = fixture.nativeElement.querySelector('div > h1');
-
-// ✅ ROBUST: data-testid attributes
-const button = fixture.nativeElement.querySelector('[data-testid="submit-button"]');
-const title = fixture.nativeElement.querySelector('[data-testid="page-title"]');
-```
-
-```html
-<!-- In template -->
-<button data-testid="submit-button" class="btn btn-primary">Submit</button>
-<h1 data-testid="page-title">{{ title }}</h1>
-```
-
-### 🟢 BEST PRACTICE — Component Testing Patterns
-
-📚 **Reference:** `references/component-patterns.md`
-
-```typescript
-describe('ProductListComponent', () => {
-  let component: ProductListComponent;
-  let fixture: ComponentFixture<ProductListComponent>;
-  let productService: jasmine.SpyObj<ProductService>;
-
-  beforeEach(async () => {
-    // Create spy object for service
-    const productServiceSpy = jasmine.createSpyObj('ProductService', ['getProducts']);
-
-    await TestBed.configureTestingModule({
-      imports: [ProductListComponent],
-      providers: [
-        { provide: ProductService, useValue: productServiceSpy }
-      ]
-    }).compileComponents();
-
-    fixture = TestBed.createComponent(ProductListComponent);
-    component = fixture.componentInstance;
-    productService = TestBed.inject(ProductService) as jasmine.SpyObj<ProductService>;
-  });
-
-  describe('initialization', () => {
-    it('should load products on init', () => {
-      const mockProducts = [{ id: '1', name: 'Product 1' }];
-      productService.getProducts.and.returnValue(of(mockProducts));
-
-      fixture.detectChanges(); // Triggers ngOnInit
-
-      expect(productService.getProducts).toHaveBeenCalled();
-      expect(component.products()).toEqual(mockProducts);
-    });
-  });
-
-  describe('user interactions', () => {
-    it('should filter products when search term changes', () => {
-      // Arrange
-      component.products.set([
-        { id: '1', name: 'Apple' },
-        { id: '2', name: 'Banana' }
-      ]);
-      fixture.detectChanges();
-
-      // Act
-      const searchInput = fixture.nativeElement.querySelector('[data-testid="search-input"]');
-      searchInput.value = 'Apple';
-      searchInput.dispatchEvent(new Event('input'));
-      fixture.detectChanges();
-
-      // Assert
-      const productCards = fixture.nativeElement.querySelectorAll('[data-testid="product-card"]');
-      expect(productCards.length).toBe(1);
-    });
-  });
-});
-```
-
----
-
-## Service Testing
-
-### 🔴 BLOCKING — Test Services in Isolation
-
-```typescript
-import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { ProductService } from './product.service';
-
-describe('ProductService', () => {
-  let service: ProductService;
-  let httpMock: HttpTestingController;
-
-  beforeEach(() => {
-    TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [ProductService]
-    });
-
-    service = TestBed.inject(ProductService);
-    httpMock = TestBed.inject(HttpTestingController);
-  });
-
-  afterEach(() => {
-    // Verify no outstanding HTTP requests
-    httpMock.verify();
-  });
-
-  it('should fetch products', () => {
-    const mockProducts = [{ id: '1', name: 'Product 1' }];
-
-    service.getProducts().subscribe(products => {
-      expect(products).toEqual(mockProducts);
-    });
-
-    const req = httpMock.expectOne('/api/products');
-    expect(req.request.method).toBe('GET');
-    req.flush(mockProducts);
-  });
-
-  it('should handle error response', () => {
-    service.getProducts().subscribe({
-      next: () => fail('should have failed'),
-      error: (error) => {
-        expect(error.status).toBe(500);
-      }
-    });
-
-    const req = httpMock.expectOne('/api/products');
-    req.flush('Error', { status: 500, statusText: 'Server Error' });
-  });
-});
-```
-
-### 🟢 BEST PRACTICE — Service with Dependencies
-
-```typescript
-describe('CartService', () => {
-  let service: CartService;
-  let storageService: jasmine.SpyObj<StorageService>;
-  let analyticsService: jasmine.SpyObj<AnalyticsService>;
-
-  beforeEach(() => {
-    const storageSpy = jasmine.createSpyObj('StorageService', ['get', 'set']);
-    const analyticsSpy = jasmine.createSpyObj('AnalyticsService', ['track']);
-
-    TestBed.configureTestingModule({
-      providers: [
-        CartService,
-        { provide: StorageService, useValue: storageSpy },
-        { provide: AnalyticsService, useValue: analyticsSpy }
-      ]
-    });
-
-    service = TestBed.inject(CartService);
-    storageService = TestBed.inject(StorageService) as jasmine.SpyObj<StorageService>;
-    analyticsService = TestBed.inject(AnalyticsService) as jasmine.SpyObj<AnalyticsService>;
-  });
-
-  it('should persist cart to storage when item added', () => {
-    storageService.get.and.returnValue([]);
-
-    service.addItem({ id: '1', name: 'Test', price: 10 });
-
-    expect(storageService.set).toHaveBeenCalledWith('cart', jasmine.any(Array));
-  });
-
-  it('should track analytics when item added', () => {
-    storageService.get.and.returnValue([]);
-
-    service.addItem({ id: '1', name: 'Test', price: 10 });
-
-    expect(analyticsService.track).toHaveBeenCalledWith('cart_item_added', {
-      productId: '1',
-      price: 10
-    });
-  });
-});
-```
-
----
-
-## Mocking
-
-### 🔴 BLOCKING — Only Mock External Dependencies
-
-```typescript
-// ❌ WRONG: Mocking internal logic
-const spy = spyOn(component, 'calculateDiscount').and.returnValue(10);
-
-// ✅ CORRECT: Mock external services
-const discountService = jasmine.createSpyObj('DiscountService', ['getDiscount']);
-discountService.getDiscount.and.returnValue(of(10));
-```
-
-### 🔴 BLOCKING — Mock HTTP, Never Real Calls
-
-```typescript
-// ❌ WRONG: Real HTTP calls in tests
-beforeEach(() => {
-  TestBed.configureTestingModule({
-    imports: [HttpClientModule], // Real HTTP!
-    providers: [ProductService]
-  });
-});
-
-// ✅ CORRECT: Mock HTTP
-beforeEach(() => {
-  TestBed.configureTestingModule({
-    imports: [HttpClientTestingModule], // Mocked HTTP
-    providers: [ProductService]
-  });
-});
-```
-
-### 🟢 BEST PRACTICE — Creating Test Mocks
-
-📚 **Reference:** `references/mocking-patterns.md`
-
-```typescript
-// Mock factory function
-function createMockProductService(): jasmine.SpyObj<ProductService> {
-  return jasmine.createSpyObj('ProductService', [
-    'getProducts',
-    'getProduct',
-    'createProduct',
-    'updateProduct',
-    'deleteProduct'
-  ]);
-}
-
-// Mock with default behaviors
-function createMockProductServiceWithDefaults(): jasmine.SpyObj<ProductService> {
-  const mock = createMockProductService();
-  mock.getProducts.and.returnValue(of([]));
-  mock.getProduct.and.returnValue(of(null));
-  return mock;
-}
-
-// Partial mock (spy on real service)
-it('should call real method with spy', () => {
-  const service = TestBed.inject(ProductService);
-  spyOn(service, 'getProducts').and.callThrough();
-  
-  // Test with real implementation but ability to verify calls
-});
-```
-
-### 🟡 WARNING — Jasmine vs Jest Mocking Syntax
-
-```typescript
-// Jasmine
-const spy = jasmine.createSpyObj('Service', ['method']);
-spy.method.and.returnValue(of(data));
-spyOn(object, 'method').and.returnValue(value);
-
-// Jest
-const spy = jest.fn().mockReturnValue(of(data));
-jest.spyOn(object, 'method').mockReturnValue(value);
-```
-
----
-
-## Async Testing
-
-### 🔴 BLOCKING — Use fakeAsync for Timer-Based Code
-
-```typescript
-import { fakeAsync, tick, flush } from '@angular/core/testing';
-
-// ❌ WRONG: Real timers make tests slow and flaky
-it('should debounce search', (done) => {
-  component.searchTerm = 'test';
-  setTimeout(() => {
-    expect(component.results.length).toBeGreaterThan(0);
-    done();
-  }, 500); // Slow!
-});
-
-// ✅ CORRECT: Use fakeAsync and tick
-it('should debounce search', fakeAsync(() => {
-  component.searchTerm = 'test';
-  tick(300); // Fast-forward 300ms
-  
-  expect(component.results.length).toBeGreaterThan(0);
-}));
-
-// ✅ CORRECT: flush() for all pending timers
-it('should complete all animations', fakeAsync(() => {
-  component.startAnimation();
-  flush(); // Complete all pending timers
-  
-  expect(component.animationComplete).toBe(true);
-}));
-```
-
-### 🔴 BLOCKING — Use waitForAsync for Promise-Based Code
-
-```typescript
-import { waitForAsync } from '@angular/core/testing';
-
-it('should load data', waitForAsync(() => {
-  component.loadData();
-  
-  fixture.whenStable().then(() => {
-    expect(component.data).toBeDefined();
-  });
-}));
-```
-
-### 🟢 BEST PRACTICE — Testing Observables
-
-```typescript
-import { of, throwError, delay } from 'rxjs';
-
-describe('Observable testing', () => {
-  it('should handle observable with done callback', (done) => {
-    service.getData().subscribe({
-      next: (data) => {
-        expect(data).toBeDefined();
-        done();
-      },
-      error: done.fail
-    });
-  });
-
-  it('should use fakeAsync for delayed observables', fakeAsync(() => {
-    let result: string | undefined;
-    
-    of('test').pipe(delay(1000)).subscribe(v => result = v);
-    
-    expect(result).toBeUndefined();
-    tick(1000);
-    expect(result).toBe('test');
-  }));
-
-  it('should test observable errors', () => {
-    productService.getProduct.and.returnValue(
-      throwError(() => new Error('Not found'))
-    );
-
-    component.loadProduct('invalid-id');
-    fixture.detectChanges();
-
-    expect(component.error()).toBe('Not found');
-  });
-});
-```
-
----
-
-## Signal Testing (Angular 16+)
-
-### 🔴 BLOCKING — Use Signal Accessors in Tests
-
-```typescript
-describe('Component with Signals', () => {
-  it('should update computed signal', () => {
-    // Arrange
-    component.items.set([
-      { price: 10 },
-      { price: 20 }
-    ]);
-
-    // Assert - call signal as function
-    expect(component.total()).toBe(30);
-  });
-
-  it('should react to signal changes', () => {
-    component.count.set(5);
-    fixture.detectChanges();
-
-    const display = fixture.nativeElement.querySelector('[data-testid="count"]');
-    expect(display.textContent).toContain('5');
-  });
-});
-```
-
-### 🟢 BEST PRACTICE — Testing Signal Effects
-
-```typescript
-import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-
-it('should trigger effect on signal change', fakeAsync(() => {
-  const logSpy = spyOn(console, 'log');
-  
-  // Component has effect(() => console.log(this.value()))
-  component.value.set('new value');
-  tick(); // Effects run asynchronously
-  
-  expect(logSpy).toHaveBeenCalledWith('new value');
-}));
-```
-
----
-
-## Test Organization
-
-### 🟢 BEST PRACTICE — AAA Pattern (Arrange-Act-Assert)
-
-```typescript
-it('should calculate discount for premium user', () => {
-  // Arrange
-  const user: User = { id: '1', tier: 'premium' };
-  const cart: CartItem[] = [
-    { productId: 'p1', price: 100, quantity: 2 }
-  ];
-  component.user.set(user);
-  component.cart.set(cart);
-
-  // Act
-  const discount = component.calculateDiscount();
-
-  // Assert
-  expect(discount).toBe(20); // 10% for premium
-});
-```
-
-### 🟢 BEST PRACTICE — Descriptive Test Names
-
-```typescript
-// ❌ WRONG: Vague names
-it('should work', () => {});
-it('test discount', () => {});
-
-// ✅ CORRECT: Describe behavior and context
-describe('ProductCardComponent', () => {
-  describe('when product is out of stock', () => {
-    it('should display "Out of Stock" badge', () => {});
-    it('should disable add to cart button', () => {});
-    it('should show "Notify me" option', () => {});
-  });
-
-  describe('when product has discount', () => {
-    it('should display original price with strikethrough', () => {});
-    it('should display discounted price in red', () => {});
-    it('should show discount percentage badge', () => {});
-  });
-});
-```
-
-### 🟢 BEST PRACTICE — Test File Structure
-
-```typescript
-describe('FeatureComponent', () => {
-  // Setup
-  let component: FeatureComponent;
-  let fixture: ComponentFixture<FeatureComponent>;
-  let mockService: jasmine.SpyObj<FeatureService>;
-
-  beforeEach(async () => {
-    // TestBed configuration
-  });
-
-  // Group related tests
-  describe('initialization', () => {
-    it('should create', () => {});
-    it('should load initial data', () => {});
-  });
-
-  describe('user interactions', () => {
-    describe('when clicking submit button', () => {
-      it('should validate form', () => {});
-      it('should show loading state', () => {});
-      it('should submit data to service', () => {});
-    });
-  });
-
-  describe('error handling', () => {
-    it('should display error message on API failure', () => {});
-    it('should allow retry on error', () => {});
-  });
-
-  describe('edge cases', () => {
-    it('should handle empty data', () => {});
-    it('should handle null response', () => {});
-  });
-});
-```
-
----
-
-## Common Pitfalls
-
-### 🔴 BLOCKING — Don't Forget Cleanup
-
-```typescript
-describe('Component with subscriptions', () => {
-  let subscription: Subscription;
-
-  afterEach(() => {
-    // Clean up subscriptions
-    subscription?.unsubscribe();
-  });
-
-  it('should subscribe to data', () => {
-    subscription = service.data$.subscribe(/* ... */);
-  });
-});
-```
-
-### 🔴 BLOCKING — Avoid Test Interdependence
-
-```typescript
-// ❌ WRONG: Tests depend on each other
 let counter = 0;
 
 it('should increment counter', () => {
   counter++;
   expect(counter).toBe(1);
 });
-
 it('should have counter at 1', () => {
-  expect(counter).toBe(1); // Fails if first test doesn't run
+  expect(counter).toBe(1);   // fails if previous test didn't run
 });
-
-// ✅ CORRECT: Each test is independent
-beforeEach(() => {
-  component.counter = 0;
-});
+```
+##### CORRECT
+```typescript
+beforeEach(() => { component.counter = 0; });
 
 it('should increment counter', () => {
   component.increment();
@@ -678,57 +77,286 @@ it('should increment counter', () => {
 });
 ```
 
-### 🟡 WARNING — Don't Test Framework Code
+---
+
+## When Choosing the Test Framework
+
+**Default for Angular projects: Jasmine** (ships with Angular CLI, integrates with `TestBed`, no configuration overhead). All examples in this skill use Jasmine syntax.
+
+Consider **Jest** for non-Angular projects, when you need built-in snapshot testing, or when parallel execution becomes a bottleneck.
+
+### Jasmine ↔ Jest syntax (single source of truth)
+
+| Operation | Jasmine | Jest |
+|-----------|---------|------|
+| Create spy function | `jasmine.createSpy('name')` | `jest.fn()` |
+| Spy on a method | `spyOn(obj, 'method')` | `jest.spyOn(obj, 'method')` |
+| Service-wide spy | `jasmine.createSpyObj('Svc', ['a','b'])` | manual `{ a: jest.fn(), b: jest.fn() }` |
+| Return value | `spy.and.returnValue(v)` | `spy.mockReturnValue(v)` |
+| Resolve promise | `spy.and.resolveTo(v)` | `spy.mockResolvedValue(v)` |
+| Throw error | `spy.and.throwError('e')` | `spy.mockImplementation(() => { throw new Error('e') })` |
+| Call through | `spy.and.callThrough()` | (no direct equivalent — use partial mocks) |
+| Verify call | `expect(spy).toHaveBeenCalled()` | `expect(spy).toHaveBeenCalled()` |
+
+### 🟡 WARNING
+
+#### Never mix Jasmine and Jest syntax in the same test
+**Why:** the runtime APIs are not interchangeable: `jest.fn()` does not have `.and.returnValue`, and `jasmine.createSpy()` does not have `.mockReturnValue`. Mixed code fails at the point of mismatch with a confusing TypeError, often paired with a passing-but-stale assertion above it.
+
+---
+
+## When Setting Up Component Tests
+
+📚 **References:** [testing-with-testbed.md](references/testing-with-testbed.md) (default Angular TestBed) | [testing-with-testing-library.md](references/testing-with-testing-library.md) (Angular Testing Library — alternative for query-driven tests)
+
+### 🔴 BLOCKING
+
+#### Use `TestBed.configureTestingModule(...).compileComponents()` then `TestBed.createComponent(...)`
+**Why:** TestBed is the only setup path that builds the component with Angular's real injector, change-detection, and lifecycle hooks. Bypassing TestBed (instantiating with `new MyComponent(...)`) skips DI, lifecycle hooks, and template compilation — the test then verifies a class that has nothing to do with what runs in production.
 
 ```typescript
-// ❌ WRONG: Testing Angular's @Input decorator
-it('should accept input', () => {
-  component.title = 'Test';
-  expect(component.title).toBe('Test'); // Pointless
-});
+beforeEach(async () => {
+  await TestBed.configureTestingModule({
+    imports: [ProductCardComponent],            // standalone
+    providers: [
+      { provide: ProductService, useValue: jasmine.createSpyObj('ProductService', ['getProducts']) },
+    ],
+  }).compileComponents();
 
-// ✅ CORRECT: Test how input affects behavior
-it('should display title in header', () => {
-  component.title = 'Test';
-  fixture.detectChanges();
-  
-  const header = fixture.nativeElement.querySelector('h1');
-  expect(header.textContent).toContain('Test');
+  fixture = TestBed.createComponent(ProductCardComponent);
+  component = fixture.componentInstance;
+});
+```
+
+#### Call `fixture.detectChanges()` after every state change
+**Why:** Angular does not auto-render in tests. A property change on the component class is invisible to the DOM until change detection runs. Asserting on the DOM without a `detectChanges()` test the previous state, not the change you just made.
+
+##### WRONG
+```typescript
+component.product = { name: 'Test', price: 99 };
+const name = fixture.nativeElement.querySelector('.product-name');
+expect(name.textContent).toBe('Test');     // empty — fails
+```
+##### CORRECT
+```typescript
+component.product = { name: 'Test', price: 99 };
+fixture.detectChanges();
+const name = fixture.nativeElement.querySelector('.product-name');
+expect(name.textContent).toContain('Test');
+```
+
+#### Use `data-testid` attributes for test selectors — never CSS classes or DOM structure
+**Why:** classes belong to styling, structure belongs to the design system — both change for reasons unrelated to component behavior, breaking tests that depended on them. `data-testid` is an explicit test contract: it changes only when the test should change.
+
+##### WRONG
+```typescript
+fixture.nativeElement.querySelector('.btn.btn-primary.submit');
+fixture.nativeElement.querySelector('div > h1');
+```
+##### CORRECT
+```typescript
+fixture.nativeElement.querySelector('[data-testid="submit-button"]');
+fixture.nativeElement.querySelector('[data-testid="page-title"]');
+```
+
+#### For signal inputs: set values via `componentRef.setInput('name', value)`, never by property assignment
+**Why:** signal inputs are read-only on the component instance — direct assignment either fails to compile under strict mode or silently sets a stale field the signal never tracks. `setInput()` goes through Angular's input-binding pipeline, which is the same mechanism a parent template uses.
+
+```typescript
+fixture.componentRef.setInput('product', { id: '1', name: 'Test', price: 99 });
+fixture.detectChanges();
+```
+
+---
+
+## When Testing Services
+
+📚 **References:** [testing-with-testbed.md](references/testing-with-testbed.md)
+
+### 🔴 BLOCKING
+
+#### Use `HttpClientTestingModule` + `HttpTestingController` — never real HTTP
+**Why:** real HTTP makes tests slow, flaky (network), and dependent on environment (which API is up?). The testing module intercepts `HttpClient` calls and lets the test assert on the request **and** craft the response synchronously.
+
+##### WRONG
+```typescript
+TestBed.configureTestingModule({
+  imports: [HttpClientModule],          // real HTTP — hits the network
+  providers: [ProductService],
+});
+```
+##### CORRECT
+```typescript
+TestBed.configureTestingModule({
+  imports: [HttpClientTestingModule],
+  providers: [ProductService],
+});
+afterEach(() => httpMock.verify());     // catch unexpected calls
+```
+
+#### Inject test doubles for every collaborator
+**Why:** a service test that uses real collaborators is an integration test in disguise — it can break for reasons that have nothing to do with the unit under test, and the failure message points to the wrong file. Doubles isolate the cause.
+
+```typescript
+const storageSpy = jasmine.createSpyObj('StorageService', ['get', 'set']);
+const analyticsSpy = jasmine.createSpyObj('AnalyticsService', ['track']);
+
+TestBed.configureTestingModule({
+  providers: [
+    CartService,
+    { provide: StorageService,   useValue: storageSpy },
+    { provide: AnalyticsService, useValue: analyticsSpy },
+  ],
 });
 ```
 
 ---
 
-## Test Coverage Guidelines
+## When Mocking
 
-### 🟢 BEST PRACTICE — What to Test
+📚 **References:** [mocking-patterns.md](references/mocking-patterns.md)
 
-| Priority | What | Why |
-|----------|------|-----|
-| **High** | Business logic | Core functionality |
-| **High** | User interactions | UX correctness |
-| **High** | Error handling | Resilience |
-| **Medium** | Edge cases | Robustness |
-| **Medium** | Integration points | Contract verification |
-| **Low** | Simple getters/setters | Low value |
-| **Skip** | Framework code | Already tested |
+### 🔴 BLOCKING
 
-### 🟡 WARNING — Coverage Targets
+#### Mock external dependencies only — never the unit under test's own internals
+**Why:** mocking your own logic ("this method returns 10") inverts the test: you no longer verify the behavior, you verify that the test setup matches itself. The remaining assertions become tautologies.
 
+##### WRONG
+```typescript
+const spy = spyOn(component, 'calculateDiscount').and.returnValue(10);
+component.computeTotal();
+expect(component.total).toBe(110);     // proves nothing about computeTotal
 ```
-Aim for meaningful coverage, not 100%:
-- Services: 80-90% (focus on business logic)
-- Components: 70-80% (focus on interactions)
-- Utils/Helpers: 90%+ (pure functions are easy to test)
-- Models/Types: No runtime tests needed
+##### CORRECT
+```typescript
+const discountService = jasmine.createSpyObj('DiscountService', ['getDiscount']);
+discountService.getDiscount.and.returnValue(of(10));
+component.computeTotal();
+expect(component.total).toBe(110);     // exercises real computeTotal logic
+```
+
+#### Use `jasmine.createSpyObj` for whole-service mocks; `spyOn` for single methods on a real instance
+**Why:** `createSpyObj` produces a fully-typed mock with every method stubbed — no accidental real calls. `spyOn` keeps the real implementation but lets you assert call counts; use it only when you genuinely need partial mocking.
+
+---
+
+## When Testing Async Code
+
+### 🔴 BLOCKING
+
+#### Use `fakeAsync` + `tick(ms)` for timer-based code; never real `setTimeout`
+**Why:** real timers turn 100 ms debounces into 100 ms tests. With 200 such tests the suite takes a full minute longer than necessary, and any timing skew produces flake. `fakeAsync` virtualizes the clock — `tick(300)` advances it instantly and synchronously.
+
+##### WRONG
+```typescript
+it('should debounce search', (done) => {
+  component.searchTerm = 'test';
+  setTimeout(() => {
+    expect(component.results.length).toBeGreaterThan(0);
+    done();
+  }, 500);                                      // 500 ms × N tests
+});
+```
+##### CORRECT
+```typescript
+it('should debounce search', fakeAsync(() => {
+  component.searchTerm = 'test';
+  tick(300);                                    // instant
+  expect(component.results.length).toBeGreaterThan(0);
+}));
+```
+
+#### Use `waitForAsync` (or `await fixture.whenStable()`) for promise-based code
+**Why:** the assertion must run after the microtask queue drains, otherwise the test passes/fails on the previous state. `waitForAsync` wraps the test in a zone that resolves only when all pending promises settle.
+
+```typescript
+it('should load data', waitForAsync(() => {
+  component.loadData();
+  fixture.whenStable().then(() => {
+    expect(component.data).toBeDefined();
+  });
+}));
 ```
 
 ---
 
-## Related Skills
+## When Testing Signals (Angular 17+)
 
-- `common-frontend-angular` — Angular testing patterns
-- `common-typescript` — TypeScript test utilities
-- `common-e2e-playwright` — E2E testing with Playwright
-- `buy-nature-frontend-coding-guide` — Frontend testing philosophy
-- `buy-nature-backoffice-coding-guide` — Backoffice testing patterns
+### 🔴 BLOCKING
+
+#### Read signals as functions in assertions — `signal()`, never `signal.value`
+**Why:** signals are accessor functions, not properties. `signal.value` returns `undefined` on a regular signal (or the function reference on a writable one) — the assertion compares the wrong thing. `signal()` invokes the accessor, which is what production code does too.
+
+```typescript
+component.items.set([{ price: 10 }, { price: 20 }]);
+expect(component.total()).toBe(30);             // function call
+```
+
+#### Use `fakeAsync` + `tick()` to flush effects
+**Why:** `effect()` runs asynchronously through Angular's scheduler. A synchronous assertion after `signal.set()` runs before the effect has fired. `tick()` advances the scheduler in `fakeAsync` mode and lets the effect flush.
+
+```typescript
+it('should trigger effect on signal change', fakeAsync(() => {
+  const logSpy = spyOn(console, 'log');
+  component.value.set('new value');
+  tick();
+  expect(logSpy).toHaveBeenCalledWith('new value');
+}));
+```
+
+---
+
+## When Organizing Tests
+
+### Naming
+
+```typescript
+// ❌ vague
+it('should work', () => {});
+it('test discount', () => {});
+
+// ✅ describes behavior + context
+describe('ProductCardComponent', () => {
+  describe('when product is out of stock', () => {
+    it('should display "Out of Stock" badge', () => {});
+    it('should disable add to cart button', () => {});
+  });
+});
+```
+
+### 🟡 WARNING
+
+#### Each test follows AAA — Arrange, Act, Assert — clearly separated
+**Why:** mixed setup and assertions hide the test's intent. AAA makes the input, the trigger, and the expectation legible at a glance — when the test fails, the diagnosis is immediate.
+
+#### Don't test framework code (decorators, untouched lifecycle shells)
+**Why:** Angular already tests `@Input` binding and `ngOnInit` plumbing. A test that asserts `component.title === 'Test'` after assignment proves nothing about your code — it slows the suite for zero coverage value.
+
+---
+
+## When Deciding What to Cover
+
+| Priority | What | Target |
+|----------|------|--------|
+| **High** | Business logic | 80–90 % |
+| **High** | User interactions (DOM events → state) | 70–80 % |
+| **High** | Error handling paths | every branch |
+| **Medium** | Edge cases (empty, null, boundaries) | each documented |
+| **Medium** | Integration points (service ↔ component) | contract verified |
+| **Skip** | Trivial getters/setters, framework code | — |
+
+> Aim for **meaningful coverage**, not 100 %. A 65 % suite that exercises every branch of business logic beats a 95 % suite that re-asserts framework code.
+
+---
+
+## Output Contract
+
+When producing test artifacts, deliver each in this exact form:
+
+| Artifact | Required Form |
+|----------|---------------|
+| **Component test** (`*.component.spec.ts`) | `TestBed.configureTestingModule + compileComponents`, signal inputs via `componentRef.setInput`, `data-testid` selectors, AAA per `it`, nested `describe` for context, fixture cleanup if subscriptions used. |
+| **Service test** (`*.service.spec.ts`) | `HttpClientTestingModule` for HTTP, `jasmine.createSpyObj` for collaborators, `httpMock.verify()` in `afterEach`, error path covered. |
+| **Spy / Mock** | `jasmine.createSpyObj('Svc', [...])` for whole-service mocks; `spyOn(obj, 'method')` for single methods; never `as any` to bypass typing. |
+| **Async test** | `fakeAsync` + `tick(ms)` for timers/effects/signal updates; `waitForAsync` + `fixture.whenStable()` for promises; `(done) => {...}` only as a last resort. |
+| **Test name** | `should <expected behavior> when <condition>` — verb, object, precondition. |

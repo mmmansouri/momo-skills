@@ -2,6 +2,18 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+## Table of Contents
+
+- [Type Scale](#type-scale)
+- [BLOCKING Rules](#-blocking-rules)
+- [Font Pairing Strategy](#font-pairing-strategy)
+- [AVOID These Generic Fonts](#-avoid-these-generic-fonts)
+- [Font Selection Checklist](#font-selection-checklist)
+- [Implementation Example](#implementation-example)
+- [Common Typography Mistakes](#common-typography-mistakes)
+- [Responsive Typography](#responsive-typography)
+- [Accessibility Considerations](#accessibility-considerations)
+
 ---
 
 ## Type Scale

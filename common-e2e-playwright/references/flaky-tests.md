@@ -2,6 +2,24 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Common Causes](#common-causes)
+- [Race Conditions](#race-conditions)
+- [Shared State](#shared-state)
+- [Animation Timing](#animation-timing)
+- [Network Variability](#network-variability)
+- [Time-Dependent Logic](#time-dependent-logic)
+- [Random Data](#random-data)
+- [Debugging Flaky Tests](#debugging-flaky-tests)
+- [Example Flaky Test Scenarios](#example-flaky-test-scenarios)
+- [Retry Strategy](#retry-strategy)
+- [Quick Reference](#quick-reference)
+- [Common Patterns](#common-patterns)
+- [Anti-Patterns](#anti-patterns)
+- [Flakiness Metrics](#flakiness-metrics)
+
 ---
 
 ## Overview
@@ -318,7 +336,7 @@ test('debug slow motion', async ({ page }) => {
 
 ---
 
-## Buy Nature Flaky Test Examples
+## Example Flaky Test Scenarios
 
 ### Example: Two-Tier Auth Timing
 

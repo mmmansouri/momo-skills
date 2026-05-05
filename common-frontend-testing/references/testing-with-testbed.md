@@ -1,4 +1,21 @@
-# Component Testing Patterns
+# Testing Components with TestBed
+
+> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+
+## Table of Contents
+
+- [Standalone Component Setup](#standalone-component-setup)
+- [Testing Inputs](#testing-inputs)
+- [Testing Outputs](#testing-outputs)
+- [Testing DOM Interactions](#testing-dom-interactions)
+- [Testing Conditional Rendering](#testing-conditional-rendering)
+- [Testing with Router](#testing-with-router)
+- [Testing with Providers](#testing-with-providers)
+- [Testing Child Components](#testing-child-components)
+- [Testing Lifecycle Hooks](#testing-lifecycle-hooks)
+- [Debug Utilities](#debug-utilities)
+
+---
 
 > Complete patterns for testing Angular components effectively.
 

@@ -1,252 +1,141 @@
 ---
 name: common-e2e-playwright
 description: >-
-  End-to-end testing with Playwright. Use when: writing E2E tests, designing
-  page objects, handling async operations, managing test data, CI/CD integration,
-  or debugging flaky tests. Contains both pure E2E discipline and Playwright-specific guidance.
+  End-to-end testing with Playwright. Use this skill whenever the user asks to
+  write an E2E test, automate a UI scenario in the browser, design a Page Object,
+  add a fixture, mock a network request, debug a flaky test, configure Playwright,
+  wire E2E tests into CI, or verify a regression in the browser — even when they
+  don't explicitly say "E2E" or "Playwright". Contains both the E2E discipline
+  (what to test, isolation, locator hygiene, async strategy) and the Playwright
+  API surface (`getByRole`, `route`, fixtures, `expect`).
 ---
 
-# E2E Testing with Playwright Guide
+# E2E Testing with Playwright
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
 ---
 
-# Part 1: E2E Testing Discipline (Tool-Agnostic)
+## When Reasoning About E2E Testing
 
-## Core Principles
+Apply these foundational stances to every E2E test:
 
-1. **Test User Journeys**: Focus on critical paths, not implementation details
-2. **Isolation**: Each test independent, no shared state between tests
-3. **Stability Over Speed**: Reliable tests > fast but flaky tests
-4. **Readable Tests**: Tests as documentation of expected behavior
-5. **Minimal E2E**: Only test what can't be tested at lower levels
+1. **Test user journeys**, not implementation details.
+2. **Isolation** — each test must run on its own, with fresh data.
+3. **Stability over speed** — a reliable slow test beats a fast flaky one.
+4. **Readable as documentation** — a test should describe expected behavior to a non-author.
+5. **Minimal E2E** — only test what cannot be covered at lower levels (unit, integration).
+
+### 🔴 BLOCKING
+
+#### Test critical user journeys only — not what unit or integration tests already cover
+**Why:** E2E tests are 10–100× slower and more expensive to debug than unit tests. Duplicating coverage at the E2E level inflates the suite, slows the feedback loop, and creates redundant failure points. Every E2E test must justify its position by exercising integration that no other layer can reach.
+
+| ✅ Test in E2E | ❌ Don't test in E2E |
+|----------------|----------------------|
+| Login / logout flow | Form validation rules |
+| Purchase checkout | Individual component rendering |
+| Search and filter | API response formats |
+| Multi-step wizards | CSS styling |
+| Cross-browser specifics | Business logic (unit) |
+
+#### Each test runs in full isolation — no shared state across tests
+**Why:** order-dependent tests fail unpredictably, can't be parallelized, and hide the real defect when one breaks. Shared mutable state (a shared user, a leftover cart) couples tests and turns the failure of test N into N false positives downstream.
+
+#### Never add fixed waits or retry-loops to mask flakiness — fix the root cause
+**Why:** `waitForTimeout(5000)` and `retries: 5` make the symptom go away locally but the underlying race condition still produces failures in CI under load. The fix is *always* an explicit wait condition (element visible, network response, URL change). Hiding flakiness consumes the team's debugging budget on the same defects forever.
+
+##### WRONG
+```typescript
+await page.click('#submit')
+await page.waitForTimeout(3000)        // hope the dialog is open by now
+await page.click('text=Confirm')
+```
+##### CORRECT
+```typescript
+await page.click('#submit')
+await expect(page.getByRole('dialog', { name: 'Confirm action' })).toBeVisible()
+await page.getByRole('button', { name: 'Confirm' }).click()
+```
 
 ---
 
-## When Designing E2E Test Strategy
+## When Designing the E2E Test Strategy
 
-📚 **References:** [test-strategy.md](references/test-strategy.md)
+📚 **References:** [strategy-and-structure.md](references/strategy-and-structure.md)
 
 ### Test Pyramid Positioning
 
 ```
         /\
-       /  \  E2E (5-10%)
-      /----\  - Critical user journeys
-     /      \  - Integration points
-    /--------\  Integration (20-30%)
-   /          \  - API contracts
-  /------------\  - Component integration
- /              \  Unit (60-70%)
-/________________\  - Business logic
+       /  \    E2E (5–10%)        — critical user journeys
+      /----\
+     /      \  Integration (20–30%) — API contracts, component integration
+    /--------\
+   /          \ Unit (60–70%)       — business logic
+  /____________\
 ```
 
 ### 🔴 BLOCKING
-- **Only test critical user journeys** → Login, checkout, core features
-- **Don't duplicate unit test coverage** → E2E for integration only
-- **No implementation details** → Test what user sees/does
 
-### What to E2E Test
-
-| ✅ Test | ❌ Don't Test |
-|---------|---------------|
-| Login/logout flow | Form validation rules |
-| Purchase checkout | Individual component rendering |
-| Search and filter | API response formats |
-| Multi-step wizards | CSS styling |
-| Cross-browser issues | Business logic (unit test) |
+#### Don't duplicate coverage across layers — pick the lowest layer that can verify the behavior
+**Why:** every behavior tested at multiple layers multiplies maintenance cost and debugging confusion when two layers diverge. The pyramid is a budget, not an addition.
 
 ---
 
-## When Structuring E2E Tests
+## When Structuring the E2E Project
 
-📚 **References:** [project-structure.md](references/project-structure.md)
-
-### 🔴 BLOCKING
+📚 **References:** [strategy-and-structure.md](references/strategy-and-structure.md)
 
 ```
 e2e/
-├── tests/
+├── tests/                  # Spec files grouped by feature
 │   ├── auth/
-│   │   ├── login.spec.ts
-│   │   └── logout.spec.ts
 │   ├── checkout/
-│   │   ├── cart.spec.ts
-│   │   └── payment.spec.ts
 │   └── catalog/
-│       └── product-search.spec.ts
-├── pages/              # Page Object Models
-│   ├── login.page.ts
-│   ├── catalog.page.ts
-│   └── checkout.page.ts
-├── fixtures/           # Test data & setup
-│   ├── users.ts
-│   └── products.ts
-├── utils/              # Helpers
-│   └── api-helpers.ts
+├── pages/                  # Page Object Models
+├── fixtures/               # Test data + Playwright fixtures
+├── utils/                  # Cross-cutting helpers (API client, etc.)
 └── playwright.config.ts
 ```
 
 ---
 
-## When Writing Page Objects
+## When Selecting Locators
 
-📚 **References:** [page-objects.md](references/page-objects.md)
+📚 **References:** [locators-guide.md](references/locators-guide.md)
 
-### 🔴 BLOCKING
-- **Encapsulate locators** → Never expose raw selectors to tests
-- **Return page objects from navigation** → Enable fluent chaining
-- **No assertions in page objects** → Page objects = actions, tests = assertions
+### Selector Priority (best → worst)
 
-### Page Object Pattern
-
-```
-┌─────────────────────────────────────┐
-│           Test Spec                 │
-│  • Describes user journey           │
-│  • Contains assertions              │
-│  • Uses page objects                │
-└──────────────┬──────────────────────┘
-               │ uses
-               ▼
-┌─────────────────────────────────────┐
-│         Page Object                 │
-│  • Encapsulates page structure      │
-│  • Provides actions (click, fill)   │
-│  • Hides locator details            │
-└──────────────┬──────────────────────┘
-               │ interacts with
-               ▼
-┌─────────────────────────────────────┐
-│         Application                 │
-└─────────────────────────────────────┘
-```
-
----
-
-## When Selecting Elements
-
-### Selector Priority (Best → Worst)
-
-| Priority | Selector Type | Example | Why |
-|----------|---------------|---------|-----|
-| 1 | Test ID | `data-testid="submit-btn"` | Explicit, stable |
-| 2 | Role + Name | `role=button[name="Submit"]` | Accessible, semantic |
-| 3 | Label text | `label:has-text("Email")` | User-visible |
-| 4 | Placeholder | `placeholder="Enter email"` | User-visible |
-| 5 | CSS class | `.submit-button` | Fragile, avoid |
-| 6 | XPath | `//div[@class="x"]/button` | Very fragile, never |
+| Priority | Selector | Example |
+|---------:|----------|---------|
+| 1 | Test ID | `page.getByTestId('submit-btn')` |
+| 2 | Role + name | `page.getByRole('button', { name: 'Submit' })` |
+| 3 | Label | `page.getByLabel('Email')` |
+| 4 | Placeholder | `page.getByPlaceholder('Enter email')` |
+| 5 | Text | `page.getByText('Welcome')` |
+| 6 | CSS class | `page.locator('.btn-primary')` *(avoid)* |
+| 7 | XPath | `page.locator('//button[...]')` *(never)* |
 
 ### 🔴 BLOCKING
-- **Never use XPath** → Too fragile, hard to read
-- **Never use CSS classes for styling** → They change
-- **Use data-testid for complex cases** → Explicit test contract
 
----
+#### Never use XPath or CSS class selectors for production E2E
+**Why:** XPath is unreadable and brittle. CSS classes belong to styling and change when the design team refactors — your tests then fail for reasons unrelated to product behavior. Test IDs and ARIA roles are explicit contracts that survive UI restyling.
 
-## When Managing Test Data
-
-📚 **References:** [test-data.md](references/test-data.md)
-
-### 🔴 BLOCKING
-- **Each test creates its own data** → No shared test data between tests
-- **Clean up after tests** → Or use isolated environments
-- **Never use production data** → Security + stability risks
-
-### Test Data Strategies
-
-| Strategy | When to Use | Pros | Cons |
-|----------|-------------|------|------|
-| API seeding | Fast setup needed | Fast, reliable | Requires API access |
-| UI seeding | Testing create flows | Tests real flow | Slow |
-| Database seeding | Complex data setup | Very fast | Tight DB coupling |
-| Fixtures | Static reference data | Simple | Can get stale |
-
----
-
-## When Handling Async Operations
-
-### 🔴 BLOCKING
-- **Never use fixed waits** → `sleep(5000)` is always wrong
-- **Wait for specific conditions** → Element visible, network idle, text appears
-- **Set reasonable timeouts** → Don't wait forever
-
-### Wait Strategies
-
-| Need | Strategy |
-|------|----------|
-| Element appears | Wait for selector |
-| Text changes | Wait for text content |
-| Navigation | Wait for URL/load state |
-| API response | Wait for network request |
-| Animation | Wait for stable position |
-
----
-
-## When Dealing with Flaky Tests
-
-📚 **References:** [flaky-tests.md](references/flaky-tests.md)
-
-### Common Causes & Solutions
-
-| Cause | Solution |
-|-------|----------|
-| Race conditions | Explicit waits for conditions |
-| Shared state | Test isolation, fresh data |
-| Animation timing | Wait for animation end |
-| Network variability | Mock or wait for network |
-| Time-dependent logic | Mock time/dates |
-| Random data | Seed random generators |
-
-### 🔴 BLOCKING
-- **Never add retry loops to hide flakiness** → Fix root cause
-- **Never increase timeouts blindly** → Find the real issue
-
----
-
-# Part 2: Playwright-Specific Guidance
-
-## When Setting Up Playwright
-
-📚 **References:** [playwright-config.md](references/playwright-config.md)
-
-### 🔴 BLOCKING - Configuration
-
+##### WRONG
 ```typescript
-// playwright.config.ts
-import { defineConfig, devices } from '@playwright/test';
+page.locator('.btn-primary')
+page.locator('div.container > form > button:nth-child(2)')
+page.locator('//button[@type="submit"]')
+```
+##### CORRECT
+```typescript
+page.getByTestId('submit-btn')
+page.getByRole('button', { name: 'Submit' })
 
-export default defineConfig({
-  testDir: './tests',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,  // Fail CI if .only left in
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ['html'],
-    ['junit', { outputFile: 'results.xml' }]
-  ],
-  
-  use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:4200',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-  },
-
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-  ],
-
-  webServer: {
-    command: 'npm run start',
-    url: 'http://localhost:4200',
-    reuseExistingServer: !process.env.CI,
-  },
-});
+// Scope within a component:
+const card = page.getByTestId('product-card').filter({ hasText: 'iPhone' })
+await card.getByRole('button', { name: 'Add to Cart' }).click()
 ```
 
 ---
@@ -257,51 +146,37 @@ export default defineConfig({
 
 ### 🔴 BLOCKING
 
+#### Encapsulate locators inside the page object — never leak raw selectors to test specs
+**Why:** raw selectors in tests scatter the same brittle string across N specs. When the UI changes, you patch N tests instead of 1 page object. The page object is the single source of truth for "how to find things on this page".
+
+#### No assertions inside page objects — assertions live in specs
+**Why:** an assertion in a page object hides the test's intent at the call site (`page.login()` either passes or fails for unknown reasons) and prevents the same action from being reused in negative-path tests. Page objects = actions; specs = expectations.
+
+#### Return the next page object from navigation actions
+**Why:** `loginAndGoToDashboard()` returning `DashboardPage` makes the test read like prose and prevents the caller from forgetting to wait for the URL change. Without the return, every test repeats the same `waitForURL` boilerplate.
+
 ```typescript
-// pages/login.page.ts
-import { Page, Locator } from '@playwright/test';
-
+// pages/login.page.ts (compact form — full example in references/page-objects-playwright.md)
 export class LoginPage {
-  // Locators as readonly properties
-  readonly emailInput: Locator;
-  readonly passwordInput: Locator;
-  readonly submitButton: Locator;
-  readonly errorMessage: Locator;
+  constructor(private readonly page: Page) {}
 
-  constructor(private readonly page: Page) {
-    // ✅ Use data-testid or role-based locators
-    this.emailInput = page.getByTestId('email-input');
-    this.passwordInput = page.getByTestId('password-input');
-    this.submitButton = page.getByRole('button', { name: 'Sign In' });
-    this.errorMessage = page.getByTestId('error-message');
+  readonly emailInput    = this.page.getByTestId('email')
+  readonly passwordInput = this.page.getByTestId('password')
+  readonly submit        = this.page.getByRole('button', { name: 'Sign in' })
+
+  async goto()                                  { await this.page.goto('/login') }
+  async login(email: string, password: string) {
+    await this.emailInput.fill(email)
+    await this.passwordInput.fill(password)
+    await this.submit.click()
   }
-
-  async goto(): Promise<void> {
-    await this.page.goto('/login');
-  }
-
-  async login(email: string, password: string): Promise<void> {
-    await this.emailInput.fill(email);
-    await this.passwordInput.fill(password);
-    await this.submitButton.click();
-  }
-
-  // ✅ Return new page object for navigation
-  async loginAndGoToDashboard(email: string, password: string): Promise<DashboardPage> {
-    await this.login(email, password);
-    await this.page.waitForURL('/dashboard');
-    return new DashboardPage(this.page);
-  }
-
-  async getErrorText(): Promise<string> {
-    return await this.errorMessage.textContent() ?? '';
+  async loginAndGoToDashboard(email: string, password: string) {
+    await this.login(email, password)
+    await this.page.waitForURL('/dashboard')
+    return new DashboardPage(this.page)
   }
 }
 ```
-
-### 🟡 WARNING
-- **Don't mix page object styles** → Consistent pattern across project
-- **Keep page objects focused** → One page = one class
 
 ---
 
@@ -309,214 +184,147 @@ export class LoginPage {
 
 📚 **References:** [test-patterns.md](references/test-patterns.md)
 
-### 🔴 BLOCKING
-
 ```typescript
-// tests/auth/login.spec.ts
-import { test, expect } from '@playwright/test';
-import { LoginPage } from '../../pages/login.page';
-import { DashboardPage } from '../../pages/dashboard.page';
-import { testUsers } from '../../fixtures/users';
+test('logs in with valid credentials', async ({ page }) => {
+  // Arrange
+  const login = new LoginPage(page)
+  await login.goto()
 
-test.describe('Login', () => {
-  let loginPage: LoginPage;
+  // Act
+  const dashboard = await login.loginAndGoToDashboard(user.email, user.password)
 
-  test.beforeEach(async ({ page }) => {
-    loginPage = new LoginPage(page);
-    await loginPage.goto();
-  });
-
-  test('should login with valid credentials', async ({ page }) => {
-    // Arrange
-    const user = testUsers.validCustomer;
-
-    // Act
-    const dashboardPage = await loginPage.loginAndGoToDashboard(
-      user.email, 
-      user.password
-    );
-
-    // Assert
-    await expect(page).toHaveURL('/dashboard');
-    await expect(dashboardPage.welcomeMessage).toContainText(user.name);
-  });
-
-  test('should show error for invalid credentials', async () => {
-    // Act
-    await loginPage.login('invalid@email.com', 'wrongpassword');
-
-    // Assert
-    await expect(loginPage.errorMessage).toBeVisible();
-    await expect(loginPage.errorMessage).toContainText('Invalid credentials');
-  });
-});
+  // Assert
+  await expect(page).toHaveURL('/dashboard')
+  await expect(dashboard.welcomeMessage).toContainText(user.name)
+})
 ```
+
+### 🟡 WARNING
+
+#### Follow Arrange–Act–Assert; one user-journey assertion per test
+**Why:** multiple user-journey assertions per test obscure which step failed and force the entire setup to re-run for each behavior. AAA + small tests pay for themselves the first time something breaks.
 
 ---
 
-## When Using Locators
+## When Handling Async Operations
 
-📚 **References:** [locators-guide.md](references/locators-guide.md)
-
-### 🔴 BLOCKING - Preferred Locators
-
-```typescript
-// ✅ BEST - Test ID (explicit contract)
-page.getByTestId('submit-button')
-
-// ✅ GOOD - Role-based (accessible)
-page.getByRole('button', { name: 'Submit' })
-page.getByRole('textbox', { name: 'Email' })
-page.getByRole('link', { name: 'Home' })
-
-// ✅ GOOD - Label-based
-page.getByLabel('Email address')
-
-// ✅ OK - Text-based (for static text)
-page.getByText('Welcome back')
-
-// 🔴 WRONG - CSS classes
-page.locator('.btn-primary')
-
-// 🔴 WRONG - Complex CSS
-page.locator('div.container > form > button:nth-child(2)')
-
-// 🔴 WRONG - XPath
-page.locator('//button[@type="submit"]')
-```
-
-### Chaining Locators
-
-```typescript
-// ✅ CORRECT - Scope within component
-const productCard = page.getByTestId('product-card').filter({ hasText: 'iPhone' });
-await productCard.getByRole('button', { name: 'Add to Cart' }).click();
-
-// ✅ CORRECT - Filter by child
-const row = page.getByRole('row').filter({ 
-  has: page.getByText('Order #123') 
-});
-await row.getByRole('button', { name: 'View' }).click();
-```
-
----
-
-## When Handling Waits
-
-📚 **References:** [async-patterns.md](references/async-patterns.md)
+📚 **References:** [network-and-async.md](references/network-and-async.md)
 
 ### 🔴 BLOCKING
 
+#### Wait for explicit conditions; never for fixed durations
+**Why:** machines vary. A 3-second wait that works on your laptop fails on a slow CI runner; a 10-second wait wastes 7 seconds × N tests. Explicit conditions are both faster on average and immune to timing skew.
+
+| Need | Strategy |
+|------|----------|
+| Element appears | `await expect(locator).toBeVisible()` |
+| Text changes | `await expect(locator).toHaveText(...)` |
+| Navigation | `await page.waitForURL('/dashboard')` |
+| API response | `await page.waitForResponse(...)` |
+| Network idle | `await page.waitForLoadState('networkidle')` |
+| Custom polling | `await expect(async () => {...}).toPass({ timeout })` |
+
+---
+
+## When Mocking Network Requests
+
+📚 **References:** [network-and-async.md](references/network-and-async.md)
+
 ```typescript
-// 🔴 WRONG - Fixed wait
-await page.waitForTimeout(5000);
-
-// ✅ CORRECT - Wait for element
-await expect(page.getByTestId('result')).toBeVisible();
-
-// ✅ CORRECT - Wait for navigation
-await page.waitForURL('/dashboard');
-
-// ✅ CORRECT - Wait for network
-await page.waitForResponse(resp => 
-  resp.url().includes('/api/products') && resp.status() === 200
-);
-
-// ✅ CORRECT - Wait for load state
-await page.waitForLoadState('networkidle');
-
-// ✅ CORRECT - Custom condition with polling
-await expect(async () => {
-  const count = await page.getByTestId('item').count();
-  expect(count).toBeGreaterThan(0);
-}).toPass({ timeout: 10000 });
+await page.route('**/api/products', route =>
+  route.fulfill({ status: 200, contentType: 'application/json',
+                  body: JSON.stringify([{ id: '1', name: 'Test', price: 99.99 }]) })
+)
+await page.goto('/products')
+await expect(page.getByText('Test')).toBeVisible()
 ```
 
 ---
 
-## When Using Fixtures
+## When Managing Test Data
 
-📚 **References:** [fixtures-guide.md](references/fixtures-guide.md)
+📚 **References:** [test-setup.md](references/test-setup.md)
 
-### 🔴 BLOCKING - Custom Fixtures
-
-```typescript
-// fixtures/index.ts
-import { test as base } from '@playwright/test';
-import { LoginPage } from '../pages/login.page';
-import { ApiHelper } from '../utils/api-helper';
-
-type MyFixtures = {
-  loginPage: LoginPage;
-  apiHelper: ApiHelper;
-  authenticatedPage: Page;
-};
-
-export const test = base.extend<MyFixtures>({
-  loginPage: async ({ page }, use) => {
-    const loginPage = new LoginPage(page);
-    await use(loginPage);
-  },
-
-  apiHelper: async ({ request }, use) => {
-    const apiHelper = new ApiHelper(request);
-    await use(apiHelper);
-  },
-
-  authenticatedPage: async ({ page, apiHelper }, use) => {
-    // Setup: Login via API (faster than UI)
-    const token = await apiHelper.login('test@example.com', 'password');
-    await page.goto('/');
-    await page.evaluate(t => localStorage.setItem('token', t), token);
-    await page.reload();
-    
-    await use(page);
-    
-    // Cleanup
-    await page.evaluate(() => localStorage.clear());
-  },
-});
-
-export { expect } from '@playwright/test';
-```
-
----
-
-## When Mocking API
-
-📚 **References:** [api-mocking.md](references/api-mocking.md)
+| Strategy | Use when | Pros | Cons |
+|----------|----------|------|------|
+| API seeding | Fast setup needed | Fast, reliable | Requires API access |
+| UI seeding | Testing the create-flow itself | Tests the real flow | Slow |
+| DB seeding | Complex pre-state | Fastest | Tightest coupling |
+| Static fixtures | Reference data | Simple | Drifts vs schema |
 
 ### 🔴 BLOCKING
 
+#### Each test creates and owns its data; never use production data
+**Why:** shared data couples tests; production data leaks PII and breaks when prod state changes. Per-test data also makes the suite trivially parallelizable.
+
+---
+
+## When Using Custom Fixtures
+
+📚 **References:** [test-setup.md](references/test-setup.md)
+
 ```typescript
-test('should display products from API', async ({ page }) => {
-  // Mock API response
-  await page.route('**/api/products', async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify([
-        { id: '1', name: 'Test Product', price: 99.99 }
-      ])
-    });
-  });
+export const test = base.extend<{ loginPage: LoginPage; authenticatedPage: Page }>({
+  loginPage: async ({ page }, use) => { await use(new LoginPage(page)) },
 
-  await page.goto('/products');
-  
-  await expect(page.getByText('Test Product')).toBeVisible();
-  await expect(page.getByText('$99.99')).toBeVisible();
-});
-
-test('should handle API errors gracefully', async ({ page }) => {
-  await page.route('**/api/products', route => 
-    route.fulfill({ status: 500 })
-  );
-
-  await page.goto('/products');
-  
-  await expect(page.getByText('Failed to load products')).toBeVisible();
-});
+  authenticatedPage: async ({ page, request }, use) => {
+    const token = await loginViaApi(request)
+    await page.goto('/')
+    await page.evaluate(t => localStorage.setItem('token', t), token)
+    await page.reload()
+    await use(page)
+    await page.evaluate(() => localStorage.clear())
+  },
+})
 ```
+
+---
+
+## When Configuring Playwright
+
+📚 **References:** [playwright-config.md](references/playwright-config.md)
+
+Minimum config every project must set:
+
+```typescript
+export default defineConfig({
+  testDir: './tests',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,        // fails CI if .only is left in
+  retries: process.env.CI ? 2 : 0,
+  use: {
+    baseURL: process.env.BASE_URL,
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
+})
+```
+
+### 🔴 BLOCKING
+
+#### Always set `forbidOnly: !!process.env.CI`
+**Why:** an accidentally-committed `.only` causes CI to silently run a single test and report green. The forbidOnly flag turns that into a hard failure where it belongs.
+
+---
+
+## When Dealing with Flaky Tests
+
+📚 **References:** [flaky-tests.md](references/flaky-tests.md)
+
+| Cause | Solution |
+|-------|----------|
+| Race conditions | Explicit waits |
+| Shared state | Test isolation, fresh data per test |
+| Animation timing | Wait for stable position / animation end |
+| Network variability | Mock or wait for the specific response |
+| Time-dependent logic | Mock time/dates |
+| Random data | Seed random generators |
+
+### 🔴 BLOCKING
+
+#### Investigate flakes — never silence them with retries or larger timeouts
+**Why:** retries paper over real defects (race conditions, missing waits). The defect remains, only its visibility moves from "test fails" to "test takes 3× longer and occasionally fails". Investigate first, retry only as a stop-gap with a tracked ticket.
 
 ---
 
@@ -524,177 +332,27 @@ test('should handle API errors gracefully', async ({ page }) => {
 
 📚 **References:** [ci-integration.md](references/ci-integration.md)
 
-### 🔴 BLOCKING - GitHub Actions
-
-```yaml
-# .github/workflows/e2e.yml
-name: E2E Tests
-
-on: [push, pull_request]
-
-jobs:
-  e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-      
-      - name: Run E2E tests
-        run: npx playwright test
-        env:
-          BASE_URL: ${{ secrets.STAGING_URL }}
-      
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
-```
-
----
-
-## Code Review Checklist
-
 ### 🔴 BLOCKING
-- [ ] No `waitForTimeout()` / fixed sleeps
-- [ ] No XPath or fragile CSS selectors
-- [ ] Page objects encapsulate all locators
-- [ ] No assertions in page objects
-- [ ] Each test is independent (no shared state)
-- [ ] Test data created per test
-- [ ] Meaningful test descriptions
-- [ ] No `.only` left in code
 
-### 🟡 WARNING
-- [ ] Prefer `getByTestId` or `getByRole` over `locator()`
-- [ ] Tests follow AAA pattern (Arrange-Act-Assert)
-- [ ] Page objects return new page objects on navigation
-- [ ] Flaky tests are investigated, not retried
+#### Upload the Playwright report and traces as artifacts on failure
+**Why:** without artifacts, "the test failed in CI" is unactionable. The HTML report + traces let any developer reproduce the failure locally without re-running the suite.
 
-### 🟢 BEST PRACTICE
-- [ ] Custom fixtures for common setup
-- [ ] API mocking for edge cases
-- [ ] Screenshots/videos on failure
-- [ ] Parallel execution enabled
-- [ ] Tests grouped by feature
+#### Run with `retries: 2` in CI but `0` locally
+**Why:** local retries hide flakes from authors; CI retries absorb genuinely transient infrastructure issues without inflating the on-call burden. The asymmetry is intentional.
+
+#### Install browsers with `--with-deps` in the CI step
+**Why:** missing system libraries cause cryptic crashes in headless mode. `--with-deps` installs all required OS packages — the few-second cost beats hours debugging missing libnss3.
 
 ---
 
----
+## Output Contract
 
-## Buy Nature Integration
+When producing E2E artifacts, deliver each in this exact form:
 
-### Two-Tier Authentication in E2E Tests
-
-Buy Nature requires **client token + user token** for authenticated requests:
-
-```typescript
-// fixtures/auth.fixture.ts
-export async function authenticateCustomer(page: Page): Promise<AuthTokens> {
-  // Step 1: Get client token
-  const clientTokenResponse = await page.request.post('/api/auth/client/token', {
-    data: {
-      clientId: 'buynature-front',
-      clientSecret: 'client-secret-123'
-    }
-  });
-  const { access_token: clientToken } = await clientTokenResponse.json();
-
-  // Step 2: Get user token (requires client token)
-  const userTokenResponse = await page.request.post('/api/auth/user/login', {
-    headers: { 'Authorization': `Bearer ${clientToken}` },
-    data: {
-      email: 'john.doe@example.com',
-      password: 'Str0ngP@ssword123!'
-    }
-  });
-  const { access_token: userToken } = await userTokenResponse.json();
-
-  return { clientToken, userToken };
-}
-```
-
-### Test Data Factories
-
-```typescript
-// utils/test-data-factories.ts
-export function createTestItem(overrides: Partial<Item> = {}): Item {
-  return {
-    id: crypto.randomUUID(),
-    name: `Test Item ${Date.now()}`,
-    price: 10.99,
-    categoryId: 'default-category',
-    stock: 100,
-    ...overrides
-  };
-}
-
-export function createTestOrder(overrides: Partial<Order> = {}): Order {
-  return {
-    id: crypto.randomUUID(),
-    customerId: crypto.randomUUID(),
-    items: [createTestItem()],
-    totalAmount: 10.99,
-    status: 'PENDING',
-    ...overrides
-  };
-}
-```
-
-### Page Objects
-
-```typescript
-// pages/LoginPage.ts
-export class LoginPage {
-  constructor(private page: Page) {}
-
-  async goto() {
-    await this.page.goto('/login');
-  }
-
-  async login(email: string, password: string) {
-    await this.page.getByLabel('Email').fill(email);
-    await this.page.getByLabel('Password').fill(password);
-    await this.page.getByRole('button', { name: 'Login' }).click();
-    await this.page.waitForURL('/');
-  }
-}
-
-// pages/CartPage.ts
-export class CartPage {
-  constructor(private page: Page) {}
-
-  async addItemToCart(itemId: string) {
-    await this.page.goto(`/items/${itemId}`);
-    await this.page.getByRole('button', { name: 'Add to Cart' }).click();
-    await expect(this.page.getByText('Item added')).toBeVisible();
-  }
-
-  async proceedToCheckout() {
-    await this.page.goto('/cart');
-    await this.page.getByRole('button', { name: 'Checkout' }).click();
-    await this.page.waitForURL('/checkout');
-  }
-}
-```
-
----
-
-## Related Skills
-
-- `common-frontend-angular` — Angular components to test
-- `common-frontend-testing` — Unit vs E2E test strategy
-- `common-architecture` — E2E test architecture
-- `buy-nature-frontend-coding-guide` — Frontend E2E patterns
-- `buy-nature-backoffice-coding-guide` — Backoffice E2E patterns
+| Artifact | Required Form |
+|----------|---------------|
+| **Test spec** (`tests/**/*.spec.ts`) | One feature per `describe`, AAA per `test`, asserts only in tests, uses page objects + fixtures, no raw selectors. |
+| **Page object** (`pages/*.page.ts`) | Class with `Locator` properties + action methods returning `Promise<void>` or the next page object. No assertions, no test data. |
+| **Custom fixture** (`fixtures/index.ts`) | `base.extend<T>({...})` with setup before `await use(...)` and cleanup after. Re-export `expect`. |
+| **Config** (`playwright.config.ts`) | `defineConfig` with `forbidOnly`, `retries`, `trace`, `screenshot`, `video`, project list, `webServer` for local dev. |
+| **CI workflow** | Steps: checkout → setup-node → `npm ci` → `npx playwright install --with-deps` → `npx playwright test` → upload report on failure. See `ci-integration.md`. |

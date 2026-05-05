@@ -1,5 +1,16 @@
 # Architecture Decision Framework
 
+## Table of Contents
+
+- [Decision Matrix Template](#decision-matrix-template)
+- [Quick Decision Guide](#quick-decision-guide)
+  - [Architectural Style Selection](#architectural-style-selection)
+  - [Technology Selection](#technology-selection)
+- [Trade-off Analysis Template](#trade-off-analysis-template)
+- [NFR Priority Template](#nfr-priority-template)
+
+---
+
 ## Decision Matrix Template
 
 | Criterion | Weight | Option A | Option B | Option C |

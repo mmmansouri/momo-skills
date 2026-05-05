@@ -2,6 +2,20 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+## Table of Contents
+
+- [Spacing Scale (8px Base)](#spacing-scale-8px-base)
+- [BLOCKING Rules](#-blocking-rules)
+- [Spacing Usage Guide](#spacing-usage-guide)
+- [Grid System](#grid-system)
+- [Flexbox Layouts](#flexbox-layouts)
+- [Whitespace Strategy](#whitespace-strategy)
+- [Responsive Layout Patterns](#responsive-layout-patterns)
+- [Touch Target Sizes](#touch-target-sizes)
+- [Z-Index Scale](#z-index-scale)
+- [Common Layout Patterns](#common-layout-patterns)
+- [Layout Checklist](#layout-checklist)
+
 ---
 
 ## Spacing Scale (8px Base)

@@ -2,6 +2,20 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+## Table of Contents
+
+- [BLOCKING - WCAG AA Requirements](#-blocking---wcag-aa-requirements)
+- [Quick Accessibility Test](#quick-accessibility-test)
+- [Semantic HTML](#semantic-html)
+- [ARIA Attributes (Use Sparingly)](#aria-attributes-use-sparingly)
+- [Keyboard Navigation Patterns](#keyboard-navigation-patterns)
+- [Screen Reader Considerations](#screen-reader-considerations)
+- [Color & Contrast](#color--contrast)
+- [Motion & Animation](#motion--animation)
+- [Complete Accessibility Checklist](#complete-accessibility-checklist)
+- [Testing Tools](#testing-tools)
+- [E-Commerce Accessibility Considerations](#e-commerce-accessibility-considerations)
+
 ---
 
 ## 🔴 BLOCKING - WCAG AA Requirements
@@ -362,7 +376,7 @@ modal.addEventListener('keydown', (e) => {
 
 ---
 
-## Buy Nature Specific Considerations
+## E-Commerce Accessibility Considerations
 
 ### E-Commerce Accessibility Priorities
 

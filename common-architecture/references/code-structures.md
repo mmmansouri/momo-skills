@@ -1,5 +1,13 @@
 # Code Structure Reference
 
+## Table of Contents
+
+- [Spring Boot - Hexagonal/Clean Structure](#spring-boot---hexagonalclean-structure)
+- [Angular - Feature-Based Structure](#angular---feature-based-structure)
+- [Dependency Rules](#dependency-rules)
+
+---
+
 ## Spring Boot - Hexagonal/Clean Structure
 
 ```

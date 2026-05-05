@@ -1,5 +1,20 @@
 # Mocking Patterns for Angular Tests
 
+> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+
+## Table of Contents
+
+- [Jasmine Spy Basics](#jasmine-spy-basics)
+- [Service Mocking Patterns](#service-mocking-patterns)
+- [HTTP Mocking](#http-mocking)
+- [Router Mocking](#router-mocking)
+- [Form Mocking](#form-mocking)
+- [Store/State Mocking](#storestate-mocking)
+- [Utility Mocks](#utility-mocks)
+- [Best Practices Summary](#best-practices-summary)
+
+---
+
 > Comprehensive guide to creating effective mocks and spies for Angular testing.
 
 ---

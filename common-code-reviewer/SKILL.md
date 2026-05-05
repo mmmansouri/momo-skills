@@ -1,234 +1,217 @@
 ---
 name: common-code-reviewer
 description: >-
-  Code review workflow for GitHub PRs via MCP tools + gh CLI fallback.
-  Use when: reviewing PRs, posting inline comments, submitting reviews,
-  resolving threads, re-reviewing after fixes. Contains review workflow,
-  summary formats, thread resolution commands, and MCP/CLI integration.
+  Code review workflow for GitHub PRs via MCP tools with gh CLI fallback. Use this
+  skill whenever the user asks to review a PR, audit a pull request, comment on
+  changes, post inline review comments, submit a review, resolve review threads,
+  re-review after fixes, check a teammate's diff, or look at a merge request —
+  even when they don't explicitly say "review". Contains the workflow, severity
+  tagging, MCP/CLI integration, thread resolution, and the output contract for
+  inline comments and review summaries.
 ---
 
-# Code Review Workflow
+# Code Review Skill
 
-Standardized PR review process for all Buy Nature code reviewers.
+> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+> Markers serve a dual role: they tag rules **inside this skill** AND they prefix every **inline comment posted on the PR** (see Output Contract).
 
-## Core Rules
+---
 
-- **You MUST post the review directly on the GitHub PR** — never just return text
-- Use MCP tools first, fall back to `gh` CLI if they fail
-- Apply severity markers consistently
-- Apply rules from your **loaded skills** — do NOT rely on inline checklists
+## When Reviewing a PR
 
-## Severity Markers
+Apply these foundational stances to every review:
 
-| Marker | Meaning | Review Action |
-|--------|---------|---------------|
-| 🔴 **BLOCKING** | Must fix before merge | REQUEST_CHANGES |
-| 🟡 **WARNING** | Should fix, tech debt if ignored | Mentioned in summary |
-| 🟢 **BEST PRACTICE** | Nice to have, optional | APPROVE with suggestions |
+1. **Post on the PR** — the review must land on GitHub, not in chat output.
+2. **Apply loaded skills** — review rules come from the skills currently loaded in your context (e.g., `common-security`, `common-rest-api`, `common-frontend-angular`), not from a static checklist embedded here.
+3. **MCP-first, gh fallback** — try MCP tools first; fall back to `gh` CLI only when an MCP call fails.
+4. **Tag every comment** — every inline comment carries a 🔴 / 🟡 / 🟢 marker.
 
-## Review Modes
+### 🔴 BLOCKING
+
+#### Always post the review on the GitHub PR — never return it as chat text only
+**Why:** a review the user has to copy-paste is a review that will not be acted on. The PR is the canonical surface — comments anchor on lines, threads track resolution, notifications fire from PR events. Chat-only output bypasses every audit and follow-up mechanism the team relies on.
+
+##### WRONG
+```
+Assistant: "Here is my review:
+- Line 42: BLOCKING — null check missing
+- Line 78: WARNING — magic number
+..."
+[no MCP / gh call ever made]
+```
+##### CORRECT
+```
+Assistant calls:
+  mcp__github__pull_request_review_write(method: "create", ...)
+  mcp__github__add_comment_to_pending_review(...)        // per finding
+  mcp__github__pull_request_review_write(method: "submit_pending", ...)
+Assistant: "Review submitted on PR #123 as REQUEST_CHANGES — 2 BLOCKING, 1 WARNING."
+```
+
+#### Try MCP tools first; fall back to `gh` CLI only after a confirmed MCP failure
+**Why:** MCP tools return structured objects (typed responses, parsed thread IDs, automatic auth); `gh` CLI returns raw text or JSON the agent must re-parse. Skipping MCP discards typing and increases parsing-error surface; falling back proactively when MCP would have worked also adds latency and burns tokens.
+
+#### Tag every inline comment with a 🔴 / 🟡 / 🟢 marker matching its review action
+**Why:** the marker drives the review's submission event — any 🔴 ⇒ `REQUEST_CHANGES`, only 🟡 / 🟢 ⇒ `APPROVE`. Without explicit tagging the agent (and the next re-review pass) cannot derive the correct event mechanically, leading to mis-submitted reviews where blocking issues land as `APPROVE`.
+
+##### WRONG
+````
+"Add a null check here, otherwise this NPEs on empty input."
+[no marker → re-review cannot tell if this was blocking or nitpick]
+````
+##### CORRECT
+````
+🔴 **BLOCKING** — Null check missing
+
+`processOrder(order)` dereferences `order.items` without a null guard.
+On empty payloads this throws NPE before reaching validation.
+
+**Suggestion:**
+```java
+if (order.items == null || order.items.isEmpty()) {
+    throw new InvalidOrderException("items required");
+}
+```
+````
+
+---
+
+## When Detecting Review Mode
 
 | Mode | Trigger | Behavior |
 |------|---------|----------|
-| **Initial Review** | Default — no prior reviews from this agent | Full code review + task tracker in summary |
-| **Re-review** | User says "re-review"/"check again"/"check fixes" OR prior reviews exist | Analyze threads, resolve fixed ones, find new issues |
+| **Initial Review** | No prior review from this agent on the PR | Full review + task tracker in summary |
+| **Re-review** | Prior review by this agent exists OR user says "re-review", "check again", "check fixes", "review updates" | Analyze threads, resolve fixed ones, find new issues |
 
-### Mode Detection Logic
-
+### Detection Algorithm
 ```
-1. Fetch existing reviews via get_reviews
-2. Check if any review was authored by this agent (bot/authenticated user)
-3. If prior reviews exist → RE-REVIEW mode
-4. If user explicitly says "re-review", "check again", "review updates", "check fixes" → RE-REVIEW mode
-5. Otherwise → INITIAL REVIEW mode
-```
+existing_reviews = mcp__github__pull_request_read(method="get_reviews", ...)
 
----
-
-## Posting Reviews: MCP Tools (Primary) + gh CLI (Fallback)
-
-Always try MCP tools first. If a call fails, immediately fall back to `gh` CLI via Bash.
-
-### MCP Tools (Primary)
-
-| Action | MCP Tool |
-|--------|----------|
-| Get PR details | `mcp__github__pull_request_read` (method: "get") |
-| Get PR diff | `mcp__github__pull_request_read` (method: "get_diff") |
-| Get PR files | `mcp__github__pull_request_read` (method: "get_files") |
-| Get PR reviews | `mcp__github__pull_request_read` (method: "get_reviews") |
-| Get review threads | `mcp__github__pull_request_read` (method: "get_review_comments") |
-| Read file from PR branch | `mcp__github__get_file_contents` |
-| Create pending review | `mcp__github__pull_request_review_write` (method: "create") |
-| Add inline comment | `mcp__github__add_comment_to_pending_review` |
-| Submit review | `mcp__github__pull_request_review_write` (method: "submit_pending") |
-| Add general comment | `mcp__github__add_issue_comment` |
-
-### gh CLI Fallback (via Bash)
-
-Replace `OWNER/REPO` with the correct value (e.g., `buynature/buy-nature-back`):
-
-```bash
-# Get PR details
-gh pr view <number> --repo OWNER/REPO --json title,body,state,files,additions,deletions
-
-# Get PR diff
-gh pr diff <number> --repo OWNER/REPO
-
-# Get PR files
-gh pr view <number> --repo OWNER/REPO --json files --jq '.files[].path'
-
-# Read file from PR branch
-gh api repos/OWNER/REPO/contents/<path>?ref=<branch> --jq '.content' | base64 -d
-
-# Submit review
-gh api repos/OWNER/REPO/pulls/<number>/reviews \
-  --method POST \
-  -f event="REQUEST_CHANGES" \
-  -f body="Review summary here"
-
-# Add inline comment
-gh api repos/OWNER/REPO/pulls/<number>/comments \
-  --method POST \
-  -f body="Comment text" \
-  -f path="src/..." \
-  -f line=42 \
-  -f side="RIGHT"
-
-# Add general comment
-gh pr comment <number> --repo OWNER/REPO --body "Comment text"
-```
-
-### Fallback Decision Logic
-
-```
-For each GitHub operation:
-  1. Try MCP tool
-  2. If MCP tool returns an error or is unavailable:
-     a. Log: "MCP tool failed, falling back to gh CLI"
-     b. Execute equivalent gh command via Bash
-  3. If gh CLI also fails:
-     a. Log the error
-     b. Continue with remaining operations
-     c. Report failures in final output
+if user_message matches /(re-review|check again|check fixes|review updates)/i:
+    mode = RE_REVIEW
+elif any(r.author == self for r in existing_reviews):
+    mode = RE_REVIEW
+else:
+    mode = INITIAL
 ```
 
 ---
 
-## Review Workflow
+## When Performing the Review (Workflow)
 
-### Step 1: Get PR Information & Detect Mode
+📚 **References:** [gh-cli-fallback.md](references/gh-cli-fallback.md)
 
-**1a. Fetch PR details:**
+### Step 1 — Fetch PR info and detect mode
 ```
-mcp__github__pull_request_read(method: "get", owner: "buynature", repo: "<repo>", pullNumber: <number>)
+mcp__github__pull_request_read(method: "get",          owner: "<owner>", repo: "<repo>", pullNumber: <n>)
+mcp__github__pull_request_read(method: "get_reviews",  owner: "<owner>", repo: "<repo>", pullNumber: <n>)
+mcp__github__pull_request_read(method: "get_diff",     owner: "<owner>", repo: "<repo>", pullNumber: <n>)
+mcp__github__pull_request_read(method: "get_files",    owner: "<owner>", repo: "<repo>", pullNumber: <n>)
 ```
-
-**1b. Fetch existing reviews to detect mode:**
+If RE-REVIEW mode, also fetch threads:
 ```
-mcp__github__pull_request_read(method: "get_reviews", owner: "buynature", repo: "<repo>", pullNumber: <number>)
+mcp__github__pull_request_read(method: "get_review_comments", owner: "<owner>", repo: "<repo>", pullNumber: <n>)
 ```
+Extract per thread: `id`, `path`, `line`, `body`, `isResolved`, `isOutdated`.
 
-**1c. If RE-REVIEW mode — fetch existing review threads:**
+### Step 2 — Analyze changed files
+
+For each changed file, apply rules from the **skill loaded in your context that matches the file type**. The orchestrating agent definition provides the file-pattern → skill mapping. Illustrative examples:
+
+| File pattern | Likely loaded skill |
+|--------------|---------------------|
+| `*.java`, `*.kt` | `common-java-developer`, `common-java-jpa`, `common-java-testing` |
+| `*.ts` (Angular) | `common-frontend-angular`, `common-frontend-testing` |
+| `*Controller.java`, REST endpoints | `common-rest-api` |
+| Anything touching auth, crypto, or input handling | `common-security` |
+
+### Step 2B — (Re-review only) Analyze existing threads
+
+Skip in INITIAL mode. For each **unresolved** thread:
+
+1. Fetch current code: `mcp__github__get_file_contents(... ref: <PR_head>)`.
+2. Compare original issue with current code; check `isOutdated` (true ⇒ code changed ⇒ likely fixed).
+3. **If FIXED** → resolve via `scripts/resolve-thread.sh <thread.id>` (see [thread-resolution-graphql.md](references/thread-resolution-graphql.md)).
+4. **If NOT FIXED** → leave unresolved; repost the issue if context warrants emphasis.
+5. Scan for NEW issues not covered by existing threads.
+
+### Step 3 — Create pending review
 ```
-mcp__github__pull_request_read(method: "get_review_comments", owner: "buynature", repo: "<repo>", pullNumber: <number>)
-```
-
-Extract from each thread: `id`, `path`, `line`, `body`, `isResolved`, `isOutdated`.
-
-**1d. Get the diff and files changed (both modes):**
-```
-mcp__github__pull_request_read(method: "get_diff", owner: "buynature", repo: "<repo>", pullNumber: <number>)
-mcp__github__pull_request_read(method: "get_files", owner: "buynature", repo: "<repo>", pullNumber: <number>)
-```
-
-### Step 2: Analyze Changed Files
-
-Apply relevant rules from your **loaded skills** based on file type. See your agent definition for the **file pattern → skill mapping** table.
-
-### Step 2B: Re-review — Analyze Existing Threads (RE-REVIEW MODE ONLY)
-
-Skip this step in Initial Review mode.
-
-For each **unresolved** thread:
-
-1. **Read current code:**
-```
-mcp__github__get_file_contents(owner: "buynature", repo: "<repo>", path: <thread.path>, ref: <PR_head_branch>)
-```
-
-2. **Determine if fixed:** Compare original issue with current code. Check `isOutdated` flag (if true, code changed → likely fixed).
-
-3. **If FIXED → Resolve via GraphQL:**
-```bash
-gh api graphql \
-  --field threadId="<PRRT_xxx>" \
-  -f query='
-    mutation($threadId: ID!) {
-      resolveReviewThread(input: {threadId: $threadId}) {
-        thread { isResolved }
-      }
-    }'
+mcp__github__pull_request_review_write(method: "create", owner: "<owner>", repo: "<repo>", pullNumber: <n>)
 ```
 
-> No MCP tool can resolve threads — GraphQL via `gh` CLI is the only way.
-
-4. **If NOT FIXED → Leave unresolved.**
-
-5. **Scan for NEW issues** not already covered by existing threads.
-
-### Step 3: Create Pending Review
-
-```
-mcp__github__pull_request_review_write(method: "create", owner: "buynature", repo: "<repo>", pullNumber: <number>)
-```
-
-### Step 4: Add Inline Comments
-
+### Step 4 — Add inline comments (one per finding)
 ```
 mcp__github__add_comment_to_pending_review(
-  owner: "buynature", repo: "<repo>", pullNumber: <number>,
-  path: "src/...", line: <line_number>, side: "RIGHT", subjectType: "LINE",
-  body: "🔴 **BLOCKING** - Issue title\n\nExplanation...\n\n**Suggestion:**\n```\n// fix\n```"
+  owner: "<owner>", repo: "<repo>", pullNumber: <n>,
+  path: "<path>", line: <n>, side: "RIGHT", subjectType: "LINE",
+  body: "<comment per Output Contract>"
 )
 ```
 
-### Step 5: Submit Review
+### Step 5 — Submit review
 
-**If BLOCKING issues (new or still-open):**
+| Findings include | Submit event |
+|------------------|--------------|
+| Any 🔴 BLOCKING (new or still-open) | `REQUEST_CHANGES` |
+| Only 🟡 / 🟢, or all previously-blocking now resolved | `APPROVE` |
+
 ```
 mcp__github__pull_request_review_write(
-  method: "submit_pending", owner: "buynature", repo: "<repo>", pullNumber: <number>,
-  event: "REQUEST_CHANGES", body: "[Summary — see formats below]"
+  method: "submit_pending", owner: "<owner>", repo: "<repo>", pullNumber: <n>,
+  event: "<REQUEST_CHANGES | APPROVE>", body: "<summary per Output Contract>"
 )
 ```
 
-**If only WARNING/BEST PRACTICE (or all resolved):**
-```
-mcp__github__pull_request_review_write(
-  method: "submit_pending", owner: "buynature", repo: "<repo>", pullNumber: <number>,
-  event: "APPROVE", body: "[Summary — see formats below]"
-)
-```
+### Step 6 — Verify
 
-### Step 6: Verify Review Was Posted
-
-Fetch reviews again. If not visible, fall back to `gh` CLI to post a comment with the full review summary.
+Re-fetch reviews. If the submitted review is not visible, fall back to `gh` CLI (see [gh-cli-fallback.md](references/gh-cli-fallback.md)) to repost the summary as a PR comment.
 
 ---
 
-## Review Summary Formats
+## When Errors Occur
 
-### Initial Review
+| Error | Response |
+|-------|----------|
+| PR not found | "Unable to find PR #<n> on `<owner>/<repo>`. Verify the number and repository." |
+| Large PR (>50 files) | "Large PR detected (<file_count> files). Reviewing critical paths first; consider splitting the PR." |
+| MCP call failed | Log `MCP failed: <op>`, invoke `gh` CLI equivalent, continue. |
+| `gh` CLI also failed | Log error, continue with remaining ops, list failures in final output. |
+| Thread resolution failed | Add a comment "Resolved manually" with the thread ID; continue. |
 
+---
+
+## Output Contract
+
+When producing review artifacts, deliver each in this exact form:
+
+| Artifact | Required Form |
+|----------|---------------|
+| **Inline comment** | First line = severity marker + bold tag + one-line title. Blank line. 2-3 sentence explanation. Blank line. `**Suggestion:**` + fenced code block with the fix. See template below. |
+| **Initial review summary** | Markdown using the Initial Review template: Overall Assessment, Issues Found counts, Review Tasks table, BLOCKING / WARNING / BEST PRACTICE sections, What's Good, Recommendation. |
+| **Re-review summary** | Markdown using the Re-review template: Overall Assessment, Resolution Progress counts, Task Tracker (✅ / ⬜ / 🆕), Recommendation. |
+| **Thread resolution** | `scripts/resolve-thread.sh <thread_id>` — never an inline `gh api graphql` block in the conversation. |
+
+### Inline Comment Template
+````
+🔴 **BLOCKING** — <one-line title>
+
+<2-3 sentence explanation of the issue and its concrete consequence>
+
+**Suggestion:**
+```<lang>
+<concrete fix>
+```
+````
+
+### Initial Review Template
 ```markdown
 ## 🔍 Code Review Summary
 
 ### Overall Assessment
-[1-2 sentences]
+<1-2 sentences>
 
 ### Issues Found
-
 | Severity | Count |
 |----------|-------|
 | 🔴 BLOCKING | X |
@@ -236,40 +219,36 @@ Fetch reviews again. If not visible, fall back to `gh` CLI to post a comment wit
 | 🟢 BEST PRACTICE | X |
 
 ### 📋 Review Tasks
-
 | Status | File | Line | Issue |
 |--------|------|------|-------|
-| ⬜ | `File` | 42 | 🔴 Brief description |
-| ⬜ | `File` | 15 | 🟡 Brief description |
+| ⬜ | `path` | 42 | 🔴 brief |
 
 **Total: X tasks open**
 
-### 🔴 BLOCKING Issues (Must Fix)
-- `File:42` - Brief description
+### 🔴 BLOCKING (Must Fix)
+- `file:line` — brief
 
-### 🟡 WARNING Issues (Should Fix)
-- `File:15` - Brief description
+### 🟡 WARNING (Should Fix)
+- `file:line` — brief
 
 ### 🟢 Suggestions
-- `File:30` - Brief description
+- `file:line` — brief
 
 ### ✅ What's Good
-- [Positive feedback]
+- <positive note>
 
 ### Recommendation
-**[APPROVE / REQUEST_CHANGES]** - [Justification]
+**APPROVE | REQUEST_CHANGES** — <justification>
 ```
 
-### Re-review
-
+### Re-review Template
 ```markdown
 ## 🔄 Re-review Summary
 
 ### Overall Assessment
-[1-2 sentences about progress]
+<1-2 sentences on progress>
 
 ### Resolution Progress
-
 | Status | Count |
 |--------|-------|
 | ✅ Resolved | X |
@@ -277,80 +256,14 @@ Fetch reviews again. If not visible, fall back to `gh` CLI to post a comment wit
 | 🆕 New Issues | X |
 
 ### 📋 Task Tracker
-
 | Status | File | Line | Issue |
 |--------|------|------|-------|
-| ✅ | `File` | 42 | 🔴 Fixed |
-| ⬜ | `File` | 78 | 🟡 Still present |
-| 🆕 | `File` | 12 | 🔴 New issue |
+| ✅ | `path` | 42 | 🔴 fixed |
+| ⬜ | `path` | 78 | 🟡 still present |
+| 🆕 | `path` | 12 | 🔴 new |
 
-**Progress: X/Y previous tasks resolved (Z%) — N new issues found**
+**Progress: X/Y resolved (Z%) — N new**
 
 ### Recommendation
-**[APPROVE / REQUEST_CHANGES]** - [Justification]
+**APPROVE | REQUEST_CHANGES** — <justification>
 ```
-
----
-
-## Thread Resolution Commands (GraphQL)
-
-Thread resolution is **only available via GitHub GraphQL API**.
-
-### Resolve a Thread
-
-```bash
-gh api graphql \
-  --field threadId="PRRT_xxx" \
-  -f query='
-    mutation($threadId: ID!) {
-      resolveReviewThread(input: {threadId: $threadId}) {
-        thread { isResolved }
-      }
-    }'
-```
-
-### Unresolve a Thread
-
-```bash
-gh api graphql \
-  --field threadId="PRRT_xxx" \
-  -f query='
-    mutation($threadId: ID!) {
-      unresolveReviewThread(input: {threadId: $threadId}) {
-        thread { isResolved }
-      }
-    }'
-```
-
-### Query Thread Status
-
-```bash
-gh api graphql \
-  --field nodeId="PRRT_xxx" \
-  -f query='
-    query($nodeId: ID!) {
-      node(id: $nodeId) {
-        ... on PullRequestReviewThread {
-          isResolved
-          isOutdated
-          comments(first: 1) {
-            nodes { body path line }
-          }
-        }
-      }
-    }'
-```
-
-### Error Handling for GraphQL
-
-If mutation fails: log error, add comment noting manual resolution needed, continue with remaining threads.
-
----
-
-## Error Handling
-
-| Error | Response |
-|-------|----------|
-| PR Not Found | "Unable to find PR #XXX. Verify the PR number and repository." |
-| Large PR (>50 files) | "Large PR detected. Consider splitting. Reviewing critical paths..." |
-| Thread Resolution Failed | "Could not resolve thread. Please resolve manually on GitHub." |

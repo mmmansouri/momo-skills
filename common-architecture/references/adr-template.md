@@ -1,5 +1,12 @@
 # ADR Template
 
+## Table of Contents
+
+- [Format](#format)
+- [Example ADR](#example-adr)
+
+---
+
 ## Format
 
 ```markdown

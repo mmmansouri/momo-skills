@@ -2,6 +2,21 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+## Table of Contents
+
+- [Overview](#overview)
+- [AAA Pattern (Arrange-Act-Assert)](#aaa-pattern-arrange-act-assert)
+- [Test Organization](#test-organization)
+- [Test Isolation](#test-isolation)
+- [BeforeEach & AfterEach](#beforeeach--aftereach)
+- [Test Naming Conventions](#test-naming-conventions)
+- [Test Data Management](#test-data-management)
+- [Parameterized Tests](#parameterized-tests)
+- [Conditional Tests](#conditional-tests)
+- [Example Test Patterns](#example-test-patterns)
+- [Quick Reference](#quick-reference)
+- [Common Patterns](#common-patterns)
+
 ---
 
 ## Overview
@@ -408,7 +423,7 @@ test.fixme('should fix flaky test', async ({ page }) => {
 
 ---
 
-## Buy Nature Test Patterns
+## Example Test Patterns
 
 ### Customer Login Flow
 
@@ -428,7 +443,7 @@ test.describe('Customer Login', () => {
   test('should login with valid customer credentials', async ({ page }) => {
     // Arrange
     const email = 'john.doe@example.com';
-    const password = 'Str0ngP@ssword123!';
+    const password = 'password123';
 
     // Act
     await loginPage.login(email, password);
@@ -449,7 +464,7 @@ test.describe('Customer Login', () => {
 
   test('should persist session after page reload', async ({ page }) => {
     // Arrange
-    await loginPage.login('john.doe@example.com', 'Str0ngP@ssword123!');
+    await loginPage.login('john.doe@example.com', 'password123');
     await expect(page).toHaveURL('/dashboard');
 
     // Act - Reload page
@@ -478,7 +493,7 @@ test.describe('Product Management', () => {
     // Login as admin
     const loginPage = new LoginPage(page);
     await loginPage.goto();
-    await loginPage.login('admin@buynature.com', 'admin123');
+    await loginPage.login('admin@example.com', 'admin123');
 
     productListPage = new ProductListPage(page);
     await productListPage.goto();

@@ -2,6 +2,23 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+## Table of Contents
+
+- [Overview](#overview)
+- [GitHub Actions Setup](#github-actions-setup)
+- [Multi-Browser Testing](#multi-browser-testing)
+- [Sharding Tests](#sharding-tests)
+- [Docker Integration](#docker-integration)
+- [Artifact Management](#artifact-management)
+- [Retries & Failure Handling](#retries--failure-handling)
+- [Environment Variables](#environment-variables)
+- [Test Reporting](#test-reporting)
+- [Example CI Workflows](#example-ci-workflows)
+- [Performance Optimization](#performance-optimization)
+- [Quick Reference](#quick-reference)
+- [Common Patterns](#common-patterns)
+- [Troubleshooting](#troubleshooting)
+
 ---
 
 ## Overview
@@ -214,7 +231,7 @@ services:
 
   backend:
     build:
-      context: ../buy-nature-back
+      context: ../<your-backend>
       dockerfile: Dockerfile
     environment:
       SPRING_PROFILES_ACTIVE: e2e
@@ -234,7 +251,7 @@ services:
 
   frontend:
     build:
-      context: ../buy-nature-front
+      context: ../<your-frontend>
       dockerfile: Dockerfile
     environment:
       API_URL: http://backend:8080
@@ -382,12 +399,12 @@ export default defineConfig({
 
 ---
 
-## Buy Nature CI Examples
+## Example CI Workflows
 
 ### Frontend E2E (Local Mode)
 
 ```yaml
-# buy-nature-e2e-front/.github/workflows/e2e-local.yml
+# <your-e2e-project>/.github/workflows/e2e-local.yml
 name: E2E Tests (Local Mode)
 
 on: [push, pull_request]
@@ -430,24 +447,24 @@ jobs:
       # Start backend
       - name: Build backend
         run: |
-          cd ../buy-nature-back
+          cd ../<your-backend>
           mvn clean package -DskipTests
 
       - name: Start backend
         run: |
-          cd ../buy-nature-back
+          cd ../<your-backend>
           mvn spring-boot:run -Dspring-boot.run.profiles=local-e2e &
           timeout 120 bash -c 'until curl -f http://localhost:8080/actuator/health; do sleep 2; done'
 
       # Start frontend
       - name: Install frontend dependencies
         run: |
-          cd ../buy-nature-front
+          cd ../<your-frontend>
           npm ci
 
       - name: Start frontend
         run: |
-          cd ../buy-nature-front
+          cd ../<your-frontend>
           npm run start:local-e2e &
           timeout 120 bash -c 'until curl -f http://localhost:4201; do sleep 2; done'
 
@@ -474,7 +491,7 @@ jobs:
 ### Frontend E2E (Docker Mode)
 
 ```yaml
-# buy-nature-e2e-front/.github/workflows/e2e-docker.yml
+# <your-e2e-project>/.github/workflows/e2e-docker.yml
 name: E2E Tests (Docker Mode)
 
 on: [push, pull_request]

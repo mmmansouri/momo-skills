@@ -2,6 +2,24 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Locator Priority Table](#locator-priority-table)
+- [getByTestId](#getbytestid)
+- [getByRole](#getbyrole)
+- [getByLabel](#getbylabel)
+- [getByPlaceholder](#getbyplaceholder)
+- [getByText](#getbytext)
+- [getByAltText](#getbyalttext)
+- [Locator Chaining](#locator-chaining)
+- [CSS Locators (Last Resort)](#css-locators-last-resort)
+- [XPath (Never Use)](#xpath-never-use)
+- [Application Locator Examples](#application-locator-examples)
+- [Advanced Locator Techniques](#advanced-locator-techniques)
+- [Quick Reference](#quick-reference)
+- [Common Patterns](#common-patterns)
+
 ---
 
 ## Overview
@@ -295,14 +313,14 @@ await page.locator('//*[@id="email"]').fill('test@test.com');
 
 ---
 
-## Buy Nature Examples
+## Application Locator Examples
 
 ### Customer Frontend
 
 ```typescript
 // Login page
 await page.getByLabel('Email').fill('john.doe@example.com');
-await page.getByLabel('Password').fill('Str0ngP@ssword123!');
+await page.getByLabel('Password').fill('password123');
 await page.getByRole('button', { name: 'Sign In' }).click();
 
 // Product catalog

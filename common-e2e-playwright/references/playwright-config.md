@@ -2,6 +2,23 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Basic Configuration](#basic-configuration)
+- [Projects Configuration](#projects-configuration)
+- [Timeout Settings](#timeout-settings)
+- [Retries & Workers](#retries--workers)
+- [Reporters](#reporters)
+- [Base URL & Environment](#base-url--environment)
+- [Web Server Integration](#web-server-integration)
+- [Trace, Screenshot, Video](#trace-screenshot-video)
+- [Global Setup & Teardown](#global-setup--teardown)
+- [Example E2E Configurations](#example-e2e-configurations)
+- [Test Match Patterns](#test-match-patterns)
+- [Quick Reference](#quick-reference)
+- [Common Patterns](#common-patterns)
+
 ---
 
 ## Overview
@@ -270,10 +287,10 @@ test('should navigate to home', async ({ page }) => {
 BASE_URL=http://localhost:4200 npx playwright test
 
 # Staging
-BASE_URL=https://staging.buynature.com npx playwright test
+BASE_URL=https://staging.example.com npx playwright test
 
 # Production smoke tests
-BASE_URL=https://buynature.com npx playwright test smoke
+BASE_URL=https://example.com npx playwright test smoke
 ```
 
 ---
@@ -411,12 +428,12 @@ export default defineConfig({
 
 ---
 
-## Buy Nature E2E Configuration
+## Example E2E Configurations
 
 ### Frontend E2E
 
 ```typescript
-// buy-nature-e2e-front/playwright.config.ts
+// <your-e2e-project>/playwright.config.ts
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
@@ -437,7 +454,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
 
-    // Buy Nature specific settings
+    // Project-specific settings
     extraHTTPHeaders: {
       'Accept-Language': 'fr-FR',
     },
@@ -474,7 +491,7 @@ export default defineConfig({
 ### Backoffice E2E
 
 ```typescript
-// buy-nature-e2e-backoffice/playwright.config.ts
+// <your-e2e-backoffice-project>/playwright.config.ts
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({

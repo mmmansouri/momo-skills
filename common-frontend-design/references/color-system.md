@@ -2,6 +2,19 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+## Table of Contents
+
+- [Color System Structure](#color-system-structure)
+- [BLOCKING Rules](#-blocking-rules)
+- [Color Scale System](#color-scale-system)
+- [Color Psychology for E-Commerce](#color-psychology-for-e-commerce)
+- [AVOID - Common Color Mistakes](#-avoid---common-color-mistakes)
+- [Semantic Color Usage](#semantic-color-usage)
+- [Contrast Requirements (WCAG AA)](#contrast-requirements-wcag-aa)
+- [Dark Mode Support](#dark-mode-support)
+- [Eco Brand Color Palette Example](#eco-brand-color-palette-example)
+- [Color Application Checklist](#color-application-checklist)
+
 ---
 
 ## Color System Structure
@@ -88,7 +101,7 @@ Each color should have a scale from 50 (lightest) to 900 (darkest):
 
 ## Color Psychology for E-Commerce
 
-| Color | Association | Use For | Buy Nature Context |
+| Color | Association | Use For | Eco Brand Context |
 |-------|-------------|---------|-------------------|
 | Green | Nature, eco, growth | Primary brand color | Perfect for eco-friendly products |
 | Dark Green | Luxury eco, premium | Premium products | High-end sustainable items |
@@ -200,30 +213,30 @@ Each color should have a scale from 50 (lightest) to 900 (darkest):
 
 ---
 
-## Buy Nature Color Palette
+## Eco Brand Color Palette Example
 
-Based on the brand's eco-friendly identity:
+Example palette for an eco-friendly brand identity:
 
 ```css
 :root {
   /* Primary - Nature Green */
-  --bn-green-500: #22c55e;
-  --bn-green-600: #16a34a;
-  --bn-green-900: #14532d;
+  --brand-green-500: #22c55e;
+  --brand-green-600: #16a34a;
+  --brand-green-900: #14532d;
 
   /* Secondary - Earth Tones */
-  --bn-cream: #faf8f5;
-  --bn-brown: #8b7355;
-  --bn-brown-dark: #5c4a3a;
+  --brand-cream: #faf8f5;
+  --brand-brown: #8b7355;
+  --brand-brown-dark: #5c4a3a;
 
   /* Accent - Natural */
-  --bn-sky: #7dd3fc;
-  --bn-terracotta: #ea580c;
+  --brand-sky: #7dd3fc;
+  --brand-terracotta: #ea580c;
 
   /* Neutral */
-  --bn-white: #ffffff;
-  --bn-gray-100: #f5f5f5;
-  --bn-gray-900: #171717;
+  --brand-white: #ffffff;
+  --brand-gray-100: #f5f5f5;
+  --brand-gray-900: #171717;
 }
 ```
 
