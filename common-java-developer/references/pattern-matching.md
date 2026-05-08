@@ -201,6 +201,43 @@ String describe(Object obj) {
 }
 ```
 
+### Primitive Patterns (Java 25 — 3rd Preview, JEP 507)
+
+> 🟡 **Preview** — requires `--enable-preview` and `--release 25`.
+> Don't ship in published libraries; OK in app code pinned to Java 25.
+
+Lets `instanceof` and `switch` patterns target **primitive types directly**,
+removing the boxed-cast dance and enabling exhaustiveness over a primitive
+selector.
+
+```java
+// instanceof with a primitive pattern
+if (value instanceof int i) {
+    return i * 2;
+}
+
+// switch branching on the underlying primitive type
+String classify(Number n) {
+    return switch (n) {
+        case int i when i < 0  -> "negative int";
+        case int i             -> "non-negative int: " + i;
+        case long l            -> "long: " + l;
+        case double d when Double.isNaN(d) -> "NaN";
+        case double d          -> "double: " + d;
+        default                -> "other";
+    };
+}
+
+// Safe primitive conversions inside patterns (no narrowing surprise)
+if (number instanceof byte b) { /* only if number actually fits in a byte */ }
+```
+
+**Why it matters:** removes manual `((Integer) n).intValue()` boxed casts,
+makes numeric branching as expressive as reference branching, and lets the
+compiler check the conversion is value-preserving.
+
+---
+
 ### Null Handling
 
 ```java

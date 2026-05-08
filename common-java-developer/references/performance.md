@@ -6,12 +6,14 @@
 
 ## Table of Contents
 1. [Decision Tree: Which Tool?](#decision-tree-which-tool)
-2. [JFR (Java Flight Recorder)](#jfr-java-flight-recorder)
-3. [async-profiler](#async-profiler)
-4. [JMH (Microbenchmarks)](#jmh-microbenchmarks)
-5. [Memory Analysis](#memory-analysis)
-6. [Performance Checklist (Code Level)](#performance-checklist-code-level)
-7. [Quick Wins](#quick-wins)
+2. [JVM Tuning (Java 25)](#jvm-tuning-java-25)
+3. [JFR (Java Flight Recorder)](#jfr-java-flight-recorder)
+4. [async-profiler](#async-profiler)
+5. [JMH (Microbenchmarks)](#jmh-microbenchmarks)
+6. [Memory Analysis](#memory-analysis)
+7. [Performance Checklist (Code Level)](#performance-checklist-code-level)
+8. [Quick Wins](#quick-wins)
+9. [Quick Reference Commands](#quick-reference-commands)
 
 ---
 
@@ -50,6 +52,52 @@ What performance issue are you investigating?
 | **JMH** | Micro-benchmarks, A/B comparisons | N/A | ❌ Development only |
 | **VisualVM** | Quick exploration, heap browsing | Medium | ⚠️ Development |
 | **Eclipse MAT** | Heap dump analysis, leak detection | N/A | N/A (offline) |
+
+---
+
+## JVM Tuning (Java 25)
+
+### Compact Object Headers (FINAL in Java 25, JEP 519)
+
+> Production-ready in Java 25, **off by default**. Reduces every Java object
+> header from 12-16 bytes down to 8 bytes — typical heap savings are **10-20 %**
+> on object-heavy workloads (DTOs, records, small collections).
+
+```bash
+# Enable
+java -XX:+UnlockExperimentalVMOptions -XX:+UseCompactObjectHeaders -jar app.jar
+```
+
+**When it pays off:**
+- Many short-lived small objects (event-loop / per-request DTOs)
+- Memory-pressured services (heap close to `-Xmx`)
+- Workloads where allocation rate, not CPU, is the bottleneck
+
+**When it doesn't:**
+- Heaps dominated by a few large arrays / buffers (savings negligible)
+- Code that depends on the exact object layout (rare — fix the code)
+
+Validate with JFR (`jdk.GarbageCollection`, `jdk.ObjectAllocationInNewTLAB`)
+before and after.
+
+### Generational Shenandoah (FINAL in Java 25, JEP 521)
+
+> Shenandoah now ships with a **generational mode** — short-lived objects
+> die in the young generation, dramatically reducing concurrent-mark work.
+
+```bash
+# Java 25 — enable generational mode (Shenandoah is still selected by -XX:+UseShenandoahGC)
+java -XX:+UseShenandoahGC -XX:ShenandoahGCMode=generational -jar app.jar
+```
+
+**Pick a GC (Java 25 baseline):**
+
+| Workload | Recommended GC |
+|---|---|
+| Default / mixed | **G1** (still the default) |
+| Latency-critical, multi-GB heap | **ZGC** (generational, default since Java 24) |
+| Throughput on huge heaps with low pause goal | **Shenandoah generational** (JEP 521) |
+| Batch / throughput-only | **Parallel GC** |
 
 ---
 

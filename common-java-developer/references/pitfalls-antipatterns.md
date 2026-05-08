@@ -11,7 +11,7 @@
 | Mutable state in streams | Use `collect()` to new collection |
 | Reusing consumed stream | Create new stream each time |
 | Parallel stream for I/O | Use virtual threads instead |
-| `synchronized` + blocking I/O | Use `ReentrantLock` |
+| `synchronized` + blocking I/O (Java 21–23 only) | Use `ReentrantLock`. Java 24+ removes pinning (JEP 491). |
 | ThreadLocal in pools | Call `remove()` in finally |
 | Empty catch block | Log and rethrow wrapped exception |
 | Swallowing `InterruptedException` | Restore interrupt + rethrow |
@@ -28,7 +28,7 @@
 
 ## Optional Misuse
 
-### orElse vs orElseGet
+### 🔴 orElse vs orElseGet
 
 ```java
 // ❌ WRONG - fetchDefault() ALWAYS called even if value present
@@ -43,7 +43,7 @@ user.orElse(null);           // No method call
 user.orElse(DEFAULT_USER);   // Constant
 ```
 
-### isPresent + get Anti-Pattern
+### 🔴 isPresent + get Anti-Pattern
 
 ```java
 // ❌ WRONG - verbose and error-prone
@@ -60,7 +60,7 @@ return optional
     .orElse("Unknown");
 ```
 
-### Optional as Field or Parameter
+### 🟡 Optional as Field or Parameter
 
 ```java
 // ❌ WRONG - Optional as field
@@ -85,7 +85,7 @@ void processUser(User user) { }
 void processUser() { processUser(defaultUser); }
 ```
 
-### Wrapping Non-Null Values
+### 🟡 Wrapping Non-Null Values
 
 ```java
 // ❌ WRONG - pointless wrapping
@@ -102,44 +102,44 @@ return Optional.ofNullable(possiblyNullValue);
 
 ## Stream Pitfalls
 
-### Reusing Streams
+### 🔴 Reusing Streams
 
 ```java
 // ❌ WRONG - streams can only be consumed once
 Stream<String> stream = list.stream();
 long count = stream.count();
-List<String> result = stream.collect(toList());  // IllegalStateException!
+List<String> result = stream.toList();  // IllegalStateException!
 
 // ✅ CORRECT - create new stream for each operation
 long count = list.stream().count();
-List<String> result = list.stream().collect(toList());
+List<String> result = list.stream().toList();
 ```
 
-### Mutable State in Streams
+### 🔴 Mutable State in Streams
 
 ```java
 // ❌ WRONG - race condition in parallel
 List<String> results = new ArrayList<>();
 stream.parallel().forEach(item -> results.add(item));
 
-// ✅ CORRECT - use collect
-List<String> results = stream.parallel().collect(toList());
+// ✅ CORRECT - collect to a new list
+List<String> results = stream.parallel().toList();
 
 // ✅ Or use thread-safe collection (slower)
 List<String> results = Collections.synchronizedList(new ArrayList<>());
 stream.parallel().forEach(item -> results.add(item));
 ```
 
-### Parallel Stream on Wrong Data Source
+### 🟡 Parallel Stream on Wrong Data Source
 
 ```java
 // ❌ WRONG - LinkedList has O(n) split cost
 LinkedList<Item> items = getItems();
-items.parallelStream().map(this::process).collect(toList());
+items.parallelStream().map(this::process).toList();
 
 // ✅ CORRECT - ArrayList has O(1) split
 ArrayList<Item> items = new ArrayList<>(getItems());
-items.parallelStream().map(this::process).collect(toList());
+items.parallelStream().map(this::process).toList();
 
 // Best sources for parallel:
 // - ArrayList, arrays
@@ -147,7 +147,7 @@ items.parallelStream().map(this::process).collect(toList());
 // - HashSet (moderate)
 ```
 
-### Parallel Stream for I/O
+### 🔴 Parallel Stream for I/O
 
 ```java
 // ❌ WRONG - blocks shared ForkJoinPool
@@ -161,28 +161,28 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 }
 ```
 
-### peek() for Side Effects
+### 🟡 peek() for Side Effects
 
 ```java
 // ❌ WRONG - peek is for debugging, not side effects
 stream.peek(item -> item.setProcessed(true))  // Mutation!
-      .collect(toList());
+      .toList();
 
 // ✅ CORRECT - use map for transformation
 stream.map(item -> item.withProcessed(true))
-      .collect(toList());
+      .toList();
 
 // peek is OK for debugging
 stream.peek(item -> log.debug("Processing: {}", item))
       .filter(...)
-      .collect(toList());
+      .toList();
 ```
 
 ---
 
 ## Record Limitations
 
-### Records Are Final
+### 🟢 Records Are Final
 
 ```java
 // ❌ WRONG - cannot extend records
@@ -198,7 +198,7 @@ public record Point2D(int x, int y) implements Point {}
 public record Point3D(int x, int y, int z) implements Point {}
 ```
 
-### Records Are Immutable
+### 🟢 Records Are Immutable
 
 ```java
 // ❌ WRONG - no setters
@@ -214,7 +214,7 @@ public record User(String name) {
 }
 ```
 
-### Mutable Components in Records
+### 🔴 Mutable Components in Records
 
 ```java
 // ⚠️ DANGER - list can be modified externally
@@ -235,7 +235,7 @@ public record Container(List<String> items) {
 
 ## Virtual Thread Pitfalls
 
-### Pooling Virtual Threads
+### 🔴 Pooling Virtual Threads
 
 ```java
 // ❌ WRONG - defeats the purpose of virtual threads
@@ -254,15 +254,19 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 }
 ```
 
-### Synchronized with Blocking
+### 🟡 Synchronized with Blocking (Java 21–23 only)
+
+> **Java 24+ (JEP 491) removes carrier-thread pinning** caused by `synchronized`.
+> The pitfall below applies only to code targeting Java 21 / 22 / 23 ;
+> `ReentrantLock` remains the safe version-agnostic choice.
 
 ```java
-// ❌ WRONG - pins carrier thread
+// ❌ WRONG on Java 21–23 - pins carrier thread (no longer pins on Java 24+)
 synchronized (lock) {
     socket.read();  // Blocking I/O inside synchronized
 }
 
-// ✅ CORRECT - use ReentrantLock
+// ✅ CORRECT (version-agnostic) - use ReentrantLock
 private final ReentrantLock lock = new ReentrantLock();
 
 lock.lock();
@@ -273,13 +277,13 @@ try {
 }
 ```
 
-### ThreadLocal in Virtual Threads
+### 🟡 ThreadLocal in Virtual Threads
 
 ```java
 // ⚠️ WARNING - ThreadLocal works but may accumulate with many virtual threads
 private static final ThreadLocal<Connection> CONNECTION = new ThreadLocal<>();
 
-// ✅ BETTER - use Scoped Values (Java 25)
+// ✅ BETTER - use Scoped Values (FINAL in Java 25, JEP 506)
 private static final ScopedValue<Connection> CONNECTION = ScopedValue.newInstance();
 
 ScopedValue.where(CONNECTION, conn).run(() -> {
@@ -291,7 +295,7 @@ ScopedValue.where(CONNECTION, conn).run(() -> {
 
 ## General Java Anti-Patterns
 
-### Catching Generic Exceptions
+### 🔴 Catching Generic Exceptions
 
 ```java
 // ❌ WRONG - catches everything including RuntimeException
@@ -311,7 +315,7 @@ try {
 }
 ```
 
-### Swallowing Exceptions
+### 🔴 Swallowing Exceptions
 
 ```java
 // ❌ WRONG - silent failure
@@ -337,7 +341,7 @@ try {
 }
 ```
 
-### Ignoring InterruptedException
+### 🟡 Ignoring InterruptedException
 
 ```java
 // ❌ WRONG - swallowing interrupt status
@@ -356,7 +360,7 @@ try {
 }
 ```
 
-### Using Raw Types
+### 🔴 Using Raw Types
 
 ```java
 // ❌ WRONG - raw type
@@ -370,7 +374,7 @@ items.add("string");
 items.add(123);  // Compile error!
 ```
 
-### Mutable Static Fields
+### 🟡 Mutable Static Fields
 
 ```java
 // ❌ WRONG - shared mutable state
@@ -393,7 +397,7 @@ public class Config {
 
 ## Memory Leak Patterns
 
-### Static Collections Without Eviction
+### 🟡 Static Collections Without Eviction
 
 ```java
 // ❌ WRONG - unbounded growth
@@ -415,7 +419,7 @@ private static final Map<String, Object> cache =
 // ✅ Or use a proper cache library (Caffeine, Guava Cache)
 ```
 
-### ThreadLocal Not Removed in Thread Pools
+### 🔴 ThreadLocal Not Removed in Thread Pools
 
 ```java
 // ❌ WRONG - ThreadLocal never cleared
@@ -438,7 +442,7 @@ public void handleRequest() {
 }
 ```
 
-### Inner Classes Holding Outer References
+### 🟡 Inner Classes Holding Outer References
 
 ```java
 // ❌ WRONG - anonymous class holds reference to Outer
@@ -463,7 +467,7 @@ private static class MyTask implements Runnable {
 }
 ```
 
-### Listeners Not Unregistered
+### 🟡 Listeners Not Unregistered
 
 ```java
 // ❌ WRONG - listener never removed
@@ -483,7 +487,7 @@ public void destroy() {
 
 ## Concurrency Bugs
 
-### Check-Then-Act Race Conditions
+### 🔴 Check-Then-Act Race Conditions
 
 ```java
 // ❌ WRONG - another thread can insert between check and put
@@ -503,7 +507,7 @@ if (counter < MAX) {
 atomicCounter.updateAndGet(c -> c < MAX ? c + 1 : c);
 ```
 
-### Double-Checked Locking Without Volatile
+### 🔴 Double-Checked Locking Without Volatile
 
 ```java
 // ❌ WRONG - instruction reordering can expose partially constructed object
@@ -532,7 +536,7 @@ public static Singleton getInstance() {
 }
 ```
 
-### Shared Mutable State Without Synchronization
+### 🔴 Shared Mutable State Without Synchronization
 
 ```java
 // ❌ WRONG - concurrent modification
@@ -556,7 +560,7 @@ public synchronized void increment() {
 }
 ```
 
-### Publishing Objects Before Fully Constructed
+### 🟡 Publishing Objects Before Fully Constructed
 
 ```java
 // ❌ WRONG - 'this' escapes before construction complete
@@ -591,7 +595,7 @@ public class GoodExample {
 
 > Full coverage: See `common-rest-api/references/spring-boot-config-pitfalls.md`
 
-### Self-Invocation Bypasses Proxy
+### 🔴 Self-Invocation Bypasses Proxy
 
 ```java
 // WRONG - @Async/@Transactional ignored (direct method call bypasses proxy)
@@ -616,7 +620,7 @@ public class OrderService {
 }
 ```
 
-### Don't Stack Multiple AOP Annotations
+### 🟡 Don't Stack Multiple AOP Annotations
 
 ```java
 // WRONG - unpredictable proxy layer ordering

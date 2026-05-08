@@ -50,9 +50,12 @@ description: >-
 | Mutable DTO class | Record |
 | Anonymous inner class (single method) | Lambda expression |
 | String concatenation in loops | `StringBuilder` or `Collectors.joining()` |
-| `ThreadLocal` | Scoped Values (Java 25) |
+| `ThreadLocal` | Scoped Values (FINAL in Java 25, JEP 506) |
 | Thread pools for blocking I/O | Virtual threads |
 | `new ArrayList<>()` (never modified) | `List.of()` |
+| Validation thrown from a private static helper called by the constructor | Statements before `super(...)` (Flexible Constructor Bodies — JEP 513) |
+| Hand-rolled HKDF over `Mac` + `MessageDigest` | `javax.crypto.KDF` (JEP 510) |
+| Long `import` blocks in scripts/snippets | `import module java.base;` (JEP 511) |
 
 ### ⚠️ When NOT to Modernize
 Leave stable code alone when:
@@ -145,7 +148,7 @@ List<String> results = new ArrayList<>();
 stream.forEach(s -> results.add(s.toUpperCase()));  // Race condition in parallel!
 
 // ✅ CORRECT
-List<String> results = stream.map(String::toUpperCase).collect(toList());
+List<String> results = stream.map(String::toUpperCase).toList();
 
 // 🔴 WRONG - stream already consumed
 Stream<String> stream = names.stream();
@@ -217,16 +220,16 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 ```
 
 ### 🟡 WARNING
-- **`synchronized` with blocking I/O in virtual threads** → Pins carrier thread, use `ReentrantLock`
-- **`ThreadLocal` with virtual threads** → May accumulate memory, use Scoped Values (Java 25)
+- **`synchronized` with blocking I/O in virtual threads (Java 21–23 only)** → Pins carrier thread, use `ReentrantLock`. **Java 24+ (JEP 491) removes this pinning** — rule still applies to code targeting Java 21–23.
+- **`ThreadLocal` with virtual threads** → May accumulate memory, use Scoped Values (FINAL in Java 25, JEP 506)
 
 ```java
-// 🟡 WARNING - pins carrier thread
+// 🟡 WARNING on Java 21–23 - pins carrier thread (no longer pins on Java 24+)
 synchronized (lock) {
     socket.read();  // Blocking I/O inside synchronized
 }
 
-// ✅ CORRECT - ReentrantLock doesn't pin
+// ✅ CORRECT (version-agnostic) - ReentrantLock never pins
 private final ReentrantLock lock = new ReentrantLock();
 lock.lock();
 try { socket.read(); }
@@ -239,76 +242,44 @@ finally { lock.unlock(); }
 | Blocking I/O at scale | Virtual threads |
 | CPU-bound parallelism | Parallel streams or ForkJoinPool |
 | Complex async pipelines | CompletableFuture |
-| Related concurrent tasks | Structured Concurrency (Java 25) |
+| Related concurrent tasks | Structured Concurrency (Java 25 — 5th Preview, JEP 505) |
 
 ---
 
 ## Performance Quick Wins
 
-📚 **References:** [pitfalls-antipatterns.md](references/pitfalls-antipatterns.md)
+📚 **Reference:** [performance.md](references/performance.md) — full guide (JFR, async-profiler, JMH, GC tuning, memory analysis)
 
-### 🟢 StringBuilder in Loops
-```java
-// 🔴 WRONG - O(n²) - creates new String each iteration
-String result = "";
-for (String s : items) { result += s; }
+The five most-broken patterns in code review (full examples & rationale in `performance.md`):
 
-// ✅ CORRECT - O(n)
-StringBuilder sb = new StringBuilder(items.size() * 16);
-for (String s : items) { sb.append(s); }
-```
+1. **String concat in loops** → `StringBuilder` (pre-sized) or `Collectors.joining()`
+2. **Boxed types in tight loops** → primitives (or `LongStream`/`IntStream` for sums)
+3. **Default-capacity collections** → pre-size when N is known (`new ArrayList<>(n)`, `new HashMap<>(n*4/3)`)
+4. **Unbounded caches** → Caffeine with `maximumSize` + `expireAfterWrite`
+5. **`ThreadLocal` in pooled threads** → call `remove()` in `finally` (or migrate to Scoped Values, JEP 506)
 
-### 🟢 Primitives vs Boxed Types
-```java
-// 🔴 WRONG - boxing overhead
-Long sum = 0L;
-for (long i = 0; i < 1_000_000; i++) { sum += i; }
-
-// ✅ CORRECT
-long sum = 0L;
-for (long i = 0; i < 1_000_000; i++) { sum += i; }
-```
-
-### 🟢 Pre-size Collections
-```java
-List<User> users = new ArrayList<>(expectedCount);
-Map<String, Value> map = new HashMap<>(expectedCount * 4 / 3);  // Load factor
-```
+JVM-level Java 25 wins: Compact Object Headers (JEP 519), Generational Shenandoah (JEP 521) — see `performance.md` § JVM Tuning.
 
 ---
 
 ## Design Patterns Quick Guide
 
-📚 **References:** [design-patterns.md](references/design-patterns.md)
+📚 **References:** [design-patterns.md](references/design-patterns.md) (decision tree + index) | [creational](references/design-patterns-creational.md) (Builder, Factory, Singleton) | [structural](references/design-patterns-structural.md) (Adapter, Decorator, Facade, Proxy, Composite, Flyweight) | [behavioral](references/design-patterns-behavioral.md) (Strategy, Observer, Command, CoR, Template, Visitor, State, Memento)
 
-### Creational Patterns
-| Pattern | Use When | Modern Java Note |
-|---------|----------|------------------|
-| **Builder** | >3 constructor params, optional fields | Static inner class |
-| **Factory Method** | Subclass decides type | Combine with sealed + switch |
-| **Singleton** | Exactly one instance needed | Enum (preferred) or static holder |
+**Modern-Java replacements to favour over textbook GoF:**
 
-### Structural Patterns
-| Pattern | Use When | Modern Java Note |
-|---------|----------|------------------|
-| **Adapter** | Convert incompatible interfaces | Functional adapter with `Function` |
-| **Decorator** | Add behavior dynamically | Function composition with `andThen()` |
-| **Facade** | Simplify complex subsystems | Single entry point class |
-| **Proxy** | Lazy loading, access control, logging | Dynamic `Proxy.newProxyInstance()` |
-| **Composite** | Tree structures (files, UI, org charts) | Sealed interface + records |
-| **Flyweight** | Many similar objects, memory critical | Factory + cache (`computeIfAbsent`) |
+| Traditional | Modern Java |
+|---|---|
+| Strategy classes | `@FunctionalInterface` + `Map<Type, Strategy>` |
+| Builder boilerplate | Record + `Consumer<Builder>` factory |
+| Factory if-else | Sealed interface + exhaustive switch |
+| Singleton (DCL) | `enum` singleton (or static holder) |
+| Observer | `Consumer<T>` + method references / Flow API |
+| Visitor double-dispatch | Sealed + pattern matching switch |
+| State machine | Sealed interface of state records |
+| Memento | Record as immutable snapshot |
 
-### Behavioral Patterns
-| Pattern | Use When | Modern Java Note |
-|---------|----------|------------------|
-| **Strategy** | Algorithm varies at runtime | Lambdas + `Map<Type, Strategy>` |
-| **Observer** | Event-driven, notifications | `Consumer<T>` or Flow API |
-| **Command** | Undo/redo, queue operations | Records for command objects |
-| **Chain of Responsibility** | Pipelines, middleware, filters | Functional `Handler.orElse()` chain |
-| **Template Method** | Fixed algorithm, variable steps | Abstract class or functional builder |
-| **Visitor** | Operations on type hierarchy | Sealed + pattern matching (no double dispatch!) |
-| **State** | Object behavior changes with state | Sealed classes or enum |
-| **Memento** | Save/restore state, undo | Record as immutable snapshot |
+For the rest (Adapter, Decorator, Facade, Proxy, Composite, Flyweight, Chain of Responsibility, Template, Command, Abstract Factory): consult the reference — each section shows both the classical and the modern Java 17+ form.
 
 ---
 

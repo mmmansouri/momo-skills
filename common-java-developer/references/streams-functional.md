@@ -47,6 +47,19 @@ stream.takeWhile(x -> x < 100)
 
 // dropWhile (Java 9) - drop while predicate true
 stream.dropWhile(x -> x < 100)
+
+// mapMulti (Java 16) - flat-map without an intermediate stream allocation
+stream.<Integer>mapMulti((value, downstream) -> {
+    if (value > 0) downstream.accept(value);
+    if (value > 10) downstream.accept(value * 2);
+})
+
+// gather (Java 24, FINAL) - custom intermediate operations via Gatherers
+import java.util.stream.Gatherers;
+stream.gather(Gatherers.windowFixed(10))      // batches of 10
+stream.gather(Gatherers.windowSliding(3))     // sliding window of 3
+stream.gather(Gatherers.fold(0, Integer::sum)) // running fold
+stream.gather(Gatherers.scan(() -> "", String::concat))
 ```
 
 ### Terminal Operations (Eager)
@@ -55,8 +68,12 @@ stream.dropWhile(x -> x < 100)
 // forEach - perform action on each element
 stream.forEach(System.out::println)
 
-// collect - gather into collection
-stream.collect(Collectors.toList())
+// toList (Java 16, preferred) - immutable, no Collector indirection
+stream.toList()
+
+// collect - gather into collection (older / when you need a mutable collection)
+stream.collect(Collectors.toList())   // mutable ArrayList
+stream.collect(Collectors.toUnmodifiableList())   // immutable
 
 // reduce - combine elements
 stream.reduce(0, Integer::sum)
@@ -165,12 +182,12 @@ IntSummaryStatistics stats =
 // ✅ Good candidate - large dataset, CPU-intensive
 largeList.parallelStream()
     .filter(item -> complexCalculation(item))
-    .collect(toList());
+    .toList();
 
 // ❌ Bad candidate - small dataset
 smallList.parallelStream()  // Overhead > benefit
     .filter(item -> item.isActive())
-    .collect(toList());
+    .toList();
 ```
 
 ### Good Data Sources for Parallel
@@ -185,17 +202,17 @@ smallList.parallelStream()  // Overhead > benefit
 
 ### Critical Rules
 
-1. **No shared mutable state**
+1. 🔴 **No shared mutable state**
 ```java
 // ❌ WRONG - race condition
 List<String> results = new ArrayList<>();
 stream.parallel().forEach(item -> results.add(item));
 
-// ✅ CORRECT - collect
-List<String> results = stream.parallel().collect(toList());
+// ✅ CORRECT - collect to a new list
+List<String> results = stream.parallel().toList();
 ```
 
-2. **Avoid I/O operations**
+2. 🔴 **Avoid I/O operations**
 ```java
 // ❌ WRONG - blocks ForkJoinPool
 stream.parallel().forEach(item -> {
@@ -208,7 +225,7 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 }
 ```
 
-3. **Order matters**
+3. 🟢 **Order matters**
 ```java
 // If order matters, use forEachOrdered
 stream.parallel()

@@ -9,10 +9,12 @@
 2. [When to Use Modules](#when-to-use-modules)
 3. [module-info.java Structure](#module-infojava-structure)
 4. [Directives Reference](#directives-reference)
-5. [Strong Encapsulation](#strong-encapsulation)
-6. [Migration Strategy](#migration-strategy)
-7. [Common Issues](#common-issues)
-8. [Code Review Checklist](#code-review-checklist)
+5. [Module Import Declarations (Java 25)](#module-import-declarations-java-25--final-jep-511)
+6. [Strong Encapsulation](#strong-encapsulation)
+7. [Migration Strategy](#migration-strategy)
+8. [Common Issues](#common-issues)
+9. [Code Review Checklist](#code-review-checklist)
+10. [Quick Reference](#quick-reference)
 
 ---
 
@@ -145,6 +147,37 @@ opens com.example.internal;  // Opens to all
 // Optional dependency (annotations, build tools)
 requires static lombok;
 ```
+
+---
+
+## Module Import Declarations (Java 25 — FINAL, JEP 511)
+
+> Preview in Java 23/24 ; **FINAL in Java 25**. Lets a `.java` file import every
+> exported package of a module in a single line — orthogonal to JPMS, you can use
+> it from non-modular code too.
+
+```java
+import module java.base;        // every exported package of java.base
+import module java.sql;         // every exported package of java.sql
+
+// Now usable without further imports:
+var list = List.of(1, 2, 3);                       // java.util
+var conn = DriverManager.getConnection(jdbcUrl);   // java.sql
+var pat  = Pattern.compile("\\d+");                // java.util.regex
+```
+
+### When to use it
+
+| Context | Recommendation |
+|---|---|
+| Compact Source Files / scripts (JEP 512) | ✅ Idiomatic — `import module java.base;` covers the bulk |
+| Educational code, REPL-style snippets | ✅ Reduces noise |
+| Production application source | 🟡 Prefer single-type imports for IDE navigability and explicit blast-radius |
+| Library `module-info.java` consumers | 🟢 Independent — `import module` does **not** add a `requires` ; you still need the dependency declared |
+
+### Name conflicts
+
+If two imported modules export packages with same-name classes (e.g. `java.util.Date` vs `java.sql.Date`), an explicit single-type import is required to disambiguate — the module import does not "win" automatically.
 
 ---
 

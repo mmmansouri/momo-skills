@@ -258,7 +258,10 @@ List<List<Integer>> windows = numbers.stream()
     .toList();
 ```
 
-### Scoped Values (Java 25)
+### Scoped Values (Java 25 — FINAL, JEP 506)
+
+> Preview since Java 21 ; **FINAL in Java 25**. No `--enable-preview` needed on JDK 25+.
+
 ```java
 // Replacement for ThreadLocal - better for virtual threads
 private static final ScopedValue<User> CURRENT_USER = ScopedValue.newInstance();
@@ -269,7 +272,58 @@ ScopedValue.where(CURRENT_USER, user).run(() -> {
 });
 ```
 
-### Primitive Types in Patterns (Java 25)
+### Module Import Declarations (Java 25 — FINAL, JEP 511)
+
+> Preview in 23/24 ; **FINAL in Java 25**. Import a whole module in one line — useful for scripts and Compact Source Files.
+
+```java
+import module java.base;        // brings every exported java.base package in scope
+import module java.sql;
+
+void main() {
+    var list = List.of("a", "b");                    // java.util — from java.base
+    var conn = DriverManager.getConnection(url);     // java.sql
+}
+```
+
+Conflicting names from two imported modules still need an explicit single-type import to disambiguate.
+
+### Compact Source Files & Instance Main Methods (Java 25 — FINAL, JEP 512)
+
+> Preview since Java 21 ; **FINAL in Java 25**. Lets a single `.java` file run without a class declaration — designed for scripts, prototypes, and learners.
+
+```java
+// File: Hello.java — no class, no public, no String[] args needed
+void main() {
+    IO.println("Hello, world!");   // java.lang.IO — bundled helper
+}
+```
+
+Run with `java Hello.java`. The compiler synthesises an enclosing class. Methods declared at top-level are instance methods of that synthetic class.
+
+### Flexible Constructor Bodies (Java 25 — FINAL, JEP 513)
+
+> Preview from Java 22 to 24 ; **FINAL in Java 25**. Statements are now allowed before `super(...)` / `this(...)` — useful for argument validation and side-effect-free preparation.
+
+```java
+public class PositiveAmount extends Money {
+    public PositiveAmount(BigDecimal value, Currency currency) {
+        // ✅ Java 25: validation BEFORE super(...) is now legal
+        if (value.signum() <= 0) {
+            throw new IllegalArgumentException("amount must be > 0");
+        }
+        var normalized = value.setScale(currency.getDefaultFractionDigits(), RoundingMode.HALF_EVEN);
+        super(normalized, currency);
+    }
+}
+```
+
+Restriction: the **prologue** (code before `super`/`this`) cannot reference `this` or any instance field/method.
+
+### Primitive Patterns (Java 25 — 3rd Preview, JEP 507)
+
+> **Preview** in Java 25 — requires `--enable-preview`. Not yet finalized.
+
 ```java
 switch (value) {
     case int i when i > 0 -> "positive";

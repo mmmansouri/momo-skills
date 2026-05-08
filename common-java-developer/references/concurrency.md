@@ -34,7 +34,7 @@ What type of task are you running?
 | Chain of async transformations | CompletableFuture |
 | CPU-intensive batch job | ForkJoinPool |
 | Simple I/O operations | Virtual threads |
-| Timeout on multiple sources | `ShutdownOnSuccess` |
+| Timeout on multiple sources | `StructuredTaskScope.open(Joiner.anySuccessfulResultOrThrow())` |
 
 ---
 
@@ -88,7 +88,7 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 
 ### Virtual Threads Pitfalls
 
-#### 1. Don't Pool Virtual Threads
+#### 🔴 1. Don't Pool Virtual Threads
 
 ```java
 // ❌ WRONG - defeats the purpose
@@ -100,15 +100,20 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 }
 ```
 
-#### 2. Avoid synchronized with Blocking I/O
+#### 🟡 2. Avoid synchronized with Blocking I/O (Java 21–23 only)
+
+> **Java 24+ removes this constraint** — JEP 491 makes `synchronized` no longer pin
+> the carrier thread when the virtual thread blocks inside. The rule below still
+> matters for code that targets Java 21 / 22 / 23, and `ReentrantLock` remains a
+> safe default for cross-version code.
 
 ```java
-// ❌ WRONG - pins carrier thread
+// ❌ WRONG on Java 21–23 - pins carrier thread
 synchronized (lock) {
     database.query();  // Blocking inside synchronized
 }
 
-// ✅ CORRECT - use ReentrantLock
+// ✅ CORRECT (and version-agnostic) - use ReentrantLock
 private final ReentrantLock lock = new ReentrantLock();
 
 lock.lock();
@@ -119,7 +124,7 @@ try {
 }
 ```
 
-#### 3. ThreadLocal Considerations
+#### 🟡 3. ThreadLocal Considerations
 
 ```java
 // ⚠️ ThreadLocal works but may accumulate
@@ -134,7 +139,9 @@ private static final ScopedValue<User> CURRENT_USER = ScopedValue.newInstance();
 
 ---
 
-## Scoped Values (Java 25)
+## Scoped Values (Java 25 — FINAL, JEP 506)
+
+> Preview since Java 21 ; **finalized in Java 25**. No `--enable-preview` needed on JDK 25+.
 
 ### Replacement for ThreadLocal
 
@@ -162,37 +169,46 @@ void processRequest() {
 
 ---
 
-## Structured Concurrency (Java 25 Preview)
+## Structured Concurrency (Java 25 — 5th Preview, JEP 505)
 
-### Basic Usage
+> **Preview API** in Java 25 — requires `--enable-preview`. The previous
+> `new StructuredTaskScope.ShutdownOnFailure()` / `ShutdownOnSuccess()` constructors
+> were removed in Java 24; the API now uses `StructuredTaskScope.open(...)` with
+> `Joiner` policies.
+
+### Wait for all, fail fast (replaces `ShutdownOnFailure`)
 
 ```java
-try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+try (var scope = StructuredTaskScope.open(Joiner.<Object>awaitAllSuccessfulOrThrow())) {
     Subtask<User> userTask = scope.fork(() -> fetchUser(userId));
     Subtask<Orders> ordersTask = scope.fork(() -> fetchOrders(userId));
 
-    scope.join();           // Wait for all tasks
-    scope.throwIfFailed();  // Propagate exceptions
+    scope.join();   // Waits, propagates first failure (cancels siblings)
 
-    return new UserProfile(
-        userTask.get(),
-        ordersTask.get()
-    );
+    return new UserProfile(userTask.get(), ordersTask.get());
 }
 ```
 
-### ShutdownOnSuccess (first wins)
+### First success wins (replaces `ShutdownOnSuccess`)
 
 ```java
-try (var scope = new StructuredTaskScope.ShutdownOnSuccess<String>()) {
+try (var scope = StructuredTaskScope.open(Joiner.<String>anySuccessfulResultOrThrow())) {
     scope.fork(() -> fetchFromMirror1());
     scope.fork(() -> fetchFromMirror2());
     scope.fork(() -> fetchFromMirror3());
 
-    scope.join();
-    return scope.result();  // First successful result
+    return scope.join();   // Returns the first successful result
 }
 ```
+
+### Other built-in joiners
+
+| Joiner | Behaviour |
+|---|---|
+| `Joiner.awaitAll()` | Wait for every subtask (success or failure), no shortcut |
+| `Joiner.awaitAllSuccessfulOrThrow()` | Cancel siblings + throw on first failure |
+| `Joiner.anySuccessfulResultOrThrow()` | Cancel siblings on first success |
+| `Joiner.allSuccessfulOrThrow()` | Like `awaitAll`, but throws if any failed |
 
 ### Benefits
 - Automatic cancellation of remaining tasks on failure

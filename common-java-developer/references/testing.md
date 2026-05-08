@@ -13,6 +13,7 @@
 6. [Parameterized Tests](#parameterized-tests)
 7. [Test Data Builders](#test-data-builders)
 8. [Code Review Checklist](#code-review-checklist)
+9. [Quick Reference](#quick-reference)
 
 ---
 

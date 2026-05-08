@@ -7,13 +7,15 @@
 ## Table of Contents
 1. [Decision Tree: Which Algorithm?](#decision-tree-which-algorithm)
 2. [Password Hashing](#password-hashing)
-3. [Encryption](#encryption)
-4. [Secure Random](#secure-random)
-5. [SSL/TLS Configuration](#ssltls-configuration)
-6. [JWT Handling](#jwt-handling)
-7. [Input Validation](#input-validation)
-8. [Secrets Management](#secrets-management)
-9. [Code Review Checklist](#code-review-checklist)
+3. [Key Derivation (KDF) — Java 25](#key-derivation-kdf--java-25)
+4. [Encryption](#encryption)
+5. [Secure Random](#secure-random)
+6. [SSL/TLS Configuration](#ssltls-configuration)
+7. [JWT Handling](#jwt-handling)
+8. [Input Validation](#input-validation)
+9. [Secrets Management](#secrets-management)
+10. [Code Review Checklist](#code-review-checklist)
+11. [Quick Reference](#quick-reference)
 
 ---
 
@@ -108,6 +110,43 @@ boolean matches = encoder.matches(rawPassword, hash);
 | Argon2 | memory=64MB, iterations=3 | memory=32MB, iterations=2 |
 
 **Rule:** Hashing should take ~100-500ms. Adjust work factor accordingly.
+
+---
+
+## Key Derivation (KDF) — Java 25
+
+### `javax.crypto.KDF` (FINAL in Java 25, JEP 510)
+
+> Use the new built-in **Key Derivation Function API** to derive symmetric keys
+> from a shared secret, password, or master key — no third-party library needed.
+> Supported algorithms include **HKDF** (HMAC-based) and **Argon2** (via providers).
+
+```java
+import javax.crypto.KDF;
+import javax.crypto.spec.HKDFParameterSpec;
+import javax.crypto.SecretKey;
+
+// HKDF-SHA256: derive a 32-byte AES key from a shared secret + salt + context
+KDF hkdf = KDF.getInstance("HKDF-SHA256");
+
+HKDFParameterSpec params = HKDFParameterSpec.ofExtract()
+    .addIKM(sharedSecret)        // input keying material
+    .addSalt(salt)
+    .thenExpand("aes-key-v1".getBytes(), 32);   // info + length
+
+SecretKey aesKey = hkdf.deriveKey("AES", params);
+```
+
+**When to use KDF (vs `MessageDigest` or `BCrypt`):**
+
+| Need | Use |
+|---|---|
+| Derive AES key from ECDH/X25519 shared secret | `KDF` (HKDF-SHA256) |
+| Derive multiple keys from one master secret | `KDF` (HKDF, distinct `info`) |
+| Hash a user password for storage | **BCrypt / Argon2** (not `KDF`) |
+| Generic data integrity hash | `MessageDigest` (SHA-256) |
+
+🔴 **BLOCKING — Don't roll your own HKDF** with `Mac` + `MessageDigest` on Java 25+ ; the built-in `KDF` is reviewed, side-channel-aware, and provider-pluggable.
 
 ---
 
