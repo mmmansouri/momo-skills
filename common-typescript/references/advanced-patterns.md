@@ -1,111 +1,113 @@
 # Advanced TypeScript Patterns
 
-> Reference for advanced TypeScript patterns, type-level programming, and real-world solutions.
+> Type-level programming and real-world patterns. For built-in utility types
+> (`Partial`, `Pick`, `Omit`, `Awaited`, `NoInfer`, etc.) and custom helpers
+> (`DeepPartial`, `Mutable`, `ValueOf`), read [utility-types.md](utility-types.md).
+
+## Table of Contents
+
+- [Discriminated Unions (Tagged Unions)](#discriminated-unions-tagged-unions) — type-safe state, API responses
+- [Type Guards](#type-guards) — user-defined predicates, assertion functions
+- [Conditional Types](#conditional-types) — `T extends U ? X : Y`, `infer`, distributive types
+- [Mapped Types](#mapped-types) — bulk property transforms, key remapping (TS 4.1+)
+- [Template Literal Types](#template-literal-types) — string composition, route param extraction
+- [Generic Constraints & Inference](#generic-constraints--inference) — `extends keyof`, `infer` patterns
+- [Branded / Nominal Types](#branded--nominal-types) — `UserId` vs `OrderId`, validated `Email`
+- [Variadic Tuple Types (TS 4.0+)](#variadic-tuple-types-ts-40) — spread tuples, partial application
+- [Recursive Types](#recursive-types) — JSON, dotted-path access
+- [Builder Pattern with Types](#builder-pattern-with-types) — staged builders
+- [Real-World: Type-Safe Event Emitter](#real-world-type-safe-event-emitter)
+- [Real-World: Type-Safe API Client](#real-world-type-safe-api-client)
+- [Pattern Cheat Sheet](#pattern-cheat-sheet)
 
 ---
 
 ## Discriminated Unions (Tagged Unions)
 
-The most powerful pattern for type-safe state management:
+The most powerful pattern for type-safe state and result modeling. A literal
+field (`status`, `type`, `kind`, `ok`) acts as the discriminator — narrowing
+on it enables exhaustiveness checking.
 
 ```typescript
-// ✅ CORRECT: Discriminated union with literal type discriminator
+// ✅ State machine with literal discriminator
 type AsyncState<T> =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'success'; data: T }
   | { status: 'error'; error: Error };
 
-function handleState<T>(state: AsyncState<T>): string {
+function render<T>(state: AsyncState<T>): string {
   switch (state.status) {
-    case 'idle':
-      return 'Waiting...';
-    case 'loading':
-      return 'Loading...';
-    case 'success':
-      return `Got: ${state.data}`; // data is available here
-    case 'error':
-      return `Error: ${state.error.message}`; // error is available here
+    case 'idle':    return 'Waiting…';
+    case 'loading': return 'Loading…';
+    case 'success': return `Got: ${state.data}`;     // data narrowed in
+    case 'error':   return `Err: ${state.error.message}`; // error narrowed in
+    default: {
+      const _exhaustive: never = state;              // forces handling new variants
+      throw new Error(`Unhandled: ${JSON.stringify(_exhaustive)}`);
+    }
   }
 }
 
-// ✅ CORRECT: API response pattern
+// ✅ API result envelope
 type ApiResponse<T> =
-  | { ok: true; data: T }
+  | { ok: true;  data: T }
   | { ok: false; error: string };
 
-async function fetchUser(id: string): Promise<ApiResponse<User>> {
-  try {
-    const user = await api.get<User>(`/users/${id}`);
-    return { ok: true, data: user };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Unknown error' };
-  }
-}
-
-// Usage with narrowing
 const result = await fetchUser('123');
-if (result.ok) {
-  console.log(result.data.name); // TypeScript knows data exists
-} else {
-  console.error(result.error); // TypeScript knows error exists
-}
+if (result.ok) console.log(result.data.name);  // narrowed
+else            console.error(result.error);   // narrowed
 ```
 
 ---
 
 ## Type Guards
 
-### User-Defined Type Guards
+### User-Defined Type Guards (predicate `x is T`)
 
 ```typescript
-// ✅ CORRECT: Type predicate with `is`
 function isString(value: unknown): value is string {
   return typeof value === 'string';
 }
 
 function isUser(value: unknown): value is User {
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    'id' in value &&
-    'email' in value &&
+    typeof value === 'object' && value !== null &&
+    'id' in value && 'email' in value &&
     typeof (value as User).id === 'string' &&
     typeof (value as User).email === 'string'
   );
 }
 
-// ✅ CORRECT: Type guard for discriminated unions
-function isErrorState<T>(state: AsyncState<T>): state is { status: 'error'; error: Error } {
-  return state.status === 'error';
+// ✅ Narrowing variants of a union
+function isErrorState<T>(s: AsyncState<T>): s is { status: 'error'; error: Error } {
+  return s.status === 'error';
 }
 
-// ✅ CORRECT: Array filter with type guard
+// ✅ Filter with type predicate — array element type narrows
 const mixed: (string | number)[] = [1, 'two', 3, 'four'];
 const strings: string[] = mixed.filter((x): x is string => typeof x === 'string');
 ```
 
-### Assertion Functions
+> TS 5.5+ infers type predicates automatically from simple boolean returns;
+> the explicit `x is T` annotation remains required for object-shape checks.
+
+### Assertion Functions (`asserts x is T`)
+
+Throws when narrowing fails — useful at boundaries (parsed config, decoded JWT).
 
 ```typescript
-// ✅ CORRECT: Assertion function with `asserts`
 function assertIsString(value: unknown): asserts value is string {
-  if (typeof value !== 'string') {
-    throw new Error(`Expected string, got ${typeof value}`);
-  }
+  if (typeof value !== 'string') throw new Error(`Expected string, got ${typeof value}`);
 }
 
 function assertDefined<T>(value: T | null | undefined): asserts value is T {
-  if (value === null || value === undefined) {
-    throw new Error('Value must be defined');
-  }
+  if (value === null || value === undefined) throw new Error('Value must be defined');
 }
 
-// Usage
 function processInput(input: unknown) {
   assertIsString(input);
-  // TypeScript now knows input is string
-  console.log(input.toUpperCase());
+  console.log(input.toUpperCase());  // input narrowed to string from here
 }
 ```
 
@@ -113,128 +115,73 @@ function processInput(input: unknown) {
 
 ## Conditional Types
 
-### Basic Conditional Types
-
 ```typescript
 // Syntax: T extends U ? X : Y
 
-// ✅ CORRECT: Extract non-nullable
-type NonNullable<T> = T extends null | undefined ? never : T;
-
-// ✅ CORRECT: Flatten arrays
 type Flatten<T> = T extends Array<infer U> ? U : T;
-
-type A = Flatten<string[]>;     // string
-type B = Flatten<number>;       // number
+type A = Flatten<string[]>;            // string
+type B = Flatten<number>;              // number
 type C = Flatten<(string | number)[]>; // string | number
 
-// ✅ CORRECT: Extract return type
-type ReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
-
-// ✅ CORRECT: Extract promise value
-type Awaited<T> = T extends Promise<infer U> ? Awaited<U> : T;
-
-type D = Awaited<Promise<Promise<string>>>; // string
+type MyReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+type MyAwaited<T>    = T extends Promise<infer U> ? MyAwaited<U> : T;
+type D = MyAwaited<Promise<Promise<string>>>; // string
 ```
 
 ### Distributive Conditional Types
 
+A conditional type distributes over a union when the checked type is a *naked*
+type parameter. Wrap in a tuple to disable distribution.
+
 ```typescript
-// Conditional types distribute over unions when T is naked type parameter
-
-type ToArray<T> = T extends any ? T[] : never;
-
-type E = ToArray<string | number>; // string[] | number[]
-
-// ✅ CORRECT: Prevent distribution with tuple
+type ToArray<T>        = T extends any   ? T[] : never;
 type ToArrayNonDist<T> = [T] extends [any] ? T[] : never;
 
-type F = ToArrayNonDist<string | number>; // (string | number)[]
+type E = ToArray<string | number>;          // string[] | number[]
+type F = ToArrayNonDist<string | number>;   // (string | number)[]
 ```
 
 ---
 
 ## Mapped Types
 
-### Basic Mapped Types
-
 ```typescript
-// ✅ CORRECT: Make all properties optional
-type Partial<T> = {
-  [P in keyof T]?: T[P];
-};
+// ✅ Reimplementations of built-ins (use the built-in versions in real code)
+type MyPartial<T>   = { [P in keyof T]?: T[P]; };
+type MyRequired<T>  = { [P in keyof T]-?: T[P]; };
+type MyReadonly<T>  = { readonly [P in keyof T]: T[P]; };
+type MyMutable<T>   = { -readonly [P in keyof T]: T[P]; };
 
-// ✅ CORRECT: Make all properties required
-type Required<T> = {
-  [P in keyof T]-?: T[P];
-};
-
-// ✅ CORRECT: Make all properties readonly
-type Readonly<T> = {
-  readonly [P in keyof T]: T[P];
-};
-
-// ✅ CORRECT: Remove readonly
-type Mutable<T> = {
-  -readonly [P in keyof T]: T[P];
-};
+// ✅ Transform property types
+type Stringify<T>   = { [P in keyof T]: string; };
+type NullableAll<T> = { [P in keyof T]: T[P] | null; };
 ```
 
-### Advanced Mapped Types
+### Key Remapping with `as` (TS 4.1+)
 
 ```typescript
-// ✅ CORRECT: Pick specific keys
-type Pick<T, K extends keyof T> = {
-  [P in K]: T[P];
-};
-
-// ✅ CORRECT: Omit specific keys
-type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;
-
-// ✅ CORRECT: Transform property types
-type Stringify<T> = {
-  [P in keyof T]: string;
-};
-
-// ✅ CORRECT: Nullable version of all properties
-type Nullable<T> = {
-  [P in keyof T]: T[P] | null;
-};
-
-// ✅ CORRECT: Deep partial
-type DeepPartial<T> = T extends object
-  ? { [P in keyof T]?: DeepPartial<T[P]> }
-  : T;
-
-// ✅ CORRECT: Deep readonly
-type DeepReadonly<T> = T extends object
-  ? { readonly [P in keyof T]: DeepReadonly<T[P]> }
-  : T;
-```
-
-### Key Remapping (TypeScript 4.1+)
-
-```typescript
-// ✅ CORRECT: Rename keys with `as`
+// ✅ Rename keys
 type Getters<T> = {
   [P in keyof T as `get${Capitalize<string & P>}`]: () => T[P];
 };
 
-interface Person {
-  name: string;
-  age: number;
-}
-
+interface Person { name: string; age: number; }
 type PersonGetters = Getters<Person>;
 // { getName: () => string; getAge: () => number; }
 
-// ✅ CORRECT: Filter keys
+// ✅ Filter keys by value type — `as never` removes the key
 type FilterByType<T, U> = {
   [P in keyof T as T[P] extends U ? P : never]: T[P];
 };
 
-type StringProps = FilterByType<Person, string>;
-// { name: string; }
+type StringProps = FilterByType<{ name: string; age: number }, string>;
+// { name: string }
+
+// ✅ Prefix keys
+type PrefixedKeys<T, P extends string> = {
+  [K in keyof T as `${P}${string & K}`]: T[K];
+};
+type Prefixed = PrefixedKeys<{ name: string }, 'user_'>;  // { user_name: string }
 ```
 
 ---
@@ -242,23 +189,21 @@ type StringProps = FilterByType<Person, string>;
 ## Template Literal Types
 
 ```typescript
-// ✅ CORRECT: Basic template literals
+// ✅ Compose strings
 type EventName<T extends string> = `on${Capitalize<T>}`;
+type ClickEvent = EventName<'click'>;  // 'onClick'
 
-type ClickEvent = EventName<'click'>; // 'onClick'
-
-// ✅ CORRECT: Union expansion
-type Alignment = 'left' | 'center' | 'right';
+// ✅ Cartesian product over unions
+type Alignment     = 'left' | 'center' | 'right';
 type VerticalAlign = 'top' | 'middle' | 'bottom';
+type Position      = `${Alignment}-${VerticalAlign}`;
+// 'left-top' | 'left-middle' | … | 'right-bottom'
 
-type Position = `${Alignment}-${VerticalAlign}`;
-// 'left-top' | 'left-middle' | 'left-bottom' | 'center-top' | ...
-
-// ✅ CORRECT: Parse string types
+// ✅ Parse route params
 type ExtractRouteParams<T extends string> =
-  T extends `${infer _Start}:${infer Param}/${infer Rest}`
+  T extends `${string}:${infer Param}/${infer Rest}`
     ? Param | ExtractRouteParams<Rest>
-    : T extends `${infer _Start}:${infer Param}`
+    : T extends `${string}:${infer Param}`
       ? Param
       : never;
 
@@ -273,21 +218,20 @@ type Params = ExtractRouteParams<'/users/:userId/posts/:postId'>;
 ### Constraining Generics
 
 ```typescript
-// ✅ CORRECT: Constrain to object with specific property
+// ✅ keyof for property access
 function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
   return obj[key];
 }
 
-// ✅ CORRECT: Constrain to have length property
+// ✅ Structural constraint
 function longest<T extends { length: number }>(a: T, b: T): T {
   return a.length >= b.length ? a : b;
 }
+longest('hello', 'hi');           // OK (string has length)
+longest([1, 2, 3], [1, 2]);       // OK (array has length)
+longest({ length: 5 }, { length: 3 }); // OK (object literal)
 
-longest('hello', 'hi');           // OK
-longest([1, 2, 3], [1, 2]);       // OK
-longest({ length: 5 }, { length: 3 }); // OK
-
-// ✅ CORRECT: Constrain with constructor
+// ✅ Constructor constraint
 function createInstance<T>(ctor: new () => T): T {
   return new ctor();
 }
@@ -296,168 +240,82 @@ function createInstance<T>(ctor: new () => T): T {
 ### Inference with `infer`
 
 ```typescript
-// ✅ CORRECT: Infer function parameters
-type Parameters<T extends (...args: any) => any> =
-  T extends (...args: infer P) => any ? P : never;
-
-// ✅ CORRECT: Infer constructor parameters
-type ConstructorParameters<T extends abstract new (...args: any) => any> =
-  T extends abstract new (...args: infer P) => any ? P : never;
-
-// ✅ CORRECT: Infer array element type
 type ElementType<T> = T extends (infer U)[] ? U : never;
+type ValueOf<T>     = T[keyof T];
 
-// ✅ CORRECT: Infer object value types
-type ValueOf<T> = T[keyof T];
+// First / last tuple element
+type First<T extends readonly unknown[]> = T extends readonly [infer F, ...unknown[]] ? F : never;
+type Last<T  extends readonly unknown[]> = T extends readonly [...unknown[], infer L] ? L : never;
 
-// ✅ CORRECT: Infer first element of tuple
-type First<T extends any[]> = T extends [infer F, ...any[]] ? F : never;
-
-// ✅ CORRECT: Infer last element of tuple
-type Last<T extends any[]> = T extends [...any[], infer L] ? L : never;
+type X = First<[1, 2, 3]>;  // 1
+type Y = Last<[1, 2, 3]>;   // 3
 ```
 
 ---
 
-## Builder Pattern with Types
+## Branded / Nominal Types
+
+TypeScript is structurally typed — two `string`s are interchangeable even when
+they represent different domain concepts. Branded types add a phantom marker.
 
 ```typescript
-// ✅ CORRECT: Type-safe builder pattern
-interface QueryBuilder<T extends object = {}> {
-  select<K extends string>(
-    fields: K[]
-  ): QueryBuilder<T & Record<'select', K[]>>;
-  
-  from<Table extends string>(
-    table: Table
-  ): QueryBuilder<T & Record<'from', Table>>;
-  
-  where<Field extends string>(
-    field: Field,
-    value: unknown
-  ): QueryBuilder<T & Record<'where', { field: Field; value: unknown }>>;
-  
-  build(): T extends { select: any; from: any } ? string : never;
-}
+type Brand<T, B> = T & { readonly __brand: B };
 
-function createQuery(): QueryBuilder {
-  const state: any = {};
-  
-  return {
-    select(fields) {
-      state.select = fields;
-      return this as any;
-    },
-    from(table) {
-      state.from = table;
-      return this as any;
-    },
-    where(field, value) {
-      state.where = { field, value };
-      return this as any;
-    },
-    build() {
-      if (!state.select || !state.from) {
-        throw new Error('select and from are required');
-      }
-      return `SELECT ${state.select.join(', ')} FROM ${state.from}` +
-        (state.where ? ` WHERE ${state.where.field} = ?` : '');
-    }
-  };
-}
-
-// Usage - build() only available after select() and from()
-const query = createQuery()
-  .select(['id', 'name'])
-  .from('users')
-  .where('id', 1)
-  .build(); // OK
-
-// This would fail type checking:
-// createQuery().select(['id']).build(); // Error: from is required
-```
-
----
-
-## Branded/Nominal Types
-
-TypeScript uses structural typing, but sometimes you need nominal types:
-
-```typescript
-// ✅ CORRECT: Branded types for type safety
-type Brand<T, B> = T & { __brand: B };
-
-type UserId = Brand<string, 'UserId'>;
+type UserId  = Brand<string, 'UserId'>;
 type OrderId = Brand<string, 'OrderId'>;
 
-function createUserId(id: string): UserId {
-  return id as UserId;
-}
+const createUserId  = (id: string): UserId  => id as UserId;
+const createOrderId = (id: string): OrderId => id as OrderId;
 
-function createOrderId(id: string): OrderId {
-  return id as OrderId;
-}
+function getUser(id: UserId): User { /* … */ }
 
-function getUser(id: UserId): User {
-  // ...
-}
-
-const userId = createUserId('user-123');
+const userId  = createUserId('user-123');
 const orderId = createOrderId('order-456');
 
-getUser(userId);  // OK
-// getUser(orderId); // Error: OrderId is not assignable to UserId
-// getUser('user-123'); // Error: string is not assignable to UserId
+getUser(userId);          // ✅ OK
+// getUser(orderId);      // ❌ OrderId not assignable to UserId
+// getUser('user-123');   // ❌ string not assignable to UserId
 
-// ✅ CORRECT: Validated types
+// ✅ Validated brands — only the validator can produce the type
 type Email = Brand<string, 'Email'>;
-type NonEmptyString = Brand<string, 'NonEmptyString'>;
 
-function validateEmail(input: string): Email | null {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(input) ? (input as Email) : null;
-}
-
-function validateNonEmpty(input: string): NonEmptyString | null {
-  return input.trim().length > 0 ? (input as NonEmptyString) : null;
+function parseEmail(input: string): Email | null {
+  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
+  return ok ? (input as Email) : null;
 }
 ```
 
+Use cases : domain IDs, validated strings (`Email`, `Url`, `NonEmptyString`),
+units (`Cents`, `Dollars`, `Milliseconds`).
+
 ---
 
-## Variadic Tuple Types (TypeScript 4.0+)
+## Variadic Tuple Types (TS 4.0+)
 
 ```typescript
-// ✅ CORRECT: Spread in tuple types
+// ✅ Concatenate tuple types
 type Concat<T extends any[], U extends any[]> = [...T, ...U];
+type AB = Concat<[1, 2], [3, 4]>;  // [1, 2, 3, 4]
 
-type A = Concat<[1, 2], [3, 4]>; // [1, 2, 3, 4]
-
-// ✅ CORRECT: Function that preserves tuple types
+// ✅ Function preserving tuple types
 function concat<T extends any[], U extends any[]>(
   arr1: [...T],
-  arr2: [...U]
+  arr2: [...U],
 ): [...T, ...U] {
   return [...arr1, ...arr2];
 }
-
 const result = concat([1, 'hello'] as const, [true, 42] as const);
-// Type: [1, "hello", true, 42]
+// type: readonly [1, 'hello', true, 42]
 
-// ✅ CORRECT: Partial application
-type PartialApply<
-  F extends (...args: any) => any,
-  Applied extends any[]
-> = F extends (...args: [...Applied, ...infer Rest]) => infer R
-  ? (...args: Rest) => R
-  : never;
+// ✅ Partial application
+type PartialApply<F extends (...args: any) => any, Applied extends any[]> =
+  F extends (...args: [...Applied, ...infer Rest]) => infer R
+    ? (...args: Rest) => R
+    : never;
 
-function add(a: number, b: number, c: number): number {
-  return a + b + c;
-}
-
-type Add1 = PartialApply<typeof add, [number]>; // (b: number, c: number) => number
-type Add2 = PartialApply<typeof add, [number, number]>; // (c: number) => number
+function add(a: number, b: number, c: number): number { return a + b + c; }
+type Add1 = PartialApply<typeof add, [number]>;          // (b: number, c: number) => number
+type Add2 = PartialApply<typeof add, [number, number]>;  // (c: number) => number
 ```
 
 ---
@@ -465,13 +323,13 @@ type Add2 = PartialApply<typeof add, [number, number]>; // (c: number) => number
 ## Recursive Types
 
 ```typescript
-// ✅ CORRECT: JSON type
+// ✅ JSON
 type JsonPrimitive = string | number | boolean | null;
-type JsonArray = Json[];
-type JsonObject = { [key: string]: Json };
-type Json = JsonPrimitive | JsonArray | JsonObject;
+type JsonArray     = Json[];
+type JsonObject    = { [key: string]: Json };
+type Json          = JsonPrimitive | JsonArray | JsonObject;
 
-// ✅ CORRECT: Recursive path type
+// ✅ Dotted-path enumeration
 type Path<T, K extends keyof T = keyof T> = K extends string
   ? T[K] extends Record<string, any>
     ? K | `${K}.${Path<T[K]>}`
@@ -479,38 +337,52 @@ type Path<T, K extends keyof T = keyof T> = K extends string
   : never;
 
 interface Config {
-  server: {
-    port: number;
-    host: string;
-  };
-  database: {
-    connection: {
-      url: string;
-    };
-  };
+  server:   { port: number; host: string };
+  database: { connection: { url: string } };
 }
 
 type ConfigPath = Path<Config>;
 // 'server' | 'server.port' | 'server.host' | 'database' | 'database.connection' | 'database.connection.url'
 
-// ✅ CORRECT: Get type at path
+// ✅ Get type at path
 type PathValue<T, P extends string> = P extends `${infer K}.${infer Rest}`
-  ? K extends keyof T
-    ? PathValue<T[K], Rest>
-    : never
-  : P extends keyof T
-    ? T[P]
-    : never;
+  ? K extends keyof T ? PathValue<T[K], Rest> : never
+  : P extends keyof T ? T[P] : never;
 
-type PortType = PathValue<Config, 'server.port'>; // number
-type UrlType = PathValue<Config, 'database.connection.url'>; // string
+type PortType = PathValue<Config, 'server.port'>;             // number
+type UrlType  = PathValue<Config, 'database.connection.url'>; // string
 ```
 
 ---
 
-## Real-World Patterns
+## Builder Pattern with Types
 
-### Type-Safe Event Emitter
+Staged builders prevent calling `.build()` before required steps are complete.
+
+```typescript
+interface QueryBuilder<T extends object = {}> {
+  select<K extends string>(fields: K[]):
+    QueryBuilder<T & { select: K[] }>;
+  from<Table extends string>(table: Table):
+    QueryBuilder<T & { from: Table }>;
+  where<Field extends string>(field: Field, value: unknown):
+    QueryBuilder<T & { where: { field: Field; value: unknown } }>;
+  build(): T extends { select: any; from: any } ? string : never;
+}
+
+// Usage — `.build()` returns `never` until both `select` and `from` are called
+const query = createQuery()
+  .select(['id', 'name'])
+  .from('users')
+  .where('id', 1)
+  .build();           // ✅ string
+
+// createQuery().select(['id']).build();  // ❌ Type 'never' is not callable
+```
+
+---
+
+## Real-World: Type-Safe Event Emitter
 
 ```typescript
 type EventMap = Record<string, any>;
@@ -521,81 +393,75 @@ interface TypedEventEmitter<Events extends EventMap> {
   emit<K extends keyof Events>(event: K, data: Events[K]): void;
 }
 
-// Usage
 interface AppEvents {
-  userLoggedIn: { userId: string; timestamp: Date };
+  userLoggedIn:  { userId: string; timestamp: Date };
   userLoggedOut: { userId: string };
-  error: Error;
+  error:         Error;
 }
 
 declare const emitter: TypedEventEmitter<AppEvents>;
 
-emitter.on('userLoggedIn', (data) => {
-  console.log(data.userId); // OK, typed correctly
-});
-
-emitter.emit('userLoggedIn', { userId: '123', timestamp: new Date() }); // OK
-// emitter.emit('userLoggedIn', { userId: '123' }); // Error: missing timestamp
+emitter.on('userLoggedIn', data => console.log(data.userId));               // ✅
+emitter.emit('userLoggedIn', { userId: '123', timestamp: new Date() });     // ✅
+// emitter.emit('userLoggedIn', { userId: '123' });                         // ❌ missing timestamp
 ```
 
-### Type-Safe API Client
+---
+
+## Real-World: Type-Safe API Client
 
 ```typescript
 interface ApiEndpoints {
   '/users': {
-    GET: { response: User[] };
+    GET:  { response: User[] };
     POST: { body: CreateUserDto; response: User };
   };
   '/users/:id': {
-    GET: { response: User };
-    PUT: { body: UpdateUserDto; response: User };
+    GET:    { response: User };
+    PUT:    { body: UpdateUserDto; response: User };
     DELETE: { response: void };
   };
 }
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
-type ApiRequest<
-  Path extends keyof ApiEndpoints,
-  Method extends keyof ApiEndpoints[Path]
-> = ApiEndpoints[Path][Method] extends { body: infer B } ? B : never;
+type ApiRequest<P extends keyof ApiEndpoints, M extends keyof ApiEndpoints[P]> =
+  ApiEndpoints[P][M] extends { body: infer B } ? B : never;
 
-type ApiResponse<
-  Path extends keyof ApiEndpoints,
-  Method extends keyof ApiEndpoints[Path]
-> = ApiEndpoints[Path][Method] extends { response: infer R } ? R : never;
+type ApiResponse<P extends keyof ApiEndpoints, M extends keyof ApiEndpoints[P]> =
+  ApiEndpoints[P][M] extends { response: infer R } ? R : never;
 
 async function apiCall<
-  Path extends keyof ApiEndpoints,
-  Method extends keyof ApiEndpoints[Path] & HttpMethod
+  P extends keyof ApiEndpoints,
+  M extends keyof ApiEndpoints[P] & HttpMethod,
 >(
-  path: Path,
-  method: Method,
-  ...args: ApiRequest<Path, Method> extends never
-    ? []
-    : [body: ApiRequest<Path, Method>]
-): Promise<ApiResponse<Path, Method>> {
-  // Implementation
+  path: P,
+  method: M,
+  ...args: ApiRequest<P, M> extends never ? [] : [body: ApiRequest<P, M>]
+): Promise<ApiResponse<P, M>> {
   return {} as any;
 }
 
-// Usage
-const users = await apiCall('/users', 'GET'); // User[]
-const newUser = await apiCall('/users', 'POST', { name: 'John', email: 'john@example.com' }); // User
-// apiCall('/users', 'POST'); // Error: body required
+const users   = await apiCall('/users', 'GET');                                          // User[]
+const newOne  = await apiCall('/users', 'POST', { name: 'John', email: 'j@e.com' });     // User
+// apiCall('/users', 'POST');                                                            // ❌ body required
 ```
 
 ---
 
-## Summary
+## Pattern Cheat Sheet
 
-| Pattern | Use Case |
-|---------|----------|
-| Discriminated Unions | Type-safe state, API responses |
-| Type Guards | Runtime type checking with TS awareness |
-| Conditional Types | Transform types based on conditions |
-| Mapped Types | Bulk property transformations |
-| Template Literals | String type manipulation |
-| Branded Types | Nominal typing, validation |
-| Variadic Tuples | Preserve tuple types through operations |
-| Recursive Types | Nested structures, paths |
+| Pattern | Use Case | Key Operator |
+|---------|----------|--------------|
+| Discriminated Union | State machines, API results | literal field `+` `switch` `+` `never` |
+| Type Guard (predicate) | Reusable runtime narrowing | `x is T` |
+| Assertion Function | Boundary validation that throws | `asserts x is T` |
+| Conditional Type | Transform types based on shape | `T extends U ? X : Y` |
+| Distributive Conditional | Map over union members | naked `T extends U` |
+| Mapped Type | Bulk property transform | `[K in keyof T]` |
+| Key Remapping | Rename / filter keys | `[K in keyof T as ...]` |
+| Template Literal Type | String type composition | `` `${X}${Y}` `` |
+| Branded Type | Nominal safety on structural types | `T & { __brand: B }` |
+| Variadic Tuple | Preserve tuple shape through fn | `[...T, ...U]` |
+| Recursive Type | Nested structures, dotted paths | self-reference `+` `infer` |
+| Staged Builder | Method ordering enforced by types | accumulator type parameter |
