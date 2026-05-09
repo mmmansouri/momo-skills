@@ -1,5 +1,28 @@
 # Spring Security 7 / Spring Boot 4 Reference
 
+## Table of Contents
+
+- [What's New in Spring Security 7](#whats-new-in-spring-security-7)
+- [Basic Security Configuration](#basic-security-configuration)
+  - Minimal config · REST API stateless config
+- [Authentication](#authentication)
+  - JWT Resource Server · OAuth2 Login · Custom UserDetailsService · MFA (Spring Security 7)
+- [Authorization](#authorization)
+  - Method security (`@PreAuthorize`, `@PostAuthorize`, `@PostFilter`) · Custom `AuthorizationManager`
+- [CORS Configuration](#cors-configuration)
+- [CSRF Configuration](#csrf-configuration)
+  - SPA (`csrf.spa()`) · Cookie-based · Stateless API
+- [Security Headers](#security-headers)
+- [Password Encoders](#password-encoders)
+  - DelegatingPasswordEncoder · Argon2 (Password4j) · Custom delegation
+- [Actuator Security](#actuator-security)
+- [Exception Handling](#exception-handling)
+  - Custom `AuthenticationEntryPoint` · RFC 7807 Problem Details
+- [Testing Security](#testing-security)
+  - MockMvc · `@WithMockUser` · `@WithUserDetails` · JWT test postprocessor
+
+---
+
 ## What's New in Spring Security 7
 
 ### Key Changes

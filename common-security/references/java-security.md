@@ -1,5 +1,21 @@
 # Java Security Reference
 
+## Table of Contents
+
+- [Injection Prevention](#injection-prevention)
+  - SQL · Command · XPath · LDAP · XXE
+- [Serialization Security](#serialization-security)
+- [Cryptography](#cryptography)
+  - AES-GCM · RSA · Digital Signatures · Secure Random
+- [Password Hashing](#password-hashing)
+  - BCrypt · Argon2 · Algorithm comparison · OWASP 2025 parameters
+- [Immutability for Security](#immutability-for-security)
+- [Access Control](#access-control)
+- [Error Handling](#error-handling)
+- [Resource Management](#resource-management)
+
+---
+
 ## Injection Prevention
 
 ### SQL Injection
@@ -307,25 +323,17 @@ boolean matches = encoder.matches(rawPassword, hash);
 | **SCrypt** | Memory-hard | Complex tuning |
 | **PBKDF2** | FIPS-140 compliant | Not memory-hard |
 
-### OWASP 2025 Recommendations
+### OWASP 2025 Minimum Parameters
 
-```java
-// Argon2id (preferred)
-new Argon2PasswordEncoder(
-    16,      // Salt length
-    32,      // Hash length
-    1,       // Parallelism (min 1)
-    19456,   // Memory in KB (min 19 MiB = 19456)
-    2        // Iterations (min 2)
-);
+Constructor signature: `Argon2PasswordEncoder(saltLength, hashLength, parallelism, memoryKB, iterations)`.
 
-// BCrypt
-new BCryptPasswordEncoder(10);  // Work factor 10+
+| Algorithm | Minimum recommended parameters |
+|-----------|--------------------------------|
+| **Argon2id** (preferred) | `new Argon2PasswordEncoder(16, 32, 1, 19456, 2)` — 19 MiB / 2 iter / 1 parallelism |
+| **BCrypt** | `new BCryptPasswordEncoder(10)` — work factor ≥ 10 |
+| **PBKDF2** (FIPS) | `new Pbkdf2PasswordEncoder("", 16, 600000, PBKDF2WithHmacSHA256)` — ≥ 600 000 iter |
 
-// PBKDF2 (FIPS compliance)
-new Pbkdf2PasswordEncoder("", 16, 600000,
-    Pbkdf2PasswordEncoder.SecretKeyFactoryAlgorithm.PBKDF2WithHmacSHA256);
-```
+For a `DelegatingPasswordEncoder` that supports algorithm migration, see [spring-security.md#password-encoders](spring-security.md#password-encoders) (sibling reference in this skill).
 
 ---
 

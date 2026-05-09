@@ -1,5 +1,23 @@
 # Security Fundamentals Reference
 
+## Table of Contents
+
+- [OWASP Top 10 (2025)](#owasp-top-10-2025)
+- [Security Principles](#security-principles)
+  - Defense in Depth · Least Privilege · Fail Secure · Zero Trust
+- [Input Validation](#input-validation)
+- [Output Encoding](#output-encoding)
+- [Secrets Management](#secrets-management)
+- [Security Headers](#security-headers)
+- [Logging Security Events](#logging-security-events)
+- [SSRF Prevention (A10)](#ssrf-prevention-a10)
+- [Threat Modeling (STRIDE)](#threat-modeling-stride)
+- [Audit Logging](#audit-logging)
+- [Rate Limiting](#rate-limiting)
+- [Dependency Security](#dependency-security)
+
+---
+
 ## OWASP Top 10 (2025)
 
 | # | Risk | Prevention |

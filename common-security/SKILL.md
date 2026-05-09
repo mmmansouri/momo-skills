@@ -1,339 +1,391 @@
 ---
 name: common-security
 description: >-
-  Application security best practices for web applications. Use when: preventing
-  OWASP Top 10 vulnerabilities (injection, XSS, CSRF), implementing authentication
-  (JWT, OAuth2, MFA), configuring authorization (RBAC), hashing passwords (BCrypt,
-  Argon2), securing APIs, or configuring Spring Security 7 / Spring Boot 4.
+  Application security guide for Spring Boot 4 / Spring Security 7 / Java 25
+  aligned with OWASP Top 10 (2025). Use whenever the user mentions injection
+  (SQL, command, XSS, log, XPath, LDAP, XXE), authentication (login, JWT,
+  OAuth2, OIDC, MFA, password hashing), authorization (RBAC, @PreAuthorize,
+  AccessDeniedException, "403 Forbidden"), CORS / CSRF, secrets management,
+  cryptography, SSRF, deserialization, security headers, audit logging,
+  rate limiting, dependency CVE scanning, the Spring Security 6 → 7 migration
+  (`authorizeHttpRequests`, `PathPatternRequestMatcher`, `csrf.spa()`), or
+  hardening Spring Boot Actuator — even when they don't explicitly say
+  "security". Do NOT use for infrastructure security (firewalls, WAF, network
+  segmentation), penetration testing methodology, or self-hosted Vault setup.
 ---
 
 # Security Developer Guide
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+>
+> **Stack baseline:** Spring Boot 4.x · Spring Framework 7.x · Spring Security 7.x · Java 25 LTS · OWASP Top 10 (2025) · Argon2id (Password4j) preferred for new password hashing.
+
+📚 **References (read each only when its trigger applies):**
+- 📚 **When you need OWASP Top 10 mapping, defense-in-depth diagrams, allowlist/denylist patterns, security headers, SSRF detail, STRIDE threat modeling, audit logging or rate-limiting recipes → read [security-fundamentals.md](references/security-fundamentals.md).**
+- 📚 **When writing or reviewing pure-Java security code (PreparedStatement, ProcessBuilder, XPath/LDAP/XXE escaping, ObjectInputFilter, AES-GCM, RSA, BCrypt/Argon2 APIs, defensive copies, sealed classes) → read [java-security.md](references/java-security.md).**
+- 📚 **When configuring Spring Security 7 (SecurityFilterChain, JWT resource server, OAuth2 login, MFA, method security, CORS, CSRF, password encoders, actuator chain, Problem Details, MockMvc tests) → read [spring-security.md](references/spring-security.md).**
+
+---
+
+## Decision Trees
+
+### Authentication Style
+
+```
+What kind of client?
+│
+├── Server-rendered web app (Thymeleaf)?     → Session-based + form login + CSRF on
+├── Single-Page App on same domain?          → Session cookie + csrf.spa() + SameSite=Lax
+├── REST API consumed by SPA on other domain → JWT (oauth2ResourceServer) + CORS
+├── Mobile / native client?                  → JWT + refresh token (HTTP-only cookie when possible)
+├── B2B / federated login?                   → OAuth2 / OIDC (oauth2Login)
+└── Service-to-service inside the cluster?   → mTLS or signed JWT with short TTL
+```
+
+### Password Hashing
+
+```
+What's the constraint?
+│
+├── New application, no FIPS requirement?    → Argon2id (Password4j) — 19 MiB / 2 iter / 1 parallelism
+├── Need broad library compatibility?        → BCrypt — work factor 12+
+├── FIPS-140 compliance required?            → PBKDF2-HMAC-SHA-256 — 600 000+ iterations
+└── Migrating from legacy MD5 / SHA1?        → DelegatingPasswordEncoder + rehash on next login
+```
+
+### CSRF
+
+```
+What's the session model?
+│
+├── Stateless JWT API?                       → csrf.disable() (safe — no ambient credentials)
+├── SPA with session cookie?                 → csrf.spa() (deferred token, BREACH-safe)
+├── Cookie token readable by JS (double-submit)? → CookieCsrfTokenRepository.withHttpOnlyFalse()
+└── Server-rendered (Thymeleaf, JSP)?        → CSRF on (default), token in form
+```
 
 ---
 
 ## When Preventing Injection Attacks
 
-📚 **References:** [security-fundamentals.md](references/security-fundamentals.md), [java-security.md](references/java-security.md)
+### 🔴 BLOCKING — Never concatenate untrusted input into queries, commands, or markup
 
-### 🔴 SQL Injection Prevention
+**Why:** every injection class (SQL, command, XPath, LDAP, XXE, XSS, log) shares the same root cause — untrusted data parsed in a privileged context. String concatenation is the universal anti-pattern; parameterization / encoding is the universal fix.
 
-```java
-// 🔴 WRONG - String concatenation
-String query = "SELECT * FROM users WHERE email = '" + email + "'";
+**Pattern table (see [java-security.md](references/java-security.md) for full code):**
 
-// ✅ CORRECT - Parameterized query
-@Query("SELECT u FROM User u WHERE u.email = :email")
-User findByEmail(@Param("email") String email);
-```
+| Sink | Wrong | Correct |
+|---|---|---|
+| SQL | `"... WHERE id = " + id` | `PreparedStatement` / `@Query` + `@Param` |
+| OS command | `Runtime.exec("ping " + h)` | `InetAddress.getByName(h).isReachable(...)` or `ProcessBuilder` array form |
+| XPath | `"//u[name='" + n + "']"` | `XPathVariableResolver` |
+| LDAP | `"(uid=" + u + ")"` | escape `\ * ( ) \0` per RFC 4515 |
+| XML | default `DocumentBuilder` | disable DTDs, external entities, XInclude |
+| HTML output | string interpolation | OWASP Java Encoder (`Encode.forHtml`, `forHtmlAttribute`, `forJavaScript`) |
+| Logging | `"... user: " + name` | parameterized: `log.info("... user: {}", name)` |
 
-### 🔴 Command Injection Prevention
+### 🔴 BLOCKING — Validate at every trust boundary, not only at the controller
 
-```java
-// 🔴 WRONG - Shell command with user input
-Runtime.getRuntime().exec("ping " + hostname);
+**Why:** controllers are not the only entry point. Message-queue listeners, scheduled jobs, deserialization callbacks, and internal service-to-service calls all cross trust boundaries. A controller-only check is bypassed the moment an internal caller appears.
 
-// ✅ CORRECT - Use Java API
-InetAddress.getByName(hostname).isReachable(5000);
-```
-
-### 🔴 XSS Prevention
-
-- Use strict allowlist input validation
-- Limit input size (50 chars when feasible)
-- Use OWASP Java Encoder for output escaping
-
-### 🔴 Log Injection Prevention
-
-```java
-// 🔴 WRONG
-logger.info("Login failed for user: " + username);
-
-// ✅ CORRECT - Parameterized logging
-logger.info("Login failed for user: {}", username);
-```
-
----
-
-## When Validating Input
-
-📚 **References:** [security-fundamentals.md](references/security-fundamentals.md)
-
-### 🔴 Always Validate Untrusted Data
-
-- Validate early (at API entry points)
-- Re-validate before security-sensitive operations
-- Use allowlist (not denylist) approach
-- Never trust: user input, external APIs, deserialized objects, file uploads
-
-### 🟡 Size Limits for DoS Prevention
-
-- Limit decompressed size, not compressed
-- Check without integer overflow: `current > max - extra` (not `current + extra > max`)
+- Validate on entry (controller, listener, consumer)
+- Re-validate before security-sensitive operations (payment, deletion, role change)
+- Use **allowlist** patterns, never denylist (denylists leak with every new bypass)
+- Cap input size to prevent DoS — compare with `current > max - extra` (avoids integer overflow)
 
 ---
 
 ## When Handling Passwords
 
-📚 **References:** [java-security.md](references/java-security.md), [spring-security.md](references/spring-security.md)
+### 🔴 BLOCKING — Never store passwords with general-purpose hashes (MD5, SHA-1, SHA-256)
 
-### 🔴 Use Strong Hashing Algorithms
+**Why:** these are designed to be fast. A consumer GPU brute-forces billions of SHA-256 hashes per second. Password hashes must be **slow and memory-hard** so an attacker who exfiltrates the hash table cannot crack it offline at scale.
 
-| Algorithm | Recommendation | OWASP Minimum Parameters |
-|-----------|----------------|--------------------------|
-| **Argon2id** | Preferred (OWASP 2025) | 19 MiB memory, 2 iterations, 1 parallelism |
-| **BCrypt** | Good default | Work factor 10+ (72-byte password limit) |
-| **PBKDF2** | FIPS-140 compliant | 600,000+ iterations with HMAC-SHA-256 |
+| Algorithm | Recommendation | Minimum parameters (OWASP 2025) |
+|---|---|---|
+| **Argon2id** | Preferred for new apps | 19 MiB memory · 2 iterations · 1 parallelism |
+| **BCrypt** | Good default, broad compat | Work factor ≥ 10 (72-byte password limit) |
+| **PBKDF2-HMAC-SHA-256** | FIPS-140 compliance | ≥ 600 000 iterations |
 
-### 🟢 Spring Security Configuration
-
-```java
-// ✅ Argon2 (recommended for new apps)
-@Bean
-public PasswordEncoder passwordEncoder() {
-    return new Argon2PasswordEncoder(16, 32, 1, 19456, 2);
-}
-```
+📚 **Encoder configuration (Spring & raw Java) → [spring-security.md#password-encoders](references/spring-security.md#password-encoders) and [java-security.md#password-hashing](references/java-security.md#password-hashing).**
 
 ---
 
 ## When Implementing Authentication
 
-📚 **References:** [spring-security.md](references/spring-security.md) — JWT Resource Server, OAuth2, MFA, UserDetailsService
+📚 **For full JWT resource server, OAuth2 login, custom UserDetailsService and Spring Security 7 MFA setup → read [spring-security.md](references/spring-security.md).**
 
-### 🔴 JWT Best Practices
+### 🔴 BLOCKING — Validate every JWT claim that affects trust
 
-| Rule | Why |
-|------|-----|
-| Short-lived tokens (15 min max) | Limits exposure window |
-| Secure refresh token storage | HTTP-only cookies preferred |
-| Validate signature, iss, aud, exp | Prevents token manipulation |
-| Use asymmetric keys (RS256/ES256) | Enables key rotation |
+**Why:** a JWT is just a signed JSON. If you skip `iss`, `aud`, or `exp` validation, an attacker can replay tokens from another tenant, audience, or past session. Signature alone proves provenance, not freshness or scope.
+
+| Rule | Reason |
+|---|---|
+| Validate signature, `iss`, `aud`, `exp`, `nbf` | Prevents token reuse across tenants / sessions |
+| Short access tokens (≤ 15 min) | Limits exposure window if leaked |
+| Refresh tokens in HTTP-only Secure cookies | Mitigates XSS theft |
+| Asymmetric keys (RS256 / ES256) | Enables key rotation without resigning every secret |
 
 ### 🟢 Stateful vs Stateless
 
-| Use Case | Recommendation |
-|----------|----------------|
-| Monolith web app | Session-based (simpler) |
-| Microservices/APIs | JWT/OAuth2 (scalable) |
-| Mobile apps | JWT with refresh tokens |
+| Use case | Recommendation |
+|---|---|
+| Monolithic web app | Session-based (simpler, server-side revoke) |
+| Microservices / public APIs | JWT / OAuth2 (scalable, no shared session store) |
+| Mobile apps | JWT with refresh token rotation |
 
 ---
 
 ## When Implementing Authorization
 
-📚 **References:** [spring-security.md](references/spring-security.md) — Method security, custom AuthorizationManager, URL-based auth
+📚 **For method security, custom `AuthorizationManager`, URL-based auth in Spring Security 7 → read [spring-security.md](references/spring-security.md).**
 
-### 🔴 Method Security
+### 🔴 BLOCKING — Authorize on the resource, not only the role
+
+**Why:** role checks (`hasRole('USER')`) prove *what the user is*, not *what they own*. Without an ownership check, any authenticated user can act on any resource by guessing the ID — IDOR (A01 in OWASP Top 10).
 
 ```java
-@PreAuthorize("hasRole('ADMIN')")
-public void deleteUser(UUID id) { }
+// 🔴 WRONG — any authenticated user can cancel any order
+@PreAuthorize("hasRole('USER')")
+public void cancelOrder(UUID orderId) { ... }
 
-@PreAuthorize("#order.customerId == authentication.principal.id")
-public void cancelOrder(Order order) { }
+// ✅ CORRECT — ownership + role
+@PreAuthorize("#order.customerId == authentication.principal.id or hasRole('ADMIN')")
+public void cancelOrder(Order order) { ... }
 ```
 
-### 🟡 Spring Security 7 Migration Notes
+### 🟡 Spring Security 6 → 7 migration
 
 ```java
 // 🔴 REMOVED in Spring Security 7
-http.authorizeRequests()...  // Use authorizeHttpRequests()
-http.csrf().and()...         // Use lambda DSL
-new AntPathRequestMatcher()  // Use PathPatternRequestMatcher
+http.authorizeRequests()...           // → authorizeHttpRequests()
+http.csrf().and()...                  // → lambda DSL only
+new AntPathRequestMatcher("/api/**")  // → PathPatternRequestMatcher
+new MvcRequestMatcher(...)            // → PathPatternRequestMatcher
+AuthorizationManager#check(...)       // → #authorize()
 ```
+
+📚 **Full migration matrix and lambda-DSL examples → [spring-security.md#whats-new-in-spring-security-7](references/spring-security.md#whats-new-in-spring-security-7).**
 
 ---
 
-## When Designing Secure Features (A04 - Insecure Design)
+## When Designing Secure Features (A04 — Insecure Design)
 
-📚 **References:** [security-fundamentals.md](references/security-fundamentals.md#threat-modeling) — STRIDE framework, Defense in Depth examples
+📚 **STRIDE framework, defense-in-depth code example, secure design patterns → [security-fundamentals.md#threat-modeling-stride](references/security-fundamentals.md#threat-modeling-stride).**
 
-### 🔴 BLOCKING
+### 🔴 BLOCKING — Threat-model before writing the first endpoint
 
-- **Identify threats before coding** → Use STRIDE (Spoofing, Tampering, Repudiation, Info Disclosure, DoS, Elevation)
-- **Fail closed** → Deny access on errors or unexpected states
-- **Defense in depth** → Multiple security layers (URL auth + method auth + business validation)
-- **No security by obscurity** → Proper auth/authz, not hidden URLs
+**Why:** A04 (Insecure Design) is the OWASP category that cannot be patched after the fact. A missing rate limit or trust boundary baked into the design surfaces only in production, where the cost of a redesign is highest. STRIDE takes 30 minutes; a rebuild takes weeks.
+
+- **Identify** threats with STRIDE (Spoofing, Tampering, Repudiation, Information disclosure, DoS, Elevation of privilege)
+- **Fail closed** on errors and unexpected states (default deny)
+- **Defense in depth** — URL auth + method auth + business validation, never one layer alone
+- **Never rely on obscurity** (hidden URLs, secret query params) instead of authorization
 
 ### 🟢 Principle of Least Privilege
 
-- Grant minimum permissions needed, use RBAC, time-limited when possible
+Grant the minimum permissions needed; prefer time-bounded scopes (token TTL, session timeout, JIT admin elevation).
 
 ---
 
 ## When Configuring CORS & CSRF
 
-📚 **References:** [spring-security.md](references/spring-security.md) — Full CORS config, SPA CSRF, cookie-based CSRF
+📚 **Full CORS chain, SPA CSRF wiring, cookie-based CSRF for JS clients → [spring-security.md#cors-configuration](references/spring-security.md#cors-configuration).**
 
-### 🔴 CORS Must Process Before Security
+### 🔴 BLOCKING — CORS must be configured inside the SecurityFilterChain, not as a global filter
 
-- Configure via `cors(cors -> cors.configurationSource(...))` in SecurityFilterChain
-- Use specific origins (never `*` in production with credentials)
-- Set `allowCredentials(true)` + `maxAge(3600L)`
+**Why:** Spring Security's filter chain runs **before** any global CORS filter. If CORS is configured outside the chain, preflight `OPTIONS` requests get a 401 before reaching the CORS handler — browsers then reject the actual request and you debug a "CORS bug" that is actually an authentication bug.
+
+- Wire via `cors(cors -> cors.configurationSource(corsSource()))`
+- Specific origins only (never `*` with `allowCredentials(true)` — browsers refuse the combination)
+- `allowCredentials(true)` only when the API uses cookies; otherwise leave false
+- Set `maxAge(3600L)` to cut preflight chatter
 
 ### 🟡 CSRF Decision Matrix
 
-| App Type | Session | CSRF |
-|----------|---------|------|
-| Traditional web (Thymeleaf) | Yes | **Enable** |
-| SPA + session cookies | Yes | **Enable** (`csrf.spa()`) |
-| REST API + JWT | No | Disable |
-| Mobile backend + JWT | No | Disable |
+| App type | Session? | CSRF |
+|---|---|---|
+| Traditional web (Thymeleaf / JSP) | Yes | **Enable** (default) |
+| SPA + session cookie | Yes | **Enable** with `csrf.spa()` |
+| REST API + JWT in `Authorization` header | No | **Disable** (no ambient credentials) |
+| Mobile backend + JWT | No | **Disable** |
 
 ---
 
 ## When Managing Secrets
 
-📚 **References:** [security-fundamentals.md](references/security-fundamentals.md)
+📚 **Secret storage hierarchy (HSM → KMS → Vault → env vars) and Kubernetes Secrets recipes → [security-fundamentals.md#secrets-management](references/security-fundamentals.md#secrets-management).**
 
-### 🔴 Never Hardcode Secrets
+### 🔴 BLOCKING — Never hardcode secrets in source or committed config
+
+**Why:** once a secret is in git history, it is compromised forever — `git filter-repo` removes the file but every clone, fork, and CI cache still holds it. Treat secret leakage as irrevocable: the only fix is rotation.
 
 ```java
-// 🔴 WRONG
+// 🔴 WRONG — secret in source
 private static final String API_KEY = "sk-abc123...";
 
-// ✅ CORRECT - Spring externalized config
+// ✅ CORRECT — Spring externalized config
 @Value("${app.api-key}")
 private String apiKey;
 ```
 
-### 🔴 Secrets Management
-
-| Environment | Solution |
-|-------------|----------|
+| Environment | Storage |
+|---|---|
 | Development | `.env` files (gitignored) |
-| CI/CD | Pipeline secrets (GitHub, GitLab) |
-| Production | Vault, AWS Secrets Manager, Azure Key Vault |
+| CI/CD | Pipeline secret store (GitHub Actions, GitLab CI) |
+| Production | Cloud KMS (AWS Secrets Manager, Azure Key Vault, GCP Secret Manager) or HashiCorp Vault |
 
 ---
 
 ## When Securing Spring Boot Actuator
 
-📚 **References:** [spring-security.md](references/spring-security.md) — Full actuator security chain, YAML config
+📚 **Full actuator security chain (`@Order(1)`, `EndpointRequest` matcher, separate management port) and YAML config → [spring-security.md#actuator-security](references/spring-security.md#actuator-security).**
 
-### 🔴 Protect Sensitive Endpoints
+### 🔴 BLOCKING — Treat actuator as a privileged surface, never as default-public
+
+**Why:** actuator endpoints expose memory dumps, environment variables, thread states and bean graphs — enough for an attacker to map the application internals and find unprotected secrets. The default `permitAll` posture from older guides has caused real production breaches; the current default exposes only `/health` and `/info` for that reason.
 
 - `health`, `info` → `permitAll()`
-- `metrics`, `prometheus` → `hasRole("METRICS")`
+- `metrics`, `prometheus` → `hasRole("METRICS")` (scrape via service account)
 - Everything else → `hasRole("ACTUATOR")`
-- Use separate `@Order(1)` SecurityFilterChain with `EndpointRequest` matcher
+- Use a separate `@Order(1)` `SecurityFilterChain` with `EndpointRequest.toAnyEndpoint()`
+- Bind management to a separate port not exposed to the public LB
 
 ---
 
 ## When Using Cryptography
 
-📚 **References:** [java-security.md](references/java-security.md) — AES-GCM, RSA, Digital Signatures, Secure Random
+📚 **AES-GCM, RSA, digital signatures, secure random recipes → [java-security.md#cryptography](references/java-security.md#cryptography).**
 
-### 🔴 BLOCKING
-- **Never write your own crypto** → Use Google Tink, Bouncy Castle, or JCA/JCE
-- **Use AES-GCM** for symmetric encryption (12-byte nonce, unique per encryption)
-- **Use RSA-4096 or Ed25519** for asymmetric keys
-- **Never store keys in code or config** → Use KMS, rotate regularly
+### 🔴 BLOCKING — Use vetted libraries, never roll your own primitives
+
+**Why:** crypto failures are silent — a wrong nonce reuse, a missing constant-time compare, a downgrade-friendly cipher selection produces output that *looks* encrypted but is broken. Vetted libraries (Tink, Bouncy Castle, JCA) embed decades of attack mitigation; hand-rolled code repeats every known mistake.
+
+- **Symmetric:** AES-GCM, 12-byte nonce, **unique per encryption** (reusing a nonce with the same key breaks confidentiality)
+- **Asymmetric:** RSA-4096 or Ed25519
+- **Random:** `SecureRandom.getInstanceStrong()` — never `java.util.Random` for security
+- **Keys:** stored in KMS / HSM, rotated on a schedule, never in code or config
 
 ---
 
-## When Making Server-Side HTTP Calls (A10 - SSRF Prevention)
+## When Making Server-Side HTTP Calls (A10 — SSRF Prevention)
 
-📚 **References:** [security-fundamentals.md](references/security-fundamentals.md#ssrf-prevention-a10) — Full code examples, URL parsing bypasses, DNS rebinding
+📚 **Full SSRF code, URL parsing bypasses, DNS rebinding mitigations → [security-fundamentals.md#ssrf-prevention-a10](references/security-fundamentals.md#ssrf-prevention-a10).**
 
-### 🔴 BLOCKING
-- **Validate user-provided URLs** against an allowlist of domains
-- **Block internal IPs** (loopback, private ranges, link-local, multicast)
-- **Use HTTPS only** for outbound requests
-- **Fail closed** → Unknown host = reject
+### 🔴 BLOCKING — Validate every user-influenced URL against a host allowlist
+
+**Why:** SSRF lets an attacker pivot from your application into your private network — cloud metadata endpoints (`169.254.169.254`), internal admin panels, and unauthenticated databases all become reachable. The application becomes the attacker's HTTP proxy. Allowlist + internal-IP block + HTTPS-only is the only reliable shape; substring checks are bypassable.
+
+- Parse with `URI` and validate `scheme` + `host` separately (no `startsWith` checks)
+- Block loopback, site-local, link-local, multicast addresses (`InetAddress.is*Address()`)
+- HTTPS only for outbound calls
+- Fail closed — unknown / unresolvable host = reject
 
 ---
 
 ## When Handling Serialization
 
-📚 **References:** [java-security.md](references/java-security.md#serialization-security)
+📚 **`ObjectInputFilter` recipes, secure `Serializable` patterns → [java-security.md#serialization-security](references/java-security.md#serialization-security).**
 
-### 🔴 BLOCKING
-- **Avoid Java serialization** → Use JSON with `ObjectMapper`
-- If required: use `ObjectInputFilter` (Java 9+) with depth/size/class limits
+### 🔴 BLOCKING — Never deserialize untrusted Java-serialized data
+
+**Why:** Java's `ObjectInputStream` instantiates arbitrary classes and runs their `readObject` callbacks — that gives an attacker who controls the bytes a path to remote code execution via gadget chains in libraries you depend on. Switching to JSON moves the parser to a data-only format with no callback semantics.
+
+- Use JSON via `ObjectMapper` (Jackson) for cross-process payloads
+- If Java serialization is unavoidable: configure `ObjectInputFilter` (Java 9+) with depth, reference count, byte budget, and class allowlist
+- Mark sensitive fields `transient`; validate inside `readObject`
 
 ---
 
 ## When Handling Errors
 
-📚 **References:** [security-fundamentals.md](references/security-fundamentals.md)
+### 🔴 BLOCKING — Never echo internal details to the client
 
-### 🔴 Never Expose Internal Details
+**Why:** stack traces, SQL fragments, and library version strings are reconnaissance gold — they tell the attacker exactly which CVE to target. The client gets a generic message; the operator gets the full context in logs.
 
 ```java
-// 🔴 WRONG - Exposes stack trace
+// 🔴 WRONG — exposes stack trace and internal exception type
 return ResponseEntity.status(500).body(e.getMessage());
 
-// ✅ CORRECT - Generic message, log details
+// ✅ CORRECT — generic message to client, full detail in logs
 log.error("Internal error", e);
 return ResponseEntity.status(500).body(Map.of("error", "An unexpected error occurred"));
 ```
+
+📚 **RFC 7807 Problem Details for security errors → [spring-security.md#exception-handling](references/spring-security.md#exception-handling).**
 
 ---
 
 ## When Implementing Security Logging (A09)
 
-📚 **References:** [security-fundamentals.md](references/security-fundamentals.md#audit-logging) — Structured logging examples, AOP aspect, log retention
+📚 **Structured logging recipes, AOP authorization-failure aspect, retention table → [security-fundamentals.md#audit-logging](references/security-fundamentals.md#audit-logging).**
 
-### 🔴 What to Log
-- Authentication attempts (success/failure), authorization failures, input validation failures
-- Password changes, MFA enrollment, admin operations, API rate limit hits
+### 🔴 BLOCKING — Log every security-relevant event, with structure
 
-### 🔴 What to NEVER Log
-- Passwords (plaintext or hashed), session tokens, JWTs, API keys, credit card numbers, PII
+**Why:** A09 (Security Logging and Monitoring Failures) blocks incident response. Without a structured audit trail you cannot answer "when did this start, who was affected, what did the attacker touch" — the legally required questions during a breach disclosure.
 
-### 🟢 Use structured logging with context (JSON key-value pairs, not free text)
+**Always log:** authentication success / failure, authorization failures, input validation rejections, password / MFA changes, admin operations, rate-limit hits.
+
+### 🔴 BLOCKING — Never log secrets, tokens, or PII
+
+**Why:** logs are typically replicated, shipped to SIEM, and retained for months. A password that hits stdout once now lives in dozens of immutable systems. Treat logs as low-trust storage — anything written there is effectively public to anyone with read access to logging infra.
+
+**Never log:** plaintext or hashed passwords, session tokens, JWTs, API keys, full credit card numbers, government IDs, health data.
+
+### 🟢 Use structured key-value logging (JSON) — `kv("event", "auth_failure")` — not free-text concatenation.
 
 ---
 
 ## When Keeping Dependencies Secure
 
-📚 **References:** [security-fundamentals.md](references/security-fundamentals.md)
+### 🔴 BLOCKING — Run a CVE scan in CI on every build
 
-### 🔴 Scan for Vulnerabilities
+**Why:** A06 (Vulnerable and Outdated Components) is consistently in the OWASP Top 10 because *transitive* dependencies update faster than humans audit. A daily Dependabot PR or a CI scan that fails on CVSS ≥ 7 is the only way to keep up; manual review at release time is always too late.
 
 | Tool | Purpose |
-|------|---------|
-| OWASP Dependency-Check | CVE scanning |
-| Snyk | Real-time vulnerability alerts |
+|---|---|
+| OWASP Dependency-Check | CVE scanning of Maven/Gradle deps, fail build on CVSS threshold |
+| Snyk | Real-time vulnerability alerts + remediation PRs |
 | Trivy | Container image scanning |
-| Dependabot | Automated dependency updates |
+| Dependabot / Renovate | Automated dependency-update PRs |
 
 ---
 
 ## Code Review Checklist
 
 ### 🔴 BLOCKING
-- [ ] No SQL/command/XSS injection vectors
-- [ ] Parameterized queries used everywhere
-- [ ] Passwords hashed with BCrypt/Argon2 (not MD5/SHA1)
-- [ ] No secrets in code or config files
-- [ ] Input validated at trust boundaries
+- [ ] No SQL/command/XPath/LDAP/log injection vectors (parameterized everywhere)
+- [ ] HTML output encoded via OWASP Java Encoder (no raw interpolation)
+- [ ] Passwords hashed with Argon2id / BCrypt (≥ 10) / PBKDF2 (≥ 600k iter), never MD5/SHA-1/SHA-256
+- [ ] No secrets in source or committed config
+- [ ] Input validated at every trust boundary (controller, listener, consumer)
 - [ ] Authentication required for sensitive endpoints
-- [ ] Authorization checks on protected resources
-- [ ] Threat modeling completed for new features (A04)
-- [ ] User-provided URLs validated against allowlist (A10)
+- [ ] Authorization checks include **ownership**, not just role
+- [ ] JWTs validate signature + `iss` + `aud` + `exp`
+- [ ] Threat model (STRIDE) completed for new features (A04)
+- [ ] User-influenced URLs validated against host allowlist + internal-IP block (A10)
+- [ ] No raw `ObjectInputStream` on untrusted data
+- [ ] Actuator endpoints behind dedicated `@Order(1)` SecurityFilterChain
 
 ### 🟡 WARNING
-- [ ] CSRF enabled for session-based auth
-- [ ] CORS configured with specific origins (not `*`)
-- [ ] Actuator endpoints protected
-- [ ] Error messages don't expose internals
-- [ ] Logging doesn't contain sensitive data
+- [ ] CSRF enabled for any session-based auth (form or SPA cookie)
+- [ ] CORS lists specific origins, never `*` with credentials
+- [ ] Error responses generic; full detail only in logs
+- [ ] Logs contain no passwords, tokens, JWTs, full PANs, or PII
+- [ ] CVE scan runs in CI and fails on CVSS ≥ 7
 
 ### 🟢 BEST PRACTICE
-- [ ] JWT tokens short-lived (15 min)
-- [ ] Dependency vulnerability scan in CI
-- [ ] Security headers configured (CSP, X-Frame-Options)
-- [ ] Rate limiting on authentication endpoints
-- [ ] Structured logging with context (JSON)
+- [ ] Access tokens ≤ 15 min, refresh tokens in HTTP-only cookies
+- [ ] Security headers configured (CSP, HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy)
+- [ ] Rate limiting on authentication and password-reset endpoints
+- [ ] Structured JSON logging with stable event names
+- [ ] Dependency-update bot enabled on the repo
 
 ---
 
 ## Related Skills
 
-- `common-java-developer` — Secure coding patterns
-- `common-rest-api` — REST API security
-- `common-architecture` — Security architecture design
+- `common-java-developer` — Secure coding patterns (sealed classes, records, defensive copies)
+- `common-rest-api` — REST API design (status codes, RFC 7807, OpenAPI)
+- `common-spring-boot-config` — YAML / profiles / AOP configuration pitfalls
+- `common-architecture` — Security architecture, trust boundaries, network segmentation
