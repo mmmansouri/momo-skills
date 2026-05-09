@@ -285,29 +285,7 @@ For the rest (Adapter, Decorator, Facade, Proxy, Composite, Flyweight, Chain of 
 
 ## When Writing Tests
 
-📚 **References:** [testing.md](references/testing.md)
-
-### 🔴 BLOCKING
-- **No shared mutable state between tests** → Use `@BeforeEach` for fresh state
-- **Don't mock internal classes** → Only mock external services (HTTP, DB)
-
-### 🟡 WARNING
-- **Test names must describe behavior** → `whenX_shouldY`, not `test1`
-- **No `Thread.sleep()` in tests** → Use `Awaitility` for async assertions
-
-### 🟢 Test Type Decision
-| Question | Test Type |
-|----------|-----------|
-| Pure logic, no I/O? | Unit test (plain JUnit) |
-| Database access? | `@DataJpaTest` |
-| REST controller? | `@WebMvcTest` |
-| Full HTTP request cycle? | `@SpringBootTest` E2E |
-
-### 🟢 Test Naming Convention
-```java
-void findById_whenUserExists_returnsUser()
-void calculateTotal_givenEmptyCart_throwsException()
-```
+📚 **See `common-java-testing`** — single source of truth for JUnit 5, Mockito, AssertJ, Spring Boot 4 / Spring Framework 7 testing slices, Testcontainers, and the test-pyramid / Given-When-Then conventions.
 
 ---
 
@@ -408,13 +386,11 @@ jcmd <pid> JFR.start name=rec duration=60s filename=rec.jfr
 - [ ] No MD5/SHA1 for password hashing → BCrypt/Argon2
 - [ ] No hardcoded secrets → environment variables
 - [ ] No SQL string concatenation → parameterized queries
-- [ ] No shared mutable state between tests
 
 ### 🟡 WARNING (Should fix)
 - [ ] No deprecated API usage
 - [ ] No `synchronized` with blocking I/O in virtual threads
 - [ ] No infinite streams without `limit()`
-- [ ] Test names describe behavior, not implementation
 - [ ] Internal packages not exported from modules
 - [ ] No catch-and-rethrow that hides exceptions from `@Retry` configuration
 - [ ] No stacking multiple AOP annotations (`@Async` + `@Retry` + `@Transactional`) on same method
@@ -427,8 +403,6 @@ jcmd <pid> JFR.start name=rec duration=60s filename=rec.jfr
 - [ ] StringBuilder in string loops
 - [ ] Primitives (not boxed) in tight loops
 - [ ] Collections pre-sized when size known
-- [ ] Tests follow AAA pattern (Arrange-Act-Assert)
-- [ ] Only external services mocked in tests
 - [ ] BCrypt work factor >= 12
 
 ---
@@ -439,4 +413,3 @@ jcmd <pid> JFR.start name=rec duration=60s filename=rec.jfr
 - `common-java-testing` — JUnit 5, Mockito, Testcontainers
 - `common-rest-api` — Spring REST controllers, OpenAPI
 - `common-security` — Authentication, authorization, OWASP
-- `buy-nature-backend-coding-guide` — Buy Nature Java conventions
