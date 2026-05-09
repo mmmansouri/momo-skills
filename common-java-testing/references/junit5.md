@@ -1,5 +1,25 @@
 # JUnit 5 Reference
 
+> JUnit 5.13+ / 6.x patterns. Stack baseline: Mockito 5+, AssertJ 3.27+, Java 25.
+
+---
+
+## Table of Contents
+
+1. [Setup & Annotations](#setup--annotations)
+2. [@Nested Classes](#nested-classes)
+3. [@ParameterizedTest](#parameterizedtest)
+4. [@ParameterizedClass (5.13+)](#parameterizedclass-513)
+5. [Exception Testing](#exception-testing)
+6. [assertAll — Grouped Assertions](#assertall-grouped-assertions)
+7. [@DisplayName](#displayname)
+8. [Timeouts](#timeouts)
+9. [Conditional Execution](#conditional-execution)
+10. [Test Instance Lifecycle](#test-instance-lifecycle)
+11. [Assumptions](#assumptions)
+
+---
+
 ## Setup & Annotations
 
 ### Basic Test Class
@@ -212,14 +232,75 @@ static Stream<Arguments> invalidEmailProvider() {
 
 ---
 
+## @ParameterizedClass (5.13+)
+
+JUnit 5.13 introduces `@ParameterizedClass` — parameterise the **whole test class** instead of a single method. Useful when many tests in the class share the same input matrix.
+
+```java
+@ParameterizedClass
+@CsvSource({
+    "USD, 2500, $25.00",
+    "EUR, 2500, €25.00",
+    "JPY, 2500, ¥2500"
+})
+class MoneyFormatterTest {
+
+    @Parameter(0) String currency;
+    @Parameter(1) long minorUnits;
+    @Parameter(2) String expected;
+
+    @Test
+    void format() {
+        assertThat(formatter.format(Money.of(currency, minorUnits))).isEqualTo(expected);
+    }
+
+    @Test
+    void parseRoundTrip() {
+        assertThat(formatter.parse(expected)).isEqualTo(Money.of(currency, minorUnits));
+    }
+}
+```
+
+### Class-level Lifecycle Hooks
+
+```java
+@ParameterizedClass
+@ValueSource(strings = {"v1", "v2"})
+class ApiVersionTest {
+
+    @Parameter String version;
+
+    @BeforeParameterizedClassInvocation
+    static void beforeEachInvocation(String version) {
+        // Runs once per parameter set, before any @Test in the class
+    }
+
+    @AfterParameterizedClassInvocation
+    static void afterEachInvocation(String version) { /* cleanup */ }
+}
+```
+
+**Why prefer `@ParameterizedClass` over per-method `@ParameterizedTest`:** when 5+ tests in a class need the same matrix, repeating `@CsvSource` on every method is noise. Class-level parameters also let `@BeforeEach` use the parameter values directly.
+
+---
+
 ## Exception Testing
 
-### assertThrows
+### 🟡 Prefer AssertJ `assertThatThrownBy`
+
+```java
+// ✅ PREFERRED — AssertJ fluent (chainable)
+assertThatThrownBy(() -> service.findById(invalidId))
+    .isInstanceOf(OrderNotFoundException.class)
+    .hasMessageContaining(invalidId.toString());
+```
+
+### assertThrows (acceptable alternative)
 
 ```java
 @Test
 void shouldThrowWhenNotFound() {
-    UUID invalidId = UUID.randomUUID();
+    UUID invalidId = UUID.fromString("00000000-0000-0000-0000-000000000999");
 
     var exception = assertThrows(OrderNotFoundException.class,
         () -> service.findById(invalidId));

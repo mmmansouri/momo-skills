@@ -1,13 +1,39 @@
 # AssertJ Reference
 
+> AssertJ 3.27+ patterns. Stack baseline: JUnit 5.13+, Spring Framework 7 (`MockMvcTester`), Java 25.
+
+---
+
+## Table of Contents
+
+1. [Why AssertJ?](#why-assertj)
+2. [Basic Assertions](#basic-assertions)
+3. [Strings](#strings)
+4. [Collections](#collections)
+5. [Extracting Fields](#extracting-fields)
+6. [Optional](#optional)
+7. [Exceptions](#exceptions)
+8. [Recursive Comparison](#recursive-comparison)
+9. [Soft Assertions](#soft-assertions)
+10. [Custom Assertions](#custom-assertions)
+11. [Chaining Assertions](#chaining-assertions)
+12. [Date / Time Assertions](#datetime-assertions)
+13. [File Assertions](#file-assertions)
+
+---
+
 ## Why AssertJ?
 
+### 🔴 BLOCKING — Use AssertJ, Not JUnit Assertions
+
+**Why:** AssertJ failure messages show actual vs expected diffs (including nested objects and collections). JUnit's `assertTrue(list.contains(item))` reports only "expected true, was false" — no clue what the list contained.
+
 ```java
-// 🔴 JUnit - Cryptic error message
+// 🔴 JUnit — Cryptic
 assertEquals(expected, actual);
 // Error: expected:<[foo]> but was:<[bar]>
 
-// ✅ AssertJ - Descriptive error message
+// ✅ AssertJ — Descriptive
 assertThat(actual).isEqualTo(expected);
 // Error: Expecting: <"bar"> to be equal to: <"foo"> but was not.
 ```
@@ -254,14 +280,15 @@ assertThat(actual)
 
 ### Collect All Failures
 
+**Why:** with chained `assertThat`, the first failure halts the test — you fix it, run again, and discover the next failure. SoftAssertions report all of them at once, cutting iteration time.
+
 ```java
-// 🔴 WRONG - Stops at first failure
+// 🔴 WRONG — Stops at first failure
 assertThat(user.getName()).isEqualTo("John");
 assertThat(user.getEmail()).isEqualTo("john@example.com");
 assertThat(user.getAge()).isEqualTo(30);
-// If first fails, you don't know about others
 
-// ✅ CORRECT - Reports ALL failures
+// ✅ CORRECT — Reports ALL failures
 SoftAssertions.assertSoftly(softly -> {
     softly.assertThat(user.getName()).isEqualTo("John");
     softly.assertThat(user.getEmail()).isEqualTo("john@example.com");
@@ -357,7 +384,7 @@ assertThat(users)
 
 ---
 
-## Date/Time Assertions
+## Date / Time Assertions {#datetime-assertions}
 
 ```java
 assertThat(instant).isBefore(Instant.now());

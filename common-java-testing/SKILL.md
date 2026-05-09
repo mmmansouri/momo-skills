@@ -1,15 +1,49 @@
 ---
 name: common-java-testing
 description: >-
-  Java testing best practices with JUnit 5, Mockito, and AssertJ. Use when:
-  writing unit/integration tests, deciding what to mock (external services only),
-  structuring tests (Given-When-Then), using fluent assertions, or applying
-  test isolation patterns.
+  Java testing guide for Spring Boot 4 / Spring Framework 7 / JUnit 5.13+ /
+  Mockito 5+ / AssertJ / Testcontainers. Use when writing unit, slice, or
+  integration tests; deciding what to mock (external boundaries only); structuring
+  tests (Given-When-Then); using fluent assertions; or wiring Testcontainers via
+  @ServiceConnection.
 ---
 
 # Java Testing Guide
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+
+> **Stack baseline:** Spring Boot 4.x · Spring Framework 7.x · JUnit 5.13+ / 6.x · Mockito 5+ · AssertJ 3.27+ · Testcontainers 2.x · Java 25.
+
+---
+
+## Decision Tree — What Type of Test?
+
+```
+What are you testing?
+│
+├── Pure logic, no I/O, no Spring?
+│   └── Unit test (plain JUnit + AssertJ)
+│
+├── JPA repository or @Entity mapping?
+│   └── @DataJpaTest + Testcontainers @ServiceConnection
+│
+├── REST controller (no service layer concerns)?
+│   └── @WebMvcTest + MockMvcTester
+│
+├── HTTP client (RestClient / WebClient / @HttpExchange)?
+│   └── @RestClientTest or MockWebServer
+│
+├── Full request → DB → response cycle?
+│   └── @SpringBootTest + Testcontainers @ServiceConnection
+│
+├── External HTTP service (Stripe, Mailgun, …)?
+│   └── WireMock or MockWebServer (the boundary)
+│
+└── Async / eventual consistency?
+    └── Awaitility (never Thread.sleep)
+```
+
+📚 Slice details → [spring-boot-testing.md](references/spring-boot-testing.md) · containers → [testcontainers.md](references/testcontainers.md)
 
 ---
 
@@ -18,29 +52,35 @@ description: >-
 ### 🔴 No-Mock Philosophy
 
 ```
-PREFER: Integration tests with real objects wired together
-MOCK:   External services only (HTTP, email, payment, filesystem)
-NEVER:  Internal classes, repositories, value objects
+PREFER: Real objects wired together (slice tests, integration tests)
+MOCK:   Process boundaries only (HTTP, SMTP, payment, filesystem, clock)
+NEVER:  Internal services, repositories, value objects, records
 ```
 
-**Why?** Mocks can hide integration bugs. If everything is mocked, are we really testing production code?
+**Why:** mocks of internal collaborators hide integration bugs and freeze the design — the test passes against a fake that no longer matches the real collaborator.
+**How to apply:** if a class lives in your codebase and you own its source, instantiate it. Mock only at the wire (external API, OS resource, time).
 
 ### 🔴 Test Isolation
 
-- Each test creates its own data → No shared mutable state
-- Use `@BeforeEach` for test-specific setup
-- Never depend on execution order
-- Use UUID suffix for unique identifiers
+- Each test creates its own data — no shared mutable state
+- Use `@BeforeEach` for test-scoped setup; never `static` mutable fields
+- Never depend on test execution order
+- Never re-use entity IDs across tests in the same class
+
+**Why:** order-dependent tests fail randomly when JUnit reorders, parallelises, or filters them — and the failure points at the wrong test.
+**How to apply:** if a test passes alone but fails in the suite (or vice-versa), that's a shared-state bug — fix it before merging.
 
 ### 🟢 Fixed Test Data
 
 ```java
-// 🔴 WRONG - Random data makes failures hard to reproduce
+// 🔴 WRONG — Random data makes failures un-reproducible
 String name = "User_" + UUID.randomUUID();
 
-// ✅ CORRECT - Fixed values, reproducible
+// ✅ CORRECT — Fixed values, reproducible
 String name = "TestUser_ValidCase";
 ```
+
+For UUIDs, use deterministic seeds: `UUID.fromString("00000000-0000-0000-0000-000000000001")`.
 
 ---
 
@@ -53,28 +93,34 @@ String name = "TestUser_ValidCase";
 ```java
 @Test
 void whenValidInput_shouldReturnExpectedResult() {
-    // Given - setup test data
+    // Given
     var request = new OrderRequest("item-1", 2);
 
-    // When - execute action
+    // When
     var result = orderService.create(request);
 
-    // Then - assert results
+    // Then
     assertThat(result.getStatus()).isEqualTo(OrderStatus.CREATED);
 }
 ```
 
-### 🔴 Naming Convention
+**Why:** the three-block layout makes scope obvious — reviewers can spot a test that does too much (multiple When/Then) at a glance.
+**How to apply:** if a test has more than one `// When`, split it.
+
+### 🔴 Naming Convention — `whenX_shouldY`
 
 | Pattern | Example |
 |---------|---------|
 | `when<Condition>_should<Result>` | `whenInvalidId_shouldReturn404` |
-| `@DisplayName` | `"Should return 404 when ID not found"` |
+| `<method>_given<Condition>_<expectation>` | `findById_givenMissing_throws` |
+| `@DisplayName` for human-readable runner output | `"Should return 404 when ID not found"` |
+
+**Why:** failing test names appear in CI logs and PR comments without their body — `test1` failing tells nobody anything; `whenInvalidId_shouldReturn404` failing tells a reviewer where to look.
 
 ### 🟡 WARNING
 
-- **One test = one behavior** → Don't extend passing tests with "just one more thing"
-- **KISS > DRY** → Duplicating test data is acceptable for clarity
+- **One test = one behaviour** — don't extend a green test with "just one more thing"
+- **KISS > DRY in tests** — duplicating a 3-line setup is fine when it makes the scenario obvious
 
 ---
 
@@ -86,22 +132,21 @@ void whenValidInput_shouldReturnExpectedResult() {
 
 | Annotation | Use Case |
 |------------|----------|
-| `@Nested` | Group related tests by method/scenario |
-| `@DisplayName` | Readable test names for reports |
-| `@ParameterizedTest` | Test multiple inputs |
+| `@Nested` | Group tests by scenario (`when creating`, `when deleting`) |
+| `@DisplayName` | Human-readable name for reports |
+| `@ParameterizedTest` | Same logic, multiple inputs |
+| `@ParameterizedClass` *(JUnit 5.13+)* | Parameterise the entire test class |
 | `@BeforeEach` | Fresh state per test |
 
-### 🟢 Exception Testing
+### 🟢 Exception Testing — Prefer AssertJ
 
 ```java
-// ✅ CORRECT - assertThrows
-@Test
-void whenNullInput_shouldThrowException() {
-    assertThrows(IllegalArgumentException.class,
-        () -> service.process(null));
-}
+// ✅ CORRECT — AssertJ fluent (preferred)
+assertThatThrownBy(() -> service.findById(invalidId))
+    .isInstanceOf(OrderNotFoundException.class)
+    .hasMessageContaining(invalidId.toString());
 
-// With message verification
+// 🟡 OK but verbose — assertThrows
 var ex = assertThrows(OrderNotFoundException.class,
     () -> service.findById(invalidId));
 assertThat(ex.getMessage()).contains(invalidId.toString());
@@ -110,7 +155,6 @@ assertThat(ex.getMessage()).contains(invalidId.toString());
 ### 🟢 Grouped Assertions
 
 ```java
-// All assertions run, report all failures
 assertAll("order validation",
     () -> assertThat(order.getId()).isNotNull(),
     () -> assertThat(order.getStatus()).isEqualTo(CREATED),
@@ -128,33 +172,35 @@ assertAll("order validation",
 
 | Type | Why Not |
 |------|---------|
-| **Internal classes** | Test real integration |
-| **Repositories** | Use `@DataJpaTest` or Testcontainers |
-| **Value objects/DTOs** | Just create them with `new` |
-| **Types you don't own** | Third-party libs may change |
+| **Internal services** | Test the real integration |
+| **Repositories** | Use `@DataJpaTest` + Testcontainers instead |
+| **Value objects / records** | Just `new` them |
+| **Types you don't own** | Wrap them, then mock the wrapper |
+
+**Why:** mocking internals locks the test to today's implementation — every refactor breaks the test even when behaviour is unchanged. The test stops protecting behaviour and starts protecting implementation.
 
 ### 🟢 What TO Mock
 
 | Type | Tool |
 |------|------|
-| HTTP clients | WireMock, MockWebServer |
-| Email services | Mock the gateway interface |
-| Payment APIs | Mock the client interface |
-| Clock/Time | Inject `Clock` dependency |
+| HTTP clients | WireMock, MockWebServer (mock the wire, not the client class) |
+| Email / SMS gateways | Mock the gateway interface you own |
+| Payment APIs | Mock the client interface you own |
+| Clock / Time | Inject `Clock` and provide a fixed one in tests |
 
 ### 🟡 Mockito Guidelines
 
 ```java
-// 🔴 WRONG - Mocking internal service
+// 🔴 WRONG — mocking an internal repository
 @Mock private OrderRepository orderRepository;
 
-// ✅ CORRECT - Mock external HTTP client
-@Mock private StripeClient stripeClient;
+// ✅ CORRECT — real repository via @DataJpaTest, mock only the external client
+@MockitoBean private StripeClient stripeClient;
 
-// 🔴 WRONG - any() loses specificity
+// 🔴 WRONG — any() loses specificity, hides regressions
 when(service.process(any())).thenReturn(result);
 
-// ✅ CORRECT - Specific values
+// ✅ CORRECT — assert the actual contract
 when(service.process(eq(expectedInput))).thenReturn(result);
 ```
 
@@ -164,17 +210,19 @@ when(service.process(eq(expectedInput))).thenReturn(result);
 
 📚 **References:** [assertj.md](references/assertj.md)
 
-### 🔴 Always Use AssertJ
+### 🔴 Always Use AssertJ — Not JUnit Assertions
 
 ```java
-// 🔴 WRONG - JUnit assertions (poor error messages)
+// 🔴 WRONG — JUnit assertions produce poor failure messages
 assertEquals(expected, actual);
 assertTrue(list.contains(item));
 
-// ✅ CORRECT - AssertJ (fluent, descriptive errors)
+// ✅ CORRECT — AssertJ: fluent, chainable, descriptive errors
 assertThat(actual).isEqualTo(expected);
 assertThat(list).contains(item);
 ```
+
+**Why:** AssertJ failure messages show the actual vs expected diff (including for collections/objects); JUnit's `assertTrue(list.contains(item))` just says "expected true, was false" — no clue what was in the list.
 
 ### 🟢 Key Patterns
 
@@ -183,8 +231,9 @@ assertThat(list).contains(item);
 | Null check | `isNull()`, `isNotNull()` |
 | Collections | `contains()`, `containsExactly()`, `hasSize()` |
 | Strings | `startsWith()`, `contains()`, `matches()` |
-| Optional | `isPresent()`, `isEmpty()`, `hasValue()` |
+| Optional | `isPresent()`, `isEmpty()`, `hasValue(v)` |
 | Numbers | `isGreaterThan()`, `isBetween()`, `isCloseTo()` |
+| Exceptions | `assertThatThrownBy(...)` |
 
 ### 🟢 Advanced Patterns
 
@@ -194,59 +243,118 @@ assertThat(users)
     .extracting(User::getName, User::getEmail)
     .contains(tuple("John", "john@example.com"));
 
-// Recursive comparison (ignore fields)
+// Recursive comparison (ignore framework-set fields)
 assertThat(actual)
     .usingRecursiveComparison()
     .ignoringFields("id", "createdAt")
     .isEqualTo(expected);
 
-// Exception assertions
-assertThatThrownBy(() -> service.process(null))
-    .isInstanceOf(IllegalArgumentException.class)
-    .hasMessageContaining("must not be null");
+// Soft assertions — collect all failures, report once
+SoftAssertions.assertSoftly(softly -> {
+    softly.assertThat(order.getStatus()).isEqualTo(CREATED);
+    softly.assertThat(order.getItems()).hasSize(2);
+    softly.assertThat(order.getTotal()).isEqualTo(BigDecimal.valueOf(99.99));
+});
 ```
+
+---
+
+## When Testing Spring Applications
+
+📚 **References:** [spring-boot-testing.md](references/spring-boot-testing.md)
+
+### 🔴 BLOCKING
+
+- **Use `@MockitoBean`, not `@MockBean`** — `@MockBean` was removed in Spring Boot 4.0
+- **Use `@MockitoSpyBean`, not `@SpyBean`** — same removal
+- **Use `@ServiceConnection`, not `@DynamicPropertySource`** for Testcontainers wiring
+
+**Why:** `@MockBean` / `@SpyBean` were Spring Boot extensions; Spring Framework 6.2 promoted them to first-class framework annotations (`@MockitoBean` / `@MockitoSpyBean`) and Boot 4 removed the deprecated names.
+
+### 🟢 Slice Test Selection
+
+| Test target | Annotation | Loads |
+|-------------|------------|-------|
+| Pure logic | None — plain JUnit | Nothing |
+| `@Repository` | `@DataJpaTest` | JPA + DataSource only |
+| `@RestController` | `@WebMvcTest(MyController.class)` | Web layer only |
+| RestClient / WebClient bean | `@RestClientTest` | HTTP client + Jackson |
+| Full app | `@SpringBootTest` | Entire context |
+
+### 🟢 MockMvcTester (Spring Framework 7) — Default for Controller Tests
+
+```java
+@WebMvcTest(OrderController.class)
+class OrderControllerTest {
+
+    @Autowired private MockMvcTester mvc;
+    @MockitoBean private OrderService orderService;
+
+    @Test
+    void whenOrderExists_returns200() {
+        when(orderService.findById(any())).thenReturn(Optional.of(order));
+
+        assertThat(mvc.get().uri("/orders/{id}", id))
+            .hasStatusOk()
+            .bodyJson()
+            .extractingPath("$.status").isEqualTo("CREATED");
+    }
+}
+```
+
+---
+
+## When Testing Async Code
+
+### 🔴 Never Use Thread.sleep()
+
+```java
+// 🔴 WRONG — flaky, slow, non-deterministic
+service.processAsync(order);
+Thread.sleep(2000);
+assertThat(repository.findById(id)).isPresent();
+
+// ✅ CORRECT — Awaitility polls until condition is met (or timeout)
+service.processAsync(order);
+await().atMost(5, SECONDS)
+    .untilAsserted(() ->
+        assertThat(repository.findById(id)).isPresent());
+```
+
+**Why:** `Thread.sleep(2000)` runs for the full 2s every time and still flakes when the machine is slow. `await().untilAsserted(...)` returns as soon as the assertion passes — typically in <100ms — and fails fast with the actual assertion error if it times out.
 
 ---
 
 ## Code Review Checklist
 
 ### 🔴 BLOCKING
-- [ ] No mocking of internal classes (services, repos)
+- [ ] No mocking of internal classes (services, repos, value objects)
 - [ ] No shared mutable state between tests
-- [ ] Each test creates its own data
-- [ ] Using `assertThat()` not `assertEquals()`
-- [ ] No `Thread.sleep()` → Use Awaitility
+- [ ] Each test creates its own data (no static fixtures mutated by tests)
+- [ ] `assertThat()` not `assertEquals()`
+- [ ] No `Thread.sleep()` — Awaitility for async assertions
+- [ ] `@MockitoBean` / `@MockitoSpyBean` (not the removed `@MockBean` / `@SpyBean`)
 
 ### 🟡 WARNING
-- [ ] Test names describe behavior, not implementation
-- [ ] No production logic duplicated in tests
-- [ ] No duplicate test scenarios across test levels (unit/integration/E2E)
-- [ ] Prefer specific values over `any()` in mocks
+- [ ] Test names describe behaviour, not implementation
+- [ ] No production logic duplicated in test code (use the real method)
+- [ ] No duplicate scenarios across unit / integration / E2E layers
+- [ ] Specific values in mocks, not blanket `any()`
+- [ ] `@ServiceConnection` (not `@DynamicPropertySource`) for Testcontainers
 
 ### 🟢 BEST PRACTICE
-- [ ] Given-When-Then structure with blank lines
-- [ ] `@Nested` for grouping related tests
-- [ ] `@ParameterizedTest` for multiple scenarios
-- [ ] `extracting()` for specific field assertions
+- [ ] Given-When-Then blocks with blank lines
+- [ ] `@Nested` to group related scenarios
+- [ ] `@ParameterizedTest` / `@ParameterizedClass` for multi-input cases
+- [ ] `extracting()` for field-level collection assertions
 - [ ] `SoftAssertions` for multiple independent checks
-
----
-
-## Project-Specific Testing Patterns
-
-> **CRITICAL:** This skill provides GENERIC Java testing guidance. For **Buy Nature project-specific** conventions (base test classes, naming rules, mock boundaries), always consult `buy-nature-backend-coding-guide` → "When Writing Tests" section.
-
-Key project-specific rules NOT covered here:
-- `AbstractBuyNatureTest` base class (all integration tests must extend it)
-- `XxxControllerE2ETest` naming convention (controller tests are integration tests)
-- Only `StripeService` and SMTP are mocked via `@MockitoBean` (everything else is real)
+- [ ] `MockMvcTester` (AssertJ) over plain `MockMvc` (Hamcrest)
 
 ---
 
 ## Related Skills
 
-- `common-java-developer` — Modern Java test patterns
-- `common-java-jpa` — Testing JPA repositories and entities
-- `common-rest-api` — Testing REST controllers with @WebMvcTest
-- `common-security` — Testing authentication and authorization
-- `buy-nature-backend-coding-guide` — **Buy Nature testing conventions (AbstractBuyNatureTest, E2ETest naming, mock boundaries)**
+- `common-java-developer` — Modern Java patterns (records, sealed, pattern matching)
+- `common-java-jpa` — Entity tests, Hibernate 7, `@DataJpaTest` patterns
+- `common-rest-api` — Controller tests, OpenAPI, contract testing
+- `common-security` — Authentication, authorisation, security tests

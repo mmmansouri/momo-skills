@@ -1,5 +1,23 @@
 # Mockito Reference
 
+> Mockito 5+ patterns. Stack baseline: JUnit 5.13+, Spring Framework 7 / Spring Boot 4, Java 25.
+
+---
+
+## Table of Contents
+
+1. [Setup](#setup)
+2. [What to Mock — Decision Guide](#what-to-mock-decision-guide)
+3. [Stubbing](#stubbing)
+4. [Verification](#verification)
+5. [Argument Matchers](#argument-matchers)
+6. [Anti-Patterns](#anti-patterns)
+7. [Spy (Partial Mock)](#spy-partial-mock)
+8. [BDD Style (Given-When-Then)](#bdd-style-given-when-then)
+9. [Mockito with Spring Boot 4](#mockito-with-spring-boot-4)
+
+---
+
 ## Setup
 
 ### JUnit 5 Integration
@@ -39,16 +57,18 @@ class OrderServiceTest {
 
 ---
 
-## What to Mock (Decision Guide)
+## What to Mock — Decision Guide
 
 ### 🔴 NEVER Mock
+
+**Why:** mocking internals locks tests to today's implementation — every refactor breaks tests even when behaviour is unchanged. The test stops protecting behaviour and starts protecting implementation.
 
 | Type | Why | Alternative |
 |------|-----|-------------|
 | Internal services | Hides integration bugs | Use real objects |
-| Repositories | Test real queries | `@DataJpaTest` or Testcontainers |
-| Value objects/DTOs | No behavior to mock | Create with `new` |
-| Third-party libs | They may change | Create wrapper interface |
+| Repositories | Test real queries | `@DataJpaTest` + Testcontainers `@ServiceConnection` |
+| Value objects / records | No behaviour to mock | Create with `new` |
+| Third-party libs | They may change | Wrap them, then mock the wrapper |
 | `List`, `Map`, `String` | Unnecessary | Use real instances |
 
 ### ✅ DO Mock
@@ -203,6 +223,8 @@ when(service.process(eq("value"), any())).thenReturn(result);
 
 ### Don't Use reset()
 
+**Why:** calling `reset()` mid-test signals the test is doing two unrelated things — split it.
+
 ```java
 // 🔴 WRONG - Indicates test does too much
 @Test
@@ -320,35 +342,48 @@ void shouldChargeCustomer() {
 
 ---
 
-## Mockito with Spring Boot
+## Mockito with Spring Boot 4
 
-### @MockBean vs @Mock
+### 🔴 BLOCKING — Use `@MockitoBean`, Not `@MockBean`
+
+**Why:** `@MockBean` and `@SpyBean` were Spring Boot extensions; Spring Framework 6.2 promoted them to first-class framework annotations (`@MockitoBean` / `@MockitoSpyBean`) and Spring Boot 4 **removed** the deprecated names. New tests must use the framework annotations.
+
+### Annotation Selection
 
 | Annotation | Context | Use Case |
 |------------|---------|----------|
-| `@Mock` | No Spring | Unit tests |
-| `@MockBean` | Spring Boot | Replace bean in context |
+| `@Mock` | No Spring | Plain unit tests |
+| `@MockitoBean` | Spring Boot 4 / SF 7 | Replace bean in test ApplicationContext |
+| `@MockitoSpyBean` | Spring Boot 4 / SF 7 | Spy on real bean in test ApplicationContext |
+| `@TestBean` | Spring Boot 4 / SF 7 | Provide a real (non-mock) test instance |
 
 ```java
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
 @SpringBootTest
 class OrderControllerE2ETest {
 
-    @MockBean  // Replaces real StripeClient in Spring context
-    private StripeClient stripeClient;
+    @MockitoBean
+    private StripeClient stripeClient;  // Replaces real StripeClient in context
 
     @Autowired
-    private TestRestTemplate restTemplate;
+    private MockMvcTester mvc;
 
     @Test
     void shouldProcessPayment() {
         when(stripeClient.charge(any())).thenReturn(success());
 
-        var response = restTemplate.postForEntity("/orders", request, Order.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(mvc.post().uri("/orders").contentType(APPLICATION_JSON).content(json))
+            .hasStatus(CREATED);
     }
 }
 ```
+
+### 🟡 Migration Caveat
+
+`@MockitoBean` is **not** supported on `@Configuration` or `@Component` classes (unlike the old `@MockBean`). Place it only on test classes.
+
+📚 More details on bean overrides: [spring-boot-testing.md](spring-boot-testing.md#bean-overrides)
 
 ### Prefer Constructor Injection
 

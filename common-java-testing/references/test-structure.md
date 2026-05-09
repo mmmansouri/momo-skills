@@ -1,5 +1,22 @@
 # Test Structure Reference
 
+> Patterns for structuring, naming, isolating, and organising tests.
+
+---
+
+## Table of Contents
+
+1. [Given-When-Then Pattern (AAA)](#given-when-then-pattern-aaa)
+2. [Test Naming Conventions](#test-naming-conventions)
+3. [Test Isolation](#test-isolation)
+4. [Test Data Patterns](#test-data-patterns)
+5. [TDD Workflow (Red → Green → Refactor)](#tdd-workflow-red--green--refactor)
+6. [Test Organization](#test-organization)
+7. [Coverage Checklist](#coverage-checklist)
+8. [Test Pyramid — Avoiding Overlap](#test-pyramid--avoiding-overlap)
+
+---
+
 ## Given-When-Then Pattern (AAA)
 
 ### Structure
@@ -7,18 +24,23 @@
 ```java
 @Test
 void whenValidOrder_shouldCalculateTotal() {
-    // Given - Arrange: setup test data
+    // Given — Arrange: setup test data
     var item1 = new OrderItem("product-1", 10.00, 2);
     var item2 = new OrderItem("product-2", 15.00, 1);
     var order = Order.create(List.of(item1, item2));
 
-    // When - Act: execute the action under test
+    // When — Act: execute the action under test
     var total = order.calculateTotal();
 
-    // Then - Assert: verify the results
+    // Then — Assert: verify the results
     assertThat(total).isEqualTo(35.00);
 }
 ```
+
+### 🔴 BLOCKING — One When Per Test
+
+**Why:** if a test has two `// When` calls, a failure can't tell you which call broke. Reviewers also can't read the test as a single behaviour.
+**How to apply:** if you find yourself adding a second action, write a second test instead.
 
 ### Key Rules
 
@@ -31,7 +53,11 @@ void whenValidOrder_shouldCalculateTotal() {
 
 ## Test Naming Conventions
 
-### Pattern 1: when_should
+### 🔴 BLOCKING — Tests Must Describe Behaviour
+
+**Why:** failing test names appear in CI logs without their body. `test1` failing tells nobody anything; `whenInvalidId_shouldReturn404` failing tells the reviewer where to look.
+
+### Pattern 1 — `when_should`
 
 ```java
 void whenCreateWithValidData_shouldReturnCreated()
@@ -40,23 +66,19 @@ void whenGetWithInvalidId_shouldReturn404()
 void whenUnauthorizedUser_shouldReturn403()
 ```
 
-### Pattern 2: @DisplayName
+### Pattern 2 — `@DisplayName`
 
 ```java
 @Test
 @DisplayName("Should return 404 when order ID doesn't exist")
-void orderNotFound() {
-    // ...
-}
+void orderNotFound() { /* ... */ }
 
 @Test
 @DisplayName("Should calculate 10% discount for premium customers")
-void premiumDiscount() {
-    // ...
-}
+void premiumDiscount() { /* ... */ }
 ```
 
-### Pattern 3: methodName_stateUnderTest_expectedBehavior
+### Pattern 3 — `methodName_stateUnderTest_expectedBehavior`
 
 ```java
 void calculateTotal_withEmptyCart_shouldReturnZero()
@@ -68,10 +90,13 @@ void findById_whenUserExists_shouldReturnUser()
 
 ## Test Isolation
 
-### 🔴 BLOCKING Rules
+### 🔴 BLOCKING — No Shared Mutable State
+
+**Why:** order-dependent tests fail randomly when JUnit reorders, parallelises, or filters them — and the failure points at the wrong test.
+**How to apply:** if a test passes alone but fails in the suite (or vice-versa), that's a shared-state bug — fix it before merging.
 
 ```java
-// 🔴 WRONG - Shared mutable state
+// 🔴 WRONG — Shared mutable state
 private static List<Order> orders = new ArrayList<>();
 
 @Test
@@ -79,7 +104,7 @@ void test1() {
     orders.add(new Order());  // Pollutes state for test2
 }
 
-// ✅ CORRECT - Fresh state per test
+// ✅ CORRECT — Fresh state per test
 @BeforeEach
 void setUp() {
     orders = new ArrayList<>();
@@ -92,14 +117,16 @@ void setUp() {
 // Pattern: Descriptive name + context
 String uniqueEmail = "test.user+" + testInfo.getDisplayName() + "@example.com";
 
-// Pattern: UUID for database uniqueness
-String categoryName = "TestCategory_" + UUID.randomUUID();
+// Pattern: Deterministic UUID for reproducible failures
+UUID id = UUID.fromString("00000000-0000-0000-0000-000000000001");
 ```
 
-### No Order Dependency
+### 🔴 BLOCKING — No Order Dependency
+
+**Why:** JUnit 5 reorders tests by default for stability. `@Order` annotations bind your suite to today's execution model and silently rot the moment someone deletes a test.
 
 ```java
-// 🔴 WRONG - test2 depends on test1's side effect
+// 🔴 WRONG — test2 depends on test1's side effect
 @Test @Order(1)
 void test1_createOrder() {
     createdOrderId = service.create(order).getId();
@@ -110,7 +137,7 @@ void test2_verifyOrder() {
     var order = service.findById(createdOrderId);  // Fails if test1 skipped!
 }
 
-// ✅ CORRECT - Each test is independent
+// ✅ CORRECT — Each test is independent
 @Test
 void shouldCreateOrder() {
     var created = service.create(order);
@@ -132,7 +159,7 @@ void shouldFindOrder() {
 ### Self-Contained Tests
 
 ```java
-// ✅ CORRECT - All data visible in test
+// ✅ CORRECT — All data visible in test
 @Test
 void shouldApplyDiscount() {
     var customer = Customer.builder()
@@ -152,7 +179,6 @@ void shouldApplyDiscount() {
 ### Test Data Builders
 
 ```java
-// For complex objects, use builders
 public class OrderTestBuilder {
 
     private UUID customerId = UUID.randomUUID();
@@ -185,26 +211,81 @@ var order = anOrder()
     .build();
 ```
 
+### Factory Methods (Simpler Alternative)
+
+```java
+public class TestData {
+
+    public static User validUser() {
+        return new User(1L, "user@test.com", "Test User", UserRole.CUSTOMER, true);
+    }
+
+    public static Order pendingOrder(User user) {
+        return new Order(1L, user, OrderStatus.PENDING, List.of(defaultItem()));
+    }
+}
+```
+
 ### Fixed vs Random Data
 
 ```java
-// 🔴 WRONG - Random makes failures hard to reproduce
-@Test
-void shouldValidateEmail() {
-    String email = "user" + Math.random() + "@test.com";
-    // If this fails, you can't reproduce with same input!
-}
+// 🔴 WRONG — Random makes failures hard to reproduce
+String email = "user" + Math.random() + "@test.com";
 
-// ✅ CORRECT - Fixed, reproducible
-@Test
-void shouldValidateEmail() {
-    String validEmail = "john.doe@example.com";
-    String invalidEmail = "not-an-email";
-
-    assertThat(validator.isValid(validEmail)).isTrue();
-    assertThat(validator.isValid(invalidEmail)).isFalse();
-}
+// ✅ CORRECT — Fixed, reproducible
+String validEmail = "john.doe@example.com";
+String invalidEmail = "not-an-email";
 ```
+
+---
+
+## TDD Workflow (Red → Green → Refactor)
+
+```
+1. RED       — Write a failing test (defines expected behaviour)
+2. GREEN     — Write minimal code to pass the test
+3. REFACTOR  — Improve code while keeping tests green
+```
+
+### Example
+
+```java
+// Step 1 — RED — Failing test first
+@Test
+void shouldCalculateTaxForOrder() {
+    var calculator = new TaxCalculator();
+    var order = new Order(100.0);
+
+    assertThat(calculator.calculate(order)).isEqualTo(10.0);  // 10% tax
+}
+// Test fails: TaxCalculator doesn't exist yet
+
+// Step 2 — GREEN — Minimal implementation
+public class TaxCalculator {
+    public double calculate(Order order) {
+        return order.total() * 0.10;
+    }
+}
+// Test passes
+
+// Step 3 — REFACTOR — Improve without changing behaviour
+public class TaxCalculator {
+    private static final double TAX_RATE = 0.10;
+
+    public double calculate(Order order) {
+        Objects.requireNonNull(order, "Order cannot be null");
+        return order.total() * TAX_RATE;
+    }
+}
+// Tests still pass — refactor successful
+```
+
+### Benefits
+
+- **Design emerges** from requirements (test-first = spec-first)
+- **Fast feedback** — break-detection within seconds
+- **Documentation** — tests show how code should be used
+- **Refactor confidence** — green suite is the safety net
 
 ---
 
@@ -225,7 +306,7 @@ src/test/java/com/example/
     └── AbstractIntegrationTest.java
 ```
 
-### Using @Nested
+### Using `@Nested`
 
 ```java
 class OrderServiceTest {
@@ -233,26 +314,20 @@ class OrderServiceTest {
     @Nested
     @DisplayName("create()")
     class Create {
-
-        @Test
-        @DisplayName("should create order with valid data")
+        @Test @DisplayName("should create order with valid data")
         void validData() { }
 
-        @Test
-        @DisplayName("should throw when customer not found")
+        @Test @DisplayName("should throw when customer not found")
         void customerNotFound() { }
     }
 
     @Nested
     @DisplayName("cancel()")
     class Cancel {
-
-        @Test
-        @DisplayName("should cancel pending order")
+        @Test @DisplayName("should cancel pending order")
         void pendingOrder() { }
 
-        @Test
-        @DisplayName("should throw when already shipped")
+        @Test @DisplayName("should throw when already shipped")
         void alreadyShipped() { }
     }
 }
@@ -262,14 +337,14 @@ class OrderServiceTest {
 
 ## Coverage Checklist
 
-Every public method should test:
+Every public endpoint should test:
 
 | Scenario | HTTP Status |
 |----------|-------------|
 | Happy path | 200, 201 |
 | Validation errors | 400 |
 | Not found | 404 |
-| Unauthorized | 401 |
+| Unauthorised | 401 |
 | Forbidden | 403 |
 | Edge cases | varies |
 
@@ -287,67 +362,67 @@ class CreateOrder {
 
 ---
 
-## Test Pyramid: Avoiding Overlap
+## Test Pyramid — Avoiding Overlap
 
-### Severity: 🟡 WARNING
+```
+         /\
+        /  \     E2E (few, slow, expensive)
+       /----\    Real browser / full HTTP cycle
+      /      \
+     /--------\  Integration (some)
+    /          \ @SpringBootTest, @DataJpaTest, @WebMvcTest
+   /------------\
+  /              \ Unit (many, fast, cheap)
+ /----------------\ Plain JUnit, no framework
+```
 
-Each scenario should be tested at **exactly one level** of the test pyramid.
-Duplicating the same assertion across unit, integration, and E2E tests wastes time and slows CI
-without increasing confidence.
+### 🟡 WARNING — One scenario, one test level
 
-### Decision Tree: Where to Test What
+**Why:** the same assertion at three levels triples CI cost without adding signal — and when the behaviour changes, three places need updating.
+**How to apply:** before writing a test, check if the scenario is already covered higher up the pyramid.
 
-| What You're Testing | Test Level | Why |
-|---------------------|-----------|-----|
-| Pure business logic (calculations, validation, transformations) | **Unit test** | No I/O needed, fast |
-| Database queries, JPA mappings, transactions | **Integration test** (`@DataJpaTest`, Testcontainers) | Needs real DB |
-| HTTP contract (status codes, serialization, validation) | **Integration test** (`@WebMvcTest`, E2E) | Needs Spring context |
-| Full user flow across multiple services | **E2E test** | Needs running application |
-
-### Anti-Pattern: Duplicate Scenarios
+### Anti-Pattern — Duplicate Scenarios
 
 ```java
-// 🔴 WRONG - Same scenario tested at TWO levels
+// 🔴 WRONG — Same scenario tested at TWO levels
 
-// Unit test (OrderServiceTest.java)
+// Unit test
 @Test
 void whenPremiumCustomer_shouldApply10PercentDiscount() {
     var order = Order.create(premiumCustomer, items);
     assertThat(order.getDiscount()).isEqualTo(new BigDecimal("10.00"));
 }
 
-// Integration test (OrderServiceIntegrationTest.java)
+// Integration test — same logic, redundant
 @Test
 void whenPremiumCustomer_shouldApply10PercentDiscount() {
-    // Same logic, but with Spring context and real DB — redundant!
     var order = orderService.createOrder(premiumCustomerRequest);
     assertThat(order.getDiscount()).isEqualTo(new BigDecimal("10.00"));
 }
 ```
 
 ```java
-// ✅ CORRECT - Each level tests what only IT can test
+// ✅ CORRECT — Each level tests what only IT can test
 
-// Unit test — business logic (no DB, no Spring)
+// Unit test — pure business logic
 @Test
 void whenPremiumCustomer_shouldApply10PercentDiscount() {
     var order = Order.create(premiumCustomer, items);
     assertThat(order.getDiscount()).isEqualTo(new BigDecimal("10.00"));
 }
 
-// Integration test — DB persistence only (not the discount calculation)
+// Integration test — persistence behaviour only (not the discount math)
 @Test
-void whenCreateOrder_shouldPersistWithCorrectStatus() {
+void shouldPersistWithCorrectStatus() {
     var saved = orderRepository.save(OrderEntity.fromDomain(order));
-    var found = orderRepository.findById(saved.getId());
-    assertThat(found).isPresent();
-    assertThat(found.get().getStatus()).isEqualTo(OrderStatus.PENDING);
+    assertThat(orderRepository.findById(saved.getId()))
+        .get().extracting(OrderEntity::getStatus).isEqualTo(OrderStatus.PENDING);
 }
 ```
 
-### Rules
-1. **Before writing a test**, check if the scenario is already covered at another level
-2. Unit tests own **business logic** — if it's pure computation, test it here only
-3. Integration tests own **infrastructure** — DB queries, external service calls, serialization
-4. E2E tests own **user flows** — multi-step scenarios that cross service boundaries
-5. If a unit test already validates a calculation, the integration test should NOT re-validate it
+### Ownership Rules
+
+1. **Unit tests own business logic** — pure computation, no Spring, no DB
+2. **Integration tests own infrastructure** — DB queries, serialisation, external client wiring
+3. **E2E tests own user flows** — multi-step scenarios crossing service boundaries
+4. If a unit test validates a calculation, the integration test must **not** re-validate it
