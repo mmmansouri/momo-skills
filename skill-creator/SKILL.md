@@ -187,7 +187,7 @@ skill-name/
 
 ### Step 6 — 🔴 Test the Skill
 
-📚 **See section** : `When Testing Skills` (below) for full test patterns (Trigger / Functional / Multi-model / Claude A-B).
+📚 **When testing the skill (trigger / functional / multi-model / Claude A-B patterns) → read the `When Testing Skills` section below.**
 
 **Iteration loop** :
 1. Run tests (Trigger first ; then Functional / Multi-model / Claude A-B as applicable).
@@ -216,7 +216,7 @@ Claude tends to *not* load skills when they would actually be useful. Counter th
 - Workflow-oriented sections ("When X"): agent knows WHEN to apply, not just WHAT exists
 - Use severity markers so agent prioritizes blocking issues first
 - Provide WRONG/CORRECT examples: agent recognizes patterns to fix
-- Inline references (📚 at section start): agent finds details without scrolling
+- Inline references at section start using `📚 **When <trigger> → read <ref>**` format (see `🔴 Reference Call-Out Format`) : agent matches context before opening the file
 - Critical instructions at top: agent reads top-down; buried rules get missed
 - **Use `CRITICAL:` or `## Important` headers** — visual priority
 - **Use scripts for deterministic validation** — code is deterministic, language interpretation isn't
@@ -269,6 +269,33 @@ Use these to signal which rules are non-negotiable, which are important but not 
   - *Meaning* : recommended improvement
   - *Agent behavior* : applies when writing new code
 
+### 🔴 Reference Call-Out Format
+
+Every mention of a reference file in SKILL.md MUST follow this format — **trigger first, directive last** :
+
+```markdown
+📚 **When <trigger context> → read [<ref-name>](references/<ref-name>.md).**
+```
+
+- `<trigger context>` — precise description of *when* the agent should consult the reference (the work it's doing, the question it's answering)
+- The read directive comes **last** so the agent first matches its current context, then follows the directive
+
+**Why** : a bare link (`📚 [ref.md](...)`) carries no signal about *when* to open it — agents skip references that look generic. Putting the trigger first lets the agent decide in one pass whether the reference applies, instead of opening it speculatively. Putting the directive first forces the agent to read past the link before knowing if it's relevant — wasted context.
+
+```markdown
+# 🔴 WRONG — bare link, no trigger
+📚 **References:** [changelog-structure.md](references/changelog-structure.md)
+
+# 🔴 WRONG — directive first, trigger buried
+📚 **Read [changelog-structure.md](references/changelog-structure.md)** when organizing master changelogs.
+
+# ✅ CORRECT — trigger first, directive last
+📚 **When organizing master changelogs, naming files, or moving/renaming
+changeset files → read [changelog-structure.md](references/changelog-structure.md).**
+```
+
+The trigger should be specific enough that an agent in an unrelated context won't open the reference, but broad enough to cover all legitimate use cases of the file.
+
 ### 🔴 Explain the Why
 
 Every 🔴 BLOCKING rule MUST be followed by a one-line `**Why:**` justification anchored in domain reasoning.
@@ -291,7 +318,7 @@ The `Why:` forces the agent applying your skill to reason about the domain *befo
 
 ## When Bundling Scripts
 
-📚 Load the following reference when your skill includes scripts that the agent needs to execute as part of the workflow. This ensures the agent knows how write, run and validate them and what to expect : [scripts-guide.md](references/scripts-guide.md)
+📚 **When your skill includes scripts the agent needs to execute (write, run, validate) → read [scripts-guide.md](references/scripts-guide.md).**
 
 ---
 
@@ -382,9 +409,9 @@ Use **this very file** (`skill-creator/SKILL.md`) as the canonical example to mi
 - **No priority indicators**
   - *Why it fails* : everything looks equally important
   - *Fix* : add 🔴/🟡/🟢 severity markers
-- **References only at bottom**
-  - *Why it fails* : agent doesn't see link until too late
-  - *Fix* : put 📚 at section start
+- **References only at bottom, or with bare links**
+  - *Why it fails* : agent doesn't see link until too late, or sees a link without knowing *when* to read it
+  - *Fix* : put 📚 at section start using `📚 **When <trigger> → read <ref>**` format
 - **Duplicate content** (SKILL.md AND references/)
   - *Why it fails* : wasted tokens, content drifts apart
   - *Fix* : content in ONE place only
@@ -443,7 +470,7 @@ Use **this very file** (`skill-creator/SKILL.md`) as the canonical example to mi
 - [ ] Sections use "When X" naming
 - [ ] Severity markers (🔴/🟡/🟢) on rules
 - [ ] WRONG/CORRECT code examples
-- [ ] Inline references (📚) at section start
+- [ ] Inline references at section start using `📚 **When <trigger> → read <ref>**` format
 - [ ] **References one level deep from SKILL.md** (no nested chains)
 - [ ] Reference files >100 lines have a Table of Contents
 - [ ] Instructions use imperative mood
