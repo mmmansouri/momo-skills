@@ -400,4 +400,3 @@ routes.invalid; // Error: property doesn't exist
 - `common-frontend-angular` — TypeScript in Angular context
 - `common-frontend-testing` — Type-safe test patterns
 - `common-developer` — General coding principles
-- `buy-nature-frontend-coding-guide` — Buy Nature TypeScript conventions

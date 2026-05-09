@@ -337,4 +337,3 @@ return ResponseEntity.status(500).body(Map.of("error", "An unexpected error occu
 - `common-java-developer` — Secure coding patterns
 - `common-rest-api` — REST API security
 - `common-architecture` — Security architecture design
-- `buy-nature-backend-coding-guide` — Buy Nature security implementation
