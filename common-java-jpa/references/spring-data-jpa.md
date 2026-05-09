@@ -1,5 +1,28 @@
 # Spring Data JPA Reference
 
+> Spring Data JPA 4.x on Spring Boot 4 / Spring Framework 7 / Hibernate 7 / Java 25.
+> Repository patterns, projections, transactions, scrolling, specifications, auditing, HQL extensions.
+
+---
+
+## Table of Contents
+
+1. [Repository Basics](#repository-basics)
+2. [Query Methods](#query-methods)
+3. [@EntityGraph](#entitygraph)
+4. [Projections](#projections)
+5. [Transactions](#transactions)
+6. [Modifying Queries](#modifying-queries)
+7. [Pagination & Sorting](#pagination--sorting)
+8. [Window / ScrollPosition (Keyset Pagination)](#window--scrollposition-keyset-pagination)
+9. [Specifications (Dynamic Queries)](#specifications-dynamic-queries)
+10. [HQL JSON / XML Functions (Hibernate 7)](#hql-json--xml-functions-hibernate-7)
+11. [QuerySpecification (Hibernate Incubating)](#queryspecification-hibernate-incubating)
+12. [Auditing](#auditing)
+13. [Hibernate Data Repositories — When (Not) to Use](#hibernate-data-repositories--when-not-to-use)
+
+---
+
 ## Repository Basics
 
 ### Standard Repository
@@ -103,7 +126,6 @@ Optional<OrderEntity> findWithDetailsByIdGraph(UUID id);
 ### Named Graph
 
 ```java
-// On entity
 @Entity
 @NamedEntityGraphs({
     @NamedEntityGraph(
@@ -124,7 +146,6 @@ Optional<OrderEntity> findWithDetailsByIdGraph(UUID id);
 })
 public class OrderEntity { }
 
-// In repository
 @EntityGraph(value = "Order.details")
 Optional<OrderEntity> findWithDetailsById(UUID id);
 ```
@@ -133,10 +154,22 @@ Optional<OrderEntity> findWithDetailsById(UUID id);
 
 ## Projections
 
-### Interface Projection
+### 🟢 Class Projection — Java Record (Default)
+
+Records are now the standard projection target (Jakarta Persistence 3.2 + Hibernate 7).
 
 ```java
-// Define projection
+public record OrderDto(UUID id, BigDecimal total, String customerName) {}
+
+@Query("SELECT new com.example.dto.OrderDto(o.id, o.total, c.name) " +
+       "FROM OrderEntity o JOIN o.customer c " +
+       "WHERE o.status = :status")
+List<OrderDto> findDtosByStatus(@Param("status") OrderStatus status);
+```
+
+### Interface Projection (Ad-Hoc)
+
+```java
 public interface OrderSummary {
     UUID getId();
     BigDecimal getTotal();
@@ -151,21 +184,7 @@ public interface OrderSummary {
     }
 }
 
-// Use in repository
 List<OrderSummary> findSummariesByCustomerId(UUID customerId);
-```
-
-### Class Projection (DTO)
-
-```java
-// DTO record
-public record OrderDto(UUID id, BigDecimal total, String customerName) {}
-
-// Constructor expression
-@Query("SELECT new com.example.dto.OrderDto(o.id, o.total, c.name) " +
-       "FROM OrderEntity o JOIN o.customer c " +
-       "WHERE o.status = :status")
-List<OrderDto> findDtosByStatus(@Param("status") OrderStatus status);
 ```
 
 ### Dynamic Projection
@@ -177,6 +196,7 @@ List<OrderDto> findDtosByStatus(@Param("status") OrderStatus status);
 // Usage
 List<OrderEntity> entities = repo.findByStatus(status, OrderEntity.class);
 List<OrderSummary> summaries = repo.findByStatus(status, OrderSummary.class);
+List<OrderDto> dtos = repo.findByStatus(status, OrderDto.class);
 ```
 
 ---
@@ -192,7 +212,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
 
-    // 🔴 BLOCKING - Always use readOnly=true for reads
+    // 🔴 BLOCKING — Always use readOnly=true for reads
     @Transactional(readOnly = true)
     public List<Order> findAllByCustomer(UUID customerId) {
         return orderRepository.findByCustomerId(customerId)
@@ -222,11 +242,10 @@ public class OrderService {
 ### Update
 
 ```java
-@Modifying
+@Modifying(clearAutomatically = true)
 @Query("UPDATE OrderEntity o SET o.status = :status WHERE o.id = :id")
 int updateStatus(@Param("id") UUID id, @Param("status") OrderStatus status);
 
-// With clear (recommended)
 @Modifying(clearAutomatically = true)
 @Query("UPDATE ProductEntity p SET p.price = p.price * :factor")
 int updateAllPrices(@Param("factor") BigDecimal factor);
@@ -248,30 +267,20 @@ long deleteByCustomerId(UUID customerId);
 
 ## Pagination & Sorting
 
-### Basic Pagination
+For large result sets prefer `Window<T>` (next section). `Page`/`Slice` remain for the cases below.
+
+### `Page<T>` — When Total Count Is Required
 
 ```java
-// Repository method
 Page<OrderEntity> findByCustomerId(UUID customerId, Pageable pageable);
 
-// Usage
 Pageable pageable = PageRequest.of(0, 20, Sort.by("createdAt").descending());
 Page<OrderEntity> page = repository.findByCustomerId(customerId, pageable);
 
-// Page info
 page.getContent();        // List<OrderEntity>
-page.getTotalElements();  // Total count
-page.getTotalPages();     // Total pages
-page.hasNext();           // More pages?
-```
-
-### Slice (No Count Query)
-
-```java
-// When you don't need total count
-Slice<OrderEntity> findSliceByCustomerId(UUID customerId, Pageable pageable);
-
-// Faster than Page - no COUNT query
+page.getTotalElements();  // Total count — the reason to choose Page
+page.getTotalPages();
+page.hasNext();
 ```
 
 ### Sort Only
@@ -279,12 +288,69 @@ Slice<OrderEntity> findSliceByCustomerId(UUID customerId, Pageable pageable);
 ```java
 List<OrderEntity> findByStatus(OrderStatus status, Sort sort);
 
-// Usage
 List<OrderEntity> orders = repository.findByStatus(
     OrderStatus.PENDING,
     Sort.by("createdAt").descending().and(Sort.by("total").ascending())
 );
 ```
+
+---
+
+## Window / ScrollPosition (Keyset Pagination)
+
+### 🟢 DEFAULT — Keyset for All List Endpoints
+
+`Window<T>` + `ScrollPosition.keyset()` is the **default pagination primitive** in Spring Data JPA 4. It uses cursor-based SQL (`WHERE created_at > :cursor`) instead of `OFFSET`, scaling to arbitrarily deep pages without performance collapse and without "drift" under concurrent writes.
+
+```java
+public interface OrderRepository extends JpaRepository<OrderEntity, UUID> {
+
+    // The ScrollPosition parameter drives both the first call and subsequent calls
+    Window<OrderEntity> findFirst50ByCustomerIdOrderByCreatedAtDesc(
+        UUID customerId,
+        ScrollPosition position
+    );
+}
+
+// First page
+Window<OrderEntity> first = repo.findFirst50ByCustomerIdOrderByCreatedAtDesc(
+    customerId,
+    ScrollPosition.keyset()
+);
+
+// Next page
+Window<OrderEntity> next = repo.findFirst50ByCustomerIdOrderByCreatedAtDesc(
+    customerId,
+    first.positionAtLast()
+);
+
+// Iterate the entire dataset in pages of 1000
+WindowIterator<OrderEntity> walker = WindowIterator
+    .of(pos -> repo.findFirst1000ByCustomerIdOrderByCreatedAtDesc(customerId, pos))
+    .startingAt(ScrollPosition.keyset());
+
+walker.forEachRemaining(o -> /* process */);
+```
+
+### Result Type — `Window<T>` Methods
+
+| Method | Returns |
+|--------|---------|
+| `getContent()` | `List<T>` |
+| `hasNext()` | Whether more rows exist beyond the cursor |
+| `positionAtLast()` | `ScrollPosition` to pass to the next call |
+| `positionAt(int index)` | Position of a specific element in the window |
+| `map(Function)` | Project the window into a new type |
+
+### Offset-Based Scrolling (`ScrollPosition.offset()`)
+
+If you must keep offset semantics (e.g. exposing page numbers to a UI):
+
+```java
+Window<OrderEntity> page = repo.findByStatus(status, ScrollPosition.offset(100));
+```
+
+This is the same cost as `Page` without the count query.
 
 ---
 
@@ -321,6 +387,58 @@ Specification<OrderEntity> spec = Specification
 
 List<OrderEntity> orders = repository.findAll(spec);
 ```
+
+---
+
+## HQL JSON / XML Functions (Hibernate 7)
+
+Hibernate 7 implements the SQL-standard `JSON_*` and `XML_*` function family in HQL and Criteria. Useful when columns store JSON (PostgreSQL `jsonb`, MySQL `JSON`, MSSQL/Oracle JSON types).
+
+```java
+// Read a JSON property as a typed value
+@Query("""
+    SELECT new com.example.dto.UserPref(u.id, json_value(u.preferences, '$.locale'))
+    FROM UserEntity u
+    WHERE json_value(u.preferences, '$.locale') = :locale
+    """)
+List<UserPref> findByLocale(@Param("locale") String locale);
+
+// Build a JSON object as a result
+@Query("""
+    SELECT json_object('id': o.id, 'total': o.total, 'status': o.status)
+    FROM OrderEntity o
+    WHERE o.id = :id
+    """)
+String findOrderAsJson(@Param("id") UUID id);
+
+// Aggregate as JSON array
+@Query("""
+    SELECT json_arrayagg(o.id)
+    FROM OrderEntity o
+    WHERE o.customer.id = :customerId
+    """)
+String findOrderIdsAsJsonArray(@Param("customerId") UUID customerId);
+```
+
+Set-returning helpers (`unnest`, `generate_series`, `json_table`) are also exposed in HQL — use for batch lookups against a parameterised list without a temp table.
+
+---
+
+## QuerySpecification (Hibernate Incubating)
+
+Hibernate 7 introduces a fluent **`QuerySpecification`** + `Restriction` + `Range` builder as a parallel API to Spring Data `Specification`. **Status: incubating** — use `Specification` (above) as the default; reach for `QuerySpecification` only when you need composability that the Criteria-based `Specification` makes painful.
+
+```java
+// Hibernate-native fluent restriction (incubating)
+QuerySpecification<OrderEntity> spec = QuerySpecification
+    .where(OrderEntity.class)
+    .restrict(Restriction.equal("status", OrderStatus.PENDING))
+    .restrict(Restriction.range("total", Range.atLeast(BigDecimal.valueOf(100))));
+
+List<OrderEntity> orders = session.createSelectionQuery(spec).getResultList();
+```
+
+Re-evaluate at every Hibernate minor release until it leaves incubating.
 
 ---
 
@@ -386,3 +504,35 @@ public class OrderEntity extends AuditedEntity {
     // Inherits audit fields
 }
 ```
+
+---
+
+## Hibernate Data Repositories — When (Not) to Use
+
+Hibernate 7 ships **Hibernate Data Repositories** — Jakarta Data-style repositories driven by an annotation processor that generates static implementations from `@Find`, `@HQL`, `@SQL` declarations. **Spring Data JPA remains the recommendation** in this skill.
+
+### Spring Data JPA (default)
+
+- Mature ecosystem (auditing, projections, specifications, scrolling, REST)
+- Tight Spring Boot integration (`@EnableJpaAuditing`, transaction propagation, observability)
+- Active issue tracking & migration guides
+
+### Hibernate Data Repositories (mention)
+
+- Static, compile-time-generated implementations (zero reflection — useful for native image)
+- No Spring Data dependency (lighter for Hibernate-only stacks)
+- Jakarta Data alignment
+
+```java
+// Example — Hibernate Data Repository (do not use as default)
+public interface Orders {
+    @Find
+    Optional<OrderEntity> byId(UUID id);
+
+    @HQL("FROM OrderEntity o WHERE o.customer.email = :email")
+    List<OrderEntity> byCustomerEmail(String email);
+}
+// Implementation generated at compile time by hibernate-processor.
+```
+
+**Decision rule:** stay on Spring Data JPA unless you target a Hibernate-only / Jakarta-Data-only stack and need build-time codegen for AOT/native.
