@@ -1,5 +1,23 @@
 # REST API Fundamentals Reference
 
+## Table of Contents
+
+1. [Richardson Maturity Model](#richardson-maturity-model)
+2. [Resource Naming Conventions](#resource-naming-conventions)
+3. [HTTP Methods in Detail](#http-methods-in-detail) — GET, POST, PUT, PATCH, DELETE
+4. [HTTP Status Codes](#http-status-codes) — full 2xx / 3xx / 4xx / 5xx catalog
+5. [Error Response Format (RFC 7807)](#error-response-format-rfc-7807) — fields + worked examples
+6. [Pagination Strategies](#pagination-strategies) — offset vs cursor, decision matrix
+7. [Sorting & Filtering](#sorting--filtering) — query-param conventions, sparse fieldsets
+8. [API Versioning Strategies](#api-versioning-strategies) — URI / query / header / media type
+9. [HATEOAS (Hypermedia)](#hateoas-hypermedia) — HAL format, link relations
+10. [Content Negotiation](#content-negotiation) — Accept / Content-Type, media types
+11. [Caching](#caching) — Cache-Control, ETag, conditional GET
+12. [Async Operations](#async-operations) — long-running ops, webhooks
+13. [Rate Limiting](#rate-limiting) — `X-RateLimit-*` headers, 429 response
+
+---
+
 ## Richardson Maturity Model
 
 | Level | Description | Example |

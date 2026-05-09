@@ -1,174 +1,133 @@
 ---
 name: common-rest-api
 description: >-
-  REST API design best practices. Use when: designing endpoints (resource naming,
-  HTTP methods), implementing pagination (offset vs cursor), handling errors
-  (RFC 7807 Problem Details), versioning APIs, documenting with OpenAPI, or
-  building REST controllers with Spring Boot 4 / Spring Framework 7.
+  REST API design and implementation best practices (HTTP semantics, RFC 7807
+  Problem Details, pagination, versioning, OpenAPI, Spring Boot 4 / Spring
+  Framework 7 controllers and clients). Use this skill whenever the user
+  designs an endpoint, picks a status code, builds a controller or client,
+  models a resource URI, paginates or filters a collection, defines a request /
+  response DTO, validates a request body, handles a REST exception, versions
+  an API, documents one with OpenAPI / Swagger, or migrates from RestTemplate
+  to RestClient / @HttpExchange — even when they don't say "REST". Do NOT use
+  for GraphQL, gRPC, SOAP, or message-broker integrations (Kafka, RabbitMQ);
+  for Spring Boot configuration pitfalls (YAML, profiles, AOP) use
+  common-spring-boot-config; for Spring Security use common-security.
 ---
 
 # REST API Developer Guide
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+📚 **When designing resource URIs, choosing status codes, picking a pagination
+strategy, picking a versioning strategy, or implementing HATEOAS / caching /
+async patterns → read [rest-api-fundamentals.md](references/rest-api-fundamentals.md)
+(spec-level reference: HTTP semantics, RFC 7807, content negotiation, rate
+limiting).**
+
+📚 **When implementing or reviewing Spring Boot 4 REST code (controllers,
+RestClient, @HttpExchange, virtual threads, exception handlers, OpenAPI
+annotations, MockMvc tests) → read [spring-rest-api.md](references/spring-rest-api.md).**
+
 ---
 
 ## When Designing Resource URIs
 
-📚 **References:** [rest-api-fundamentals.md](references/rest-api-fundamentals.md)
+### 🔴 BLOCKING — URIs name resources (nouns), never actions (verbs)
 
-### 🔴 Use Nouns, Not Verbs
+**Why** : the HTTP method already encodes the action. Putting a verb in the URI (`/getOrder`, `/createOrder`) breaks REST's uniform-interface contract — the same resource ends up with multiple URIs depending on what you do to it, killing cacheability and link-ability.
 
 ```
 ✅ CORRECT                    🔴 WRONG
-GET  /orders                  GET  /getOrders
-POST /orders                  POST /createOrder
-GET  /orders/123              GET  /getOrderById?id=123
-PUT  /orders/123              POST /updateOrder
+GET    /orders                GET  /getOrders
+POST   /orders                POST /createOrder
+GET    /orders/123            GET  /getOrderById?id=123
+PUT    /orders/123            POST /updateOrder
 DELETE /orders/123            POST /deleteOrder
 ```
 
-### 🔴 Use Plural Nouns for Collections
+### 🔴 BLOCKING — Collection URIs use plural nouns
+
+**Why** : `/orders/123` reads naturally as "order 123 inside the orders collection". `/order/123` reads as "the singleton 'order' resource has a sub-thing called 123" — which becomes incoherent the moment you add `GET /orders` for the collection.
 
 ```
-✅ CORRECT                    🔴 WRONG
-/customers                    /customer
-/orders                       /order
-/products                     /product
+✅ /customers · /orders · /products
+🔴 /customer  · /order  · /product
 ```
 
-### 🔴 Model Relationships via Nesting
+### 🟡 Limit nesting depth to 2-3 levels
+
+Beyond two levels, prefer top-level resources with query parameters over deeper paths.
 
 ```
-GET  /customers/5/orders      # Orders for customer 5
-POST /customers/5/orders      # Create order for customer 5
-GET  /orders/99/items         # Items in order 99
+✅ /customers/5/orders
+✅ /reviews?orderId=99&itemId=42
+
+🔴 /customers/5/orders/99/items/42/reviews   (too deep)
 ```
 
-### 🟡 Limit Nesting Depth to 2-3 Levels
-
-```
-✅ CORRECT
-/customers/5/orders           # Then use order ID separately
-/orders/99/items
-
-🔴 WRONG - Too deep
-/customers/5/orders/99/items/42/reviews
-```
-
-### 🟢 Use Query Parameters for Filtering
+### 🟢 Use query parameters for filtering, sorting, field selection
 
 ```
 GET /orders?status=pending&minTotal=100
-GET /products?category=electronics&inStock=true
-GET /users?role=admin&createdAfter=2025-01-01
+GET /products?sort=-createdAt,+name
+GET /products?fields=id,name,price
 ```
 
 ---
 
-## When Choosing HTTP Methods
+## When Choosing HTTP Methods and Status Codes
 
-📚 **References:** [rest-api-fundamentals.md](references/rest-api-fundamentals.md)
+### 🔴 BLOCKING — Method must match its semantics (safety + idempotence)
 
-### 🔴 Method Semantics
+**Why** : caches, proxies, retry logic, and crawlers all assume HTTP method semantics. A `GET` with side effects gets re-executed by a retrying proxy; a non-idempotent `PUT` breaks at-least-once delivery. Deviating from the spec corrupts data through infrastructure you don't control.
 
-| Method | Action | Idempotent | Safe | Request Body |
-|--------|--------|------------|------|--------------|
-| GET | Retrieve resource(s) | Yes | Yes | No |
-| POST | Create resource | No | No | Yes |
-| PUT | Replace resource | Yes | No | Yes |
-| PATCH | Partial update | No* | No | Yes |
-| DELETE | Remove resource | Yes | No | Optional |
+| Method | Action | Idempotent | Safe | Body |
+|--------|--------|------------|------|------|
+| GET    | Retrieve            | Yes  | Yes | No |
+| POST   | Create / non-idempotent action | No   | No  | Yes |
+| PUT    | Replace             | Yes  | No  | Yes |
+| PATCH  | Partial update      | No\* | No  | Yes |
+| DELETE | Remove              | Yes  | No  | Optional |
 
-*PATCH can be idempotent depending on implementation.
+\*PATCH can be made idempotent with the right patch document format.
 
-### 🔴 Standard Status Codes by Method
+### 🔴 BLOCKING — Status codes must reflect outcomes, not just success/failure
 
-**GET:**
-| Status | When |
-|--------|------|
-| 200 OK | Resource found |
-| 204 No Content | Collection empty |
-| 404 Not Found | Resource doesn't exist |
+**Why** : clients route on status codes (200 vs 201 vs 204; 400 vs 409 vs 422). Returning 200 for everything forces clients to parse the body to know what happened, defeating the entire point of HTTP status codes.
 
-**POST:**
-| Status | When |
-|--------|------|
-| 201 Created | Resource created (include Location header) |
-| 200 OK | Action performed, no resource created |
-| 400 Bad Request | Validation failed |
-| 409 Conflict | Duplicate resource |
+Key rules to keep in mind without re-reading the full reference:
+- **POST that creates a resource → 201 Created + `Location` header** (not 200)
+- **DELETE → 204 No Content** (no body)
+- **GET / PUT / PATCH that returns no body → 204 No Content**
+- **400 = malformed request** ; **422 = valid syntax but semantic error** ; **409 = business-rule conflict**
+- **401 = not authenticated** ; **403 = authenticated but forbidden**
 
-**PUT:**
-| Status | When |
-|--------|------|
-| 200 OK | Updated and returning body |
-| 204 No Content | Updated, no body |
-| 201 Created | Resource created (upsert) |
-| 404 Not Found | Resource doesn't exist |
-
-**PATCH:**
-| Status | When |
-|--------|------|
-| 200 OK | Updated and returning body |
-| 204 No Content | Updated, no body |
-| 400 Bad Request | Invalid patch document |
-| 409 Conflict | Cannot apply patch |
-
-**DELETE:**
-| Status | When |
-|--------|------|
-| 204 No Content | Successfully deleted |
-| 404 Not Found | Resource doesn't exist |
-| 409 Conflict | Cannot delete (dependencies) |
+For the full per-method status-code matrix and 4xx / 5xx catalog → see `rest-api-fundamentals.md`.
 
 ---
 
-## When Using Spring Boot 4 REST Features
+## When Choosing a Spring Boot 4 HTTP Client
 
-📚 **References:** [spring-rest-api.md](references/spring-rest-api.md) — RestClient, HTTP Interface Clients, Virtual Threads, comparison table
+| Client          | Status            | Use case |
+|-----------------|-------------------|----------|
+| `RestTemplate`  | Maintenance mode  | Legacy code only — don't rewrite for the sake of rewriting |
+| `RestClient`    | ✅ Preferred      | New simple HTTP calls, fluent API |
+| `@HttpExchange` | ✅ Preferred      | Multi-endpoint clients defined as interfaces (Feign-style, native Spring) |
+| `WebClient`     | Reactive          | Non-blocking / streaming workloads |
 
-| Feature | RestTemplate | RestClient | HTTP Interface |
-|---------|--------------|------------|----------------|
-| **Release** | Spring 3.0 (2009) | Spring 6.1 / Boot 3.2 | Spring 6.0 / Boot 3.0 |
-| **API Style** | Imperative, verbose | Fluent, modern | Declarative |
-| **Type Safety** | ⚠️ Weak | ✅ Strong | ✅ Strong |
-| **Status** | Maintenance mode | ✅ Preferred | ✅ Preferred |
-| **Use Case** | Legacy code | New code, fluent API | Interface-driven, clean |
-
-### 🟢 Migration Path
-
-- **Existing code:** Keep `RestTemplate` (don't rewrite)
-- **New simple HTTP calls:** Use `RestClient`
-- **New multi-endpoint interfaces:** Use `@HttpExchange` clients
-- **Virtual threads (Java 21+):** Enable for high-concurrency blocking I/O
-
----
-
-## When Configuring Spring Boot Applications
-
-📚 **References:** [spring-boot-config-pitfalls.md](references/spring-boot-config-pitfalls.md)
-
-### 🔴 BLOCKING
-- **No duplicate YAML root keys** → Each root key (`spring:`, `server:`, etc.) must appear only ONCE per file. Duplicates silently override the first block.
-
-### 🟡 WARNING
-- **No dev defaults in base config** → `cache: false`, debug flags, test mail servers belong in profile-specific files only
-- **No stacking AOP annotations on same method** → `@Async` + `@Retry` creates unpredictable proxy ordering. Use delegation between beans.
-- **Resilience4j retry exceptions must match** → If catch-and-rethrow wraps the original exception, retry config targeting the original type never triggers
-- **Springdoc OpenAPI minimum** for Spring Boot 4: `2.6.0` (recommended: `2.8.5`)
-
-### 🟢 BEST PRACTICE
-- **No unused YAML properties** → Every property must be referenced by `@Value`, `@ConfigurationProperties`, or Spring auto-config
-- **No orphan template files** → Every template must be referenced in code
+### 🟢 Migration path
+- **Existing `RestTemplate` code** → keep as-is
+- **New simple HTTP call** → `RestClient`
+- **New multi-endpoint integration** → `@HttpExchange`
+- **High-concurrency blocking I/O on Java 21+** → enable virtual threads (see `spring-rest-api.md`)
 
 ---
 
 ## When Handling Errors
 
-📚 **References:** [rest-api-fundamentals.md](references/rest-api-fundamentals.md), [spring-rest-api.md](references/spring-rest-api.md)
+### 🔴 BLOCKING — Error responses use RFC 7807 Problem Details
 
-### 🔴 Use RFC 7807 Problem Details
+**Why** : without a standard error envelope, every client writes a custom parser per service, and consistency drifts as the API grows. RFC 7807 (`application/problem+json`) is the IETF-blessed shape that Spring's `ProblemDetail` class and most modern clients understand out of the box.
 
 ```json
 {
@@ -178,132 +137,100 @@ GET /users?role=admin&createdAfter=2025-01-01
   "detail": "The request contains invalid fields",
   "instance": "/orders/123",
   "errors": [
-    { "field": "email", "message": "must be a valid email address" },
+    { "field": "email",    "message": "must be a valid email address" },
     { "field": "quantity", "message": "must be greater than 0" }
   ]
 }
 ```
 
-### 🔴 Standard Error Status Codes
+### 🔴 BLOCKING — Never expose internal details (stack traces, SQL, framework class names)
 
-| Code | Meaning | Use Case |
-|------|---------|----------|
-| 400 | Bad Request | Validation error, malformed request |
-| 401 | Unauthorized | Authentication required |
-| 403 | Forbidden | Authenticated but not authorized |
-| 404 | Not Found | Resource doesn't exist |
-| 409 | Conflict | Business rule violation, duplicate |
-| 422 | Unprocessable Entity | Semantic error (valid syntax) |
-| 429 | Too Many Requests | Rate limit exceeded |
-| 500 | Internal Server Error | Unexpected server error |
-
-### 🟡 Never Expose Internal Details
+**Why** : stack traces and SQL errors leak implementation details that map directly to known CVEs (database version, ORM version, table names). They also expose the internal data model to attackers and confuse legitimate clients.
 
 ```json
-// 🔴 WRONG - Exposes internal details
+// 🔴 WRONG — leaks PostgreSQL driver and internal SQL
 { "error": "org.postgresql.util.PSQLException: duplicate key value..." }
 
-// ✅ CORRECT - User-friendly message
-{ "type": "...", "title": "Email Already Exists", "status": 409, "detail": "A user with this email already exists" }
+// ✅ CORRECT — domain-level message
+{ "type": "...", "title": "Email Already Exists", "status": 409,
+  "detail": "A user with this email already exists" }
 ```
+
+For Spring's `@RestControllerAdvice` exception-handler skeleton → see `spring-rest-api.md` § Exception Handling.
 
 ---
 
 ## When Implementing Pagination
 
-📚 **References:** [rest-api-fundamentals.md](references/rest-api-fundamentals.md)
+### 🔴 BLOCKING — Never return unbounded collections
 
-### 🔴 Always Paginate Collections
+**Why** : a collection that grows to 100k rows kills the server (memory), the network (payload size), and the client (parse time) the day a single tenant crosses the threshold. Pagination must be the default, not an opt-in.
 
-Never return unbounded lists. Set reasonable defaults and maximums.
+Set sensible defaults (e.g., `size=20`) and a hard maximum (e.g., `size<=100`).
 
-### 🟢 Offset vs Cursor Pagination
+### 🟢 Offset vs cursor — pick by dataset size and consistency requirements
 
-| Approach | Example | Best For |
-|----------|---------|----------|
-| **Offset** | `GET /orders?page=2&size=20` | Small/static datasets, random access |
-| **Cursor** | `GET /orders?limit=20&after=eyJpZCI6MTAwfQ` | Large/dynamic datasets, consistency |
+| Approach | Example                                | Best for |
+|----------|----------------------------------------|----------|
+| Offset   | `GET /orders?page=2&size=20`           | Small / static datasets, random access |
+| Cursor   | `GET /orders?limit=20&after=eyJpZCI6…` | Large / dynamic datasets, infinite scroll, stability under concurrent writes |
+
+Rule of thumb: under 10k rows → offset is fine ; over 10k or real-time feed → cursor.
 
 ---
 
 ## When Versioning APIs
 
-📚 **References:** [rest-api-fundamentals.md](references/rest-api-fundamentals.md), [spring-rest-api.md](references/spring-rest-api.md)
+### 🟡 Pick one strategy and stay with it
 
-### 🟡 Versioning Strategies
+| Strategy   | Example                              | Trade-off |
+|------------|--------------------------------------|-----------|
+| URI path   | `/v1/orders`                         | Simple, explicit, cache-friendly — **default choice** |
+| Header     | `Api-Version: 1`                     | Clean URIs, less discoverable |
+| Media type | `Accept: application/vnd.api.v1+json`| REST-pure, complex, rare |
+| Query      | `/orders?version=1`                  | Easy to forget, breaks some caches |
 
-| Strategy | Example | Pros | Cons |
-|----------|---------|------|------|
-| **URI Path** | `/v1/orders` | Simple, explicit | Breaks REST purity |
-| **Query Param** | `/orders?version=1` | Flexible | Can be missed |
-| **Header** | `Api-Version: 1` | Clean URIs | Less discoverable |
-| **Media Type** | `Accept: application/vnd.api.v1+json` | REST-compliant | Complex |
+**Default**: URI path. **Escape hatch**: media type for content-negotiated APIs that already use rich `Accept` headers.
 
-### 🟢 Recommended: URI Path (Most Common)
-
-```java
-@RestController
-@RequestMapping("/api/v1/orders")
-public class OrderControllerV1 { }
-```
+Spring Framework 7 ships first-class versioning support (`@ApiVersion`, `ApiVersionConfigurer`) — see `spring-rest-api.md`.
 
 ---
 
-## When Implementing Sorting & Filtering
+## When Designing Request / Response DTOs
 
-📚 **References:** [rest-api-fundamentals.md](references/rest-api-fundamentals.md)
+### 🔴 BLOCKING — Controllers expose DTOs, never JPA entities
 
-### 🟢 Query Parameter Conventions
-
-```
-# Filtering
-GET /products?category=electronics&minPrice=100&maxPrice=500
-
-# Sorting (+ ascending, - descending)
-GET /products?sort=-createdAt,+name
-
-# Field selection (sparse fieldsets)
-GET /products?fields=id,name,price
-```
-
----
-
-## When Designing Request/Response Bodies
-
-📚 **References:** [spring-rest-api.md](references/spring-rest-api.md)
-
-### 🔴 Use DTOs, Never Entities
+**Why** : returning an entity couples your wire format to your database schema (any column rename becomes a breaking API change), triggers lazy-loading inside Jackson serialization (`LazyInitializationException` / N+1), and exposes fields you never meant to publish (audit columns, internal flags).
 
 ```java
-// 🔴 WRONG - Exposing entity
+// 🔴 WRONG — entity leaks to the wire
 @GetMapping("/{id}")
 public Order getOrder(@PathVariable UUID id) {
     return orderRepository.findById(id).orElseThrow();
 }
 
-// ✅ CORRECT - Using DTO
+// ✅ CORRECT — DTO at the boundary
 @GetMapping("/{id}")
 public OrderResponse getOrder(@PathVariable UUID id) {
-    Order order = orderService.findById(id);
-    return OrderResponse.from(order);
+    return OrderResponse.from(orderService.findById(id));
 }
 ```
 
-### 🟢 Separate DTOs for Create/Update/Response
+### 🟢 Separate DTOs for create / update / response
 
-| DTO Type | Purpose | Annotations |
-|----------|---------|-------------|
-| `*CreationRequest` | POST body — required fields only | `@NotNull`, `@NotEmpty` |
-| `*UpdateRequest` | PUT body — all mutable fields optional | `@Size`, `@Min` |
-| `*RetrievalResponse` | GET response — full representation | `static from()` factory |
+| DTO type              | Purpose                                | Typical annotations          |
+|-----------------------|----------------------------------------|------------------------------|
+| `*CreationRequest`    | POST body — required fields only       | `@NotNull`, `@NotEmpty`      |
+| `*UpdateRequest`      | PUT body — all mutable fields          | `@Size`, `@Min`              |
+| `*RetrievalResponse`  | GET response — full representation     | `static from()` factory      |
 
 ---
 
 ## When Validating Requests
 
-📚 **References:** [spring-rest-api.md](references/spring-rest-api.md)
+### 🔴 BLOCKING — Validate at the controller boundary with `@Valid`
 
-### 🔴 Validate at Controller Level
+**Why** : pushing validation into services duplicates checks, leaks business logic across layers, and produces inconsistent error shapes. Bean Validation at the controller produces uniform 400 responses with field-level details and runs *before* any service code touches bad input.
 
 ```java
 @PostMapping
@@ -315,64 +242,59 @@ public ResponseEntity<OrderResponse> createOrder(
 }
 ```
 
-### 🔴 Use Bean Validation Annotations
-
-| Annotation | Use Case |
-|------------|----------|
-| `@NotNull` | Field must not be null |
-| `@NotEmpty` | String/Collection must not be empty |
-| `@NotBlank` | String must have non-whitespace content |
-| `@Size(min, max)` | Length/size constraints |
-| `@Min`, `@Max` | Numeric bounds |
-| `@Email` | Valid email format |
-| `@Valid` | Cascade validation to nested objects |
+For the full Bean Validation annotation catalog, custom validators, and validation groups → see `spring-rest-api.md` § Request Validation.
 
 ---
 
 ## When Documenting APIs
 
-📚 **References:** [spring-rest-api.md](references/spring-rest-api.md)
+### 🔴 BLOCKING — Every public endpoint is documented in OpenAPI 3 (Springdoc)
 
-### 🔴 Use OpenAPI 3 (Springdoc)
+**Why** : an endpoint without an OpenAPI spec is invisible to client codegen, API gateways, contract tests, and external integrators. The cost of documenting at write-time is one annotation; the cost of retrofitting is days of archeology.
 
-- Annotate controllers with `@Operation` (summary + description)
-- Use `@ApiResponses` for all possible status codes
-- Use `@Schema` on DTOs for model documentation
+Minimum:
+- `@Operation(summary, description)` on every handler method
+- `@ApiResponses` listing every status code the handler can return
+- `@Schema` on every DTO field that needs explanation, example, or constraint
+- Springdoc dependency: `springdoc-openapi-starter-webmvc-ui` ≥ `2.6.0` (Spring Boot 4)
+
+Worked example with controller + schema annotations → see `spring-rest-api.md` § API Documentation.
 
 ---
 
 ## Code Review Checklist
 
 ### 🔴 BLOCKING
-- [ ] Resource URIs use nouns (not verbs)
-- [ ] HTTP methods match semantics (GET read, POST create, etc.)
-- [ ] Status codes reflect outcomes (201 Created, 404 Not Found)
-- [ ] DTOs used instead of entities
-- [ ] Request validation with @Valid
-- [ ] Error responses follow RFC 7807
-- [ ] No duplicate YAML root keys in application config files
+- [ ] Resource URIs use plural nouns, no verbs
+- [ ] HTTP method matches semantics (safety + idempotence)
+- [ ] Status code reflects the outcome (201 + Location on POST-create, 204 on DELETE, 422 vs 400 vs 409)
+- [ ] DTOs at controller boundary — no entities exposed
+- [ ] Request bodies validated with `@Valid` + Bean Validation
+- [ ] Error responses use RFC 7807 (`ProblemDetail` / `application/problem+json`)
+- [ ] No internal details (stack traces, SQL, class names) leaked in error bodies
+- [ ] Collections are paginated with sensible default + hard maximum
+- [ ] Public endpoints have OpenAPI annotations (`@Operation`, `@ApiResponses`, `@Schema`)
 
 ### 🟡 WARNING
-- [ ] Collections are paginated
-- [ ] Nested URIs limited to 2-3 levels
-- [ ] No internal details in error messages
-- [ ] API versioning strategy defined
-- [ ] No dev-only defaults in base `application.yml`
-- [ ] No stacking `@Async` + `@Retry` on same method
+- [ ] Nested URIs ≤ 3 levels
+- [ ] Versioning strategy chosen and applied consistently
+- [ ] `Location` header set on `201 Created`
+- [ ] Cursor pagination used for collections > 10k rows or real-time feeds
+- [ ] New code uses `RestClient` / `@HttpExchange`, not `RestTemplate`
 
 ### 🟢 BEST PRACTICE
-- [ ] OpenAPI documentation complete
-- [ ] Sorting and filtering supported
-- [ ] HATEOAS links for discoverability (see [rest-api-fundamentals.md](references/rest-api-fundamentals.md#hateoas-hypermedia))
-- [ ] Cursor pagination for large datasets
-- [ ] Location header on POST 201
+- [ ] Sorting and filtering supported with documented query-param conventions
+- [ ] HATEOAS links for discoverability (see `rest-api-fundamentals.md` § HATEOAS)
+- [ ] ETag + `Cache-Control` on cacheable GETs
+- [ ] Rate-limit headers (`X-RateLimit-*`, `Retry-After`) on 429 responses
 
 ---
 
 ## Related Skills
 
-- `common-java-developer` — Modern Java patterns
-- `common-java-jpa` — Entity-DTO mapping
-- `common-security` — REST API security, OAuth2
-- `common-architecture` — API design principles
-- `buy-nature-backend-coding-guide` — Buy Nature REST conventions
+- `common-java-developer` — Modern Java patterns (records, sealed types, virtual threads)
+- `common-java-jpa` — Entity ↔ DTO mapping, repository design
+- `common-java-testing` — MockMvc / `@RestClientTest` / Testcontainers integration tests
+- `common-security` — Spring Security 7, OAuth2, JWT, securing the REST surface
+- `common-spring-boot-config` — Spring Boot YAML / profiles / AOP / `@ConditionalOnProperty` pitfalls
+- `common-architecture` — Bounded contexts, hexagonal layering around the REST adapter

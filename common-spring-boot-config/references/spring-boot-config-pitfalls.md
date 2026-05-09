@@ -1,5 +1,16 @@
 # Spring Boot Configuration Pitfalls
 
+## Table of Contents
+
+1. [YAML Duplicate Root Keys](#1-yaml-duplicate-root-keys) — 🔴 BLOCKING
+2. [Spring AOP Proxy Annotation Ordering](#2-spring-aop-proxy-annotation-ordering) — 🟡 WARNING
+3. [Resilience4j Retry Exception Configuration](#3-resilience4j-retry-exception-configuration) — 🟡 WARNING
+4. [Hardcoded Retry Attempt Count in Fallback](#4-hardcoded-retry-attempt-count-in-fallback) — 🟡 WARNING
+5. [Spring Profile-Specific Configuration](#5-spring-profile-specific-configuration) — 🟡 WARNING
+6. [Unused Properties and Templates](#6-unused-properties-and-templates) — 🟢 BEST PRACTICE
+7. [Incomplete @ConditionalOnProperty Scope](#7-incomplete-conditionalonproperty-scope) — 🔴 BLOCKING
+8. [Misleading Comments About Unimplemented Features](#8-misleading-comments-about-unimplemented-features) — 🟡 WARNING
+
 ---
 
 ## 1. YAML Duplicate Root Keys
@@ -169,7 +180,7 @@ public void sendEmailFallback(String to, MailException e) {
 
 ---
 
-## 3B. Hardcoded Retry Attempt Count in Fallback
+## 4. Hardcoded Retry Attempt Count in Fallback
 
 ### Severity: 🟡 WARNING
 
@@ -215,7 +226,7 @@ public class EmailService {
 
 ---
 
-## 4. Spring Profile-Specific Configuration
+## 5. Spring Profile-Specific Configuration
 
 ### Severity: 🟡 WARNING
 
@@ -262,7 +273,7 @@ For every property in base `application.yml`, ask: **"Is this safe for productio
 
 ---
 
-## 5. Unused Properties and Templates
+## 6. Unused Properties and Templates
 
 ### Severity: 🟢 BEST PRACTICE
 
@@ -281,7 +292,7 @@ rendered, create misleading configuration suggesting features are wired when the
 
 ---
 
-## 6. Incomplete @ConditionalOnProperty Scope
+## 7. Incomplete @ConditionalOnProperty Scope
 
 ### Severity: 🔴 BLOCKING
 
@@ -345,9 +356,9 @@ public class EmailService { ... }
 
 ---
 
-## Pitfall 8: Misleading Comments About Unimplemented Features
+## 8. Misleading Comments About Unimplemented Features
 
-### Problem
+### Severity: 🟡 WARNING
 
 Comments claiming features exist (i18n support, caching, async processing) when the implementation is absent. These mislead reviewers and future developers into thinking functionality is present.
 

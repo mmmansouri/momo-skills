@@ -1,5 +1,20 @@
 # Spring REST API Reference (Spring Boot 4 / Spring Framework 7)
 
+## Table of Contents
+
+1. [What's New in Spring Framework 7 for REST](#whats-new-in-spring-framework-7-for-rest) — versioning, RestClient, @HttpExchange, virtual threads, client comparison
+2. [Controller Design](#controller-design) — `@RestController` skeleton, best practices
+3. [Request Validation](#request-validation) — Bean Validation annotations, custom validators, validation groups
+4. [Exception Handling](#exception-handling) — `@RestControllerAdvice` with `ProblemDetail`, custom exceptions
+5. [Pagination](#pagination) — Spring Data `Pageable`, custom `PageResponse`, cursor-based
+6. [API Documentation (OpenAPI)](#api-documentation-openapi) — Springdoc setup, `@Operation`, `@Schema`
+7. [HATEOAS with Spring](#hateoas-with-spring) — `EntityModel`, `CollectionModel`, `PagedModel`
+8. [Content Negotiation](#content-negotiation) — `ContentNegotiationConfigurer`, multiple representations
+9. [Testing REST APIs](#testing-rest-apis) — MockMvc, `@RestClientTest`
+10. [Performance Tips](#performance-tips) — compression, ETag caching, async endpoints
+
+---
+
 ## What's New in Spring Framework 7 for REST
 
 ### Key Changes
@@ -191,10 +206,10 @@ public class VirtualThreadsConfig {
 | **Status** | Maintenance mode | ✅ Preferred | ✅ Preferred |
 | **Use Case** | Legacy code | New code, fluent API | Interface-driven, clean |
 
-### Buy Nature Migration Path
+### Migration Path (RestTemplate → RestClient / @HttpExchange)
 
-**Current (Spring Boot 3.x):**
-- Use `RestTemplate` in existing services (don't rewrite)
+**Existing (Spring Boot 3.x or earlier):**
+- Keep `RestTemplate` in existing services — don't rewrite for the sake of rewriting
 
 **New code (Spring Boot 4.x):**
 1. **Simple HTTP calls:** Use `RestClient`
