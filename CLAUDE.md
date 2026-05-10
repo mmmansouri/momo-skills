@@ -1,8 +1,36 @@
 # Momo Skills — Skill Library Cartography
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
-Reusable skill library consumed via symlink (`~/.claude/skills → momo-skills`).
-Available to all projects on this machine. Project-specific skills belong in each project's own `skills/` directory, not here.
+Reusable skill library. Skills are bridged into each application via Windows junctions
+(`<app>/.claude/skills/<skill> → momo-skills/<package>/<skill>`), so each app sees only
+the skills relevant to its stack. Project-specific (one-off) skills still belong in
+each project's own `skills/` directory, not here.
+
+## Package Layout
+
+Skills are organized in 4 top-level packages:
+
+```
+momo-skills/
+├── development/                    # coding skills
+│   ├── common-developer/, common-architecture/, common-git/, common-code-reviewer/
+│   ├── backend/
+│   │   ├── java/                   # common-java-developer/, common-java-jpa/, common-java-testing/
+│   │   └── spring/                 # common-spring-boot-config/, common-rest-api/, common-security/, common-liquibase/
+│   └── frontend/
+│       ├── common-typescript/
+│       └── angular/                # common-frontend-angular/, common-frontend-design/, common-frontend-testing/, common-e2e-playwright/
+├── specification/                  # SDD workflow & templates
+│   └── spec-templates/, spec-workflow-feature-planning/, spec-workflow-story-refinement/
+├── ia/                             # AI/Claude meta-skills
+│   └── skill-creator/, initiate-claude/
+└── tools/                          # external tool symlinks (gitignored)
+    └── pptx/, remotion-best-practices/
+```
+
+When you add a skill, place it under the smallest package that scopes its language /
+framework / domain — that determines which apps will receive it through their junction
+bridges.
 
 ## Naming Convention
 
