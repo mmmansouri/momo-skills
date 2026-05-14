@@ -1,5 +1,20 @@
 # Modern Java Features (Java 8-25)
 
+---
+
+## Table of Contents
+
+1. [Java 8 (2014) - Foundation of Modern Java](#java-8-2014---foundation-of-modern-java)
+2. [Java 9 (2017)](#java-9-2017)
+3. [Java 10 (2018)](#java-10-2018)
+4. [Java 11 (2018) - LTS](#java-11-2018---lts)
+5. [Java 14-16 (2020-2021)](#java-14-16-2020-2021)
+6. [Java 17 (2021) - LTS](#java-17-2021---lts)
+7. [Java 21 (2023) - LTS](#java-21-2023---lts)
+8. [Java 22-25 (2024-2025)](#java-22-25-2024-2025)
+
+---
+
 ## Java 8 (2014) - Foundation of Modern Java
 
 ### Lambda Expressions

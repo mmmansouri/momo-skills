@@ -13,9 +13,9 @@ description: >-
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
-📚 **References:**
-- [git-quick-reference.md](references/git-quick-reference.md) — command lookup tables (rebase, stash, undo, cherry-pick, tags, blame/log search, reflog, bisect, aliases) + recovery anti-patterns
-- [git-cross-platform.md](references/git-cross-platform.md) — CRLF/autocrlf, hooks on Windows/Unix, gitignore patterns, Windows path-length
+📚 **When looking up git commands for rebase, stash, undo, cherry-pick, tags, blame/log search, reflog, bisect, or aliases, or recovering from a mistake → read [git-quick-reference.md](references/git-quick-reference.md).**
+
+📚 **When configuring git across Windows/Unix (CRLF/autocrlf, hook portability, gitignore patterns, Windows path-length limits) → read [git-cross-platform.md](references/git-cross-platform.md).**
 
 > **Parameterization:** scripts read `BASE_BRANCH` (default `develop`) and `JIRA_PREFIX` (default `TICKET`) from the environment. Override in your shell or via CLI flags.
 
@@ -185,7 +185,7 @@ git checkout develop
 git merge feature/my-feature
 ```
 
-📚 See [git-quick-reference.md](references/git-quick-reference.md) for interactive rebase, history rewriting, and recovery commands.
+📚 **When performing interactive rebase, rewriting history, or recovering lost commits → read [git-quick-reference.md](references/git-quick-reference.md).**
 
 ---
 

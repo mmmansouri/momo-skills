@@ -48,7 +48,7 @@ Use an indented tree showing application layers from entry point to storage.
   - Show only groups/packages, not individual classes or files
   - Omit layers that don't exist instead of leaving empty placeholders
 
-📄 **Asset:** `assets/{stack}/architecture-tree.md` — template + adaptation rules for the detected stack
+📚 **When generating the Simplified Architecture tree for the detected stack → load [architecture-tree](assets/{stack}/architecture-tree.md).**
 
 ---
 
@@ -75,7 +75,7 @@ Each startup mode gets its own `### <mode-id>` heading followed by labeled bulle
 - Include every detected profile, even if undocumented
 - Detect the exact booting command for each mode. Ask the user if any are missing or uncertain
 
-📄 **Asset:** `assets/{stack}/startup-modes.md` — structured-list template with detection checklist
+📚 **When generating the Startup Modes section for the detected stack → load [startup-modes](assets/{stack}/startup-modes.md).**
 
 ---
 

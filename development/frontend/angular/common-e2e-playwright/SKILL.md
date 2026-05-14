@@ -62,7 +62,7 @@ await page.getByRole('button', { name: 'Confirm' }).click()
 
 ## When Designing the E2E Test Strategy
 
-📚 **References:** [strategy-and-structure.md](references/strategy-and-structure.md)
+📚 **When deciding what to cover at the E2E layer, positioning tests on the pyramid, choosing smoke vs full suite, or planning cross-browser scope → read [e2e-strategy.md](references/e2e-strategy.md).**
 
 ### Test Pyramid Positioning
 
@@ -85,7 +85,7 @@ await page.getByRole('button', { name: 'Confirm' }).click()
 
 ## When Structuring the E2E Project
 
-📚 **References:** [strategy-and-structure.md](references/strategy-and-structure.md)
+📚 **When laying out the `e2e/` folder, organizing specs by feature, or placing pages/fixtures/utils directories → read [project-structure.md](references/project-structure.md).**
 
 ```
 e2e/
@@ -103,7 +103,7 @@ e2e/
 
 ## When Selecting Locators
 
-📚 **References:** [locators-guide.md](references/locators-guide.md)
+📚 **When choosing between `getByTestId`/`getByRole`/`getByLabel`, chaining locators, scoping within components, or replacing CSS/XPath selectors → read [locators-guide.md](references/locators-guide.md).**
 
 ### Selector Priority (best → worst)
 
@@ -142,7 +142,7 @@ await card.getByRole('button', { name: 'Add to Cart' }).click()
 
 ## When Writing Page Objects
 
-📚 **References:** [page-objects-playwright.md](references/page-objects-playwright.md)
+📚 **When designing a Page Object class, encapsulating locators, writing action methods that return the next page, or choosing class vs component vs function POMs → read [page-objects-playwright.md](references/page-objects-playwright.md).**
 
 ### 🔴 BLOCKING
 
@@ -182,7 +182,7 @@ export class LoginPage {
 
 ## When Writing Tests
 
-📚 **References:** [test-patterns.md](references/test-patterns.md)
+📚 **When structuring a spec with Arrange–Act–Assert, naming tests, parameterizing scenarios, using beforeEach/afterEach, or isolating per-test state → read [test-patterns.md](references/test-patterns.md).**
 
 ```typescript
 test('logs in with valid credentials', async ({ page }) => {
@@ -208,7 +208,7 @@ test('logs in with valid credentials', async ({ page }) => {
 
 ## When Handling Async Operations
 
-📚 **References:** [network-and-async.md](references/network-and-async.md)
+📚 **When picking a wait strategy (`toBeVisible`, `waitForURL`, `waitForResponse`, `toPass`), tuning timeouts, or handling animations and load states → read [async-waits.md](references/async-waits.md).**
 
 ### 🔴 BLOCKING
 
@@ -228,7 +228,7 @@ test('logs in with valid credentials', async ({ page }) => {
 
 ## When Mocking Network Requests
 
-📚 **References:** [network-and-async.md](references/network-and-async.md)
+📚 **When intercepting requests with `page.route`, fulfilling responses, stubbing third-party APIs, or asserting on outgoing payloads → read [network-mocking.md](references/network-mocking.md).**
 
 ```typescript
 await page.route('**/api/products', route =>
@@ -243,7 +243,7 @@ await expect(page.getByText('Test')).toBeVisible()
 
 ## When Managing Test Data
 
-📚 **References:** [test-setup.md](references/test-setup.md)
+📚 **When choosing between API/UI/DB seeding, using factories, cleaning up data, or avoiding production data leakage → read [test-data.md](references/test-data.md).**
 
 | Strategy | Use when | Pros | Cons |
 |----------|----------|------|------|
@@ -261,7 +261,7 @@ await expect(page.getByText('Test')).toBeVisible()
 
 ## When Using Custom Fixtures
 
-📚 **References:** [test-setup.md](references/test-setup.md)
+📚 **When extending `base.extend<T>` with custom fixtures, wiring authenticated pages, scoping fixture lifecycle (test/worker), or composing fixtures across spec files → read [custom-fixtures.md](references/custom-fixtures.md).**
 
 ```typescript
 export const test = base.extend<{ loginPage: LoginPage; authenticatedPage: Page }>({
@@ -282,7 +282,7 @@ export const test = base.extend<{ loginPage: LoginPage; authenticatedPage: Page 
 
 ## When Configuring Playwright
 
-📚 **References:** [playwright-config.md](references/playwright-config.md)
+📚 **When editing `playwright.config.ts` — projects, timeouts, reporters, baseURL, webServer, trace/screenshot/video, global setup/teardown → read [playwright-config.md](references/playwright-config.md).**
 
 Minimum config every project must set:
 
@@ -310,7 +310,7 @@ export default defineConfig({
 
 ## When Dealing with Flaky Tests
 
-📚 **References:** [flaky-tests.md](references/flaky-tests.md)
+📚 **When diagnosing intermittent failures — race conditions, animation timing, shared state, time/random non-determinism — or deciding on a retry policy → read [flaky-tests.md](references/flaky-tests.md).**
 
 | Cause | Solution |
 |-------|----------|
@@ -330,7 +330,9 @@ export default defineConfig({
 
 ## When Running in CI
 
-📚 **References:** [ci-integration.md](references/ci-integration.md)
+📚 **When wiring Playwright into GitHub Actions, sharding tests across workers, uploading reports/traces as artifacts, or installing browsers with `--with-deps` → read [ci-github-actions.md](references/ci-github-actions.md).**
+
+📚 **When configuring Docker runners (docker-compose for the full stack), choosing reporters (HTML/JUnit/GitHub), tuning CI performance (caching, parallel jobs), or troubleshooting CI-only failures → read [ci-docker-reporting.md](references/ci-docker-reporting.md).**
 
 ### 🔴 BLOCKING
 
@@ -355,4 +357,4 @@ When producing E2E artifacts, deliver each in this exact form:
 | **Page object** (`pages/*.page.ts`) | Class with `Locator` properties + action methods returning `Promise<void>` or the next page object. No assertions, no test data. |
 | **Custom fixture** (`fixtures/index.ts`) | `base.extend<T>({...})` with setup before `await use(...)` and cleanup after. Re-export `expect`. |
 | **Config** (`playwright.config.ts`) | `defineConfig` with `forbidOnly`, `retries`, `trace`, `screenshot`, `video`, project list, `webServer` for local dev. |
-| **CI workflow** | Steps: checkout → setup-node → `npm ci` → `npx playwright install --with-deps` → `npx playwright test` → upload report on failure. See `ci-integration.md`. |
+| **CI workflow** | Steps: checkout → setup-node → `npm ci` → `npx playwright install --with-deps` → `npx playwright test` → upload report on failure. See `ci-github-actions.md`. |

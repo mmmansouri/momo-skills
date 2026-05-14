@@ -151,7 +151,9 @@ Complete understanding of what to build and how, with concrete file paths and pa
 
 ### Actions
 
-1. **Write Story description** following `spec-templates/references/story-sections-guide.md`:
+1. **Write Story description** section by section.
+
+   📚 **When writing the refined Story body (Context, Functional Spec, Technical Spec, Acceptance Criteria, Technical Notes, Out of Scope, Dependencies) in Step 3 → read [spec-templates/references/story-sections-guide.md](../spec-templates/references/story-sections-guide.md).**
 
    | Section | Content Source |
    |---------|--------------|
@@ -183,7 +185,9 @@ Complete understanding of what to build and how, with concrete file paths and pa
    - Include navigation steps, assertions, error verification
    - Reference page objects to create
 
-4. **Validate quality** using `references/refinement-checklist.md`
+4. **Validate quality** of the draft spec while still iterating in Step 3.
+
+   📚 **When self-checking section completeness, AC coverage, technical-spec precision, and E2E companion quality of the in-progress draft (Step 3 self-review) → read [refinement-checklist.md](references/refinement-checklist.md).**
 
 5. **Present spec to user:**
    - Full story content (section by section)
@@ -203,8 +207,9 @@ Approved Story specification and E2E companion plan ready for Jira update.
 
 1. **Build ADF JSON** for Story description:
    - Follow `buy-nature-jira-writer` formatting rules
-   - Use ADF templates from `buy-nature-jira-writer/references/adf-advanced-templates.md`
    - Write ADF to temp file
+
+   📚 **When building ADF JSON for Jira (panels, tables, code blocks, advanced node structures) in Step 4 → read [buy-nature-jira-writer/references/adf-advanced-templates.md](../../buy-nature-jira-writer/references/adf-advanced-templates.md).** *(External skill — expected to be available at runtime via the bridged skills tree; not present in `momo-skills/`.)*
 
 2. **Update Story description** in Jira:
    ```bash
@@ -265,7 +270,9 @@ Story description updated in Jira with full specification. E2E companion created
 
 ## Quality Checklist (Before Step 4)
 
-Before updating Jira, verify using `references/refinement-checklist.md`:
+📚 **When running the final pre-Jira-update gate (last pass before calling the update/create scripts in Step 4) → read [refinement-checklist.md](references/refinement-checklist.md).**
+
+Before updating Jira, verify:
 
 - [ ] Context explains WHY, not just WHAT
 - [ ] All ACs have numbered IDs (AC1, AC2...)

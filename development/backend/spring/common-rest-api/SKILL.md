@@ -18,16 +18,6 @@ description: >-
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
-📚 **When designing resource URIs, choosing status codes, picking a pagination
-strategy, picking a versioning strategy, or implementing HATEOAS / caching /
-async patterns → read [rest-api-fundamentals.md](references/rest-api-fundamentals.md)
-(spec-level reference: HTTP semantics, RFC 7807, content negotiation, rate
-limiting).**
-
-📚 **When implementing or reviewing Spring Boot 4 REST code (controllers,
-RestClient, @HttpExchange, virtual threads, exception handlers, OpenAPI
-annotations, MockMvc tests) → read [spring-rest-api.md](references/spring-rest-api.md).**
-
 ---
 
 ## When Designing Resource URIs
@@ -77,6 +67,8 @@ GET /products?fields=id,name,price
 
 ## When Choosing HTTP Methods and Status Codes
 
+📚 **When picking a status code outside the common cases below, or needing the full per-method status-code matrix and 4xx / 5xx catalog → read [rest-uris-methods-status.md](references/rest-uris-methods-status.md).**
+
 ### 🔴 BLOCKING — Method must match its semantics (safety + idempotence)
 
 **Why** : caches, proxies, retry logic, and crawlers all assume HTTP method semantics. A `GET` with side effects gets re-executed by a retrying proxy; a non-idempotent `PUT` breaks at-least-once delivery. Deviating from the spec corrupts data through infrastructure you don't control.
@@ -102,11 +94,11 @@ Key rules to keep in mind without re-reading the full reference:
 - **400 = malformed request** ; **422 = valid syntax but semantic error** ; **409 = business-rule conflict**
 - **401 = not authenticated** ; **403 = authenticated but forbidden**
 
-For the full per-method status-code matrix and 4xx / 5xx catalog → see `rest-api-fundamentals.md`.
-
 ---
 
 ## When Choosing a Spring Boot 4 HTTP Client
+
+📚 **When configuring `RestClient` / `@HttpExchange` / `WebClient`, comparing client trade-offs, or enabling virtual threads on Java 21+ for high-concurrency blocking I/O → read [spring-rest-clients.md](references/spring-rest-clients.md).**
 
 | Client          | Status            | Use case |
 |-----------------|-------------------|----------|
@@ -119,11 +111,15 @@ For the full per-method status-code matrix and 4xx / 5xx catalog → see `rest-a
 - **Existing `RestTemplate` code** → keep as-is
 - **New simple HTTP call** → `RestClient`
 - **New multi-endpoint integration** → `@HttpExchange`
-- **High-concurrency blocking I/O on Java 21+** → enable virtual threads (see `spring-rest-api.md`)
+- **High-concurrency blocking I/O on Java 21+** → enable virtual threads
 
 ---
 
 ## When Handling Errors
+
+📚 **When implementing the RFC 7807 envelope details, building a `@RestControllerAdvice` exception-handler skeleton, or mapping custom exceptions to `ProblemDetail` → read [spring-exception-handling.md](references/spring-exception-handling.md).**
+
+📚 **When needing the full RFC 7807 field reference or worked examples of problem types → read [rest-errors-rfc7807.md](references/rest-errors-rfc7807.md).**
 
 ### 🔴 BLOCKING — Error responses use RFC 7807 Problem Details
 
@@ -156,11 +152,13 @@ For the full per-method status-code matrix and 4xx / 5xx catalog → see `rest-a
   "detail": "A user with this email already exists" }
 ```
 
-For Spring's `@RestControllerAdvice` exception-handler skeleton → see `spring-rest-api.md` § Exception Handling.
-
 ---
 
 ## When Implementing Pagination
+
+📚 **When implementing offset or cursor pagination with Spring Data `Pageable` / a custom `PageResponse` → read [spring-pagination-hateoas.md](references/spring-pagination-hateoas.md).**
+
+📚 **When choosing between offset and cursor pagination, or designing sort / filter / sparse-fieldset query-param conventions → read [rest-pagination-filtering-versioning.md](references/rest-pagination-filtering-versioning.md).**
 
 ### 🔴 BLOCKING — Never return unbounded collections
 
@@ -181,6 +179,10 @@ Rule of thumb: under 10k rows → offset is fine ; over 10k or real-time feed �
 
 ## When Versioning APIs
 
+📚 **When comparing URI / header / media-type / query versioning trade-offs in depth → read [rest-pagination-filtering-versioning.md](references/rest-pagination-filtering-versioning.md).**
+
+📚 **When wiring Spring Framework 7's `@ApiVersion` / `ApiVersionConfigurer` → read [spring-rest-clients.md](references/spring-rest-clients.md).**
+
 ### 🟡 Pick one strategy and stay with it
 
 | Strategy   | Example                              | Trade-off |
@@ -192,7 +194,7 @@ Rule of thumb: under 10k rows → offset is fine ; over 10k or real-time feed �
 
 **Default**: URI path. **Escape hatch**: media type for content-negotiated APIs that already use rich `Accept` headers.
 
-Spring Framework 7 ships first-class versioning support (`@ApiVersion`, `ApiVersionConfigurer`) — see `spring-rest-api.md`.
+Spring Framework 7 ships first-class versioning support (`@ApiVersion`, `ApiVersionConfigurer`).
 
 ---
 
@@ -228,6 +230,8 @@ public OrderResponse getOrder(@PathVariable UUID id) {
 
 ## When Validating Requests
 
+📚 **When picking Bean Validation annotations, writing a custom validator, or using validation groups → read [spring-validation.md](references/spring-validation.md).**
+
 ### 🔴 BLOCKING — Validate at the controller boundary with `@Valid`
 
 **Why** : pushing validation into services duplicates checks, leaks business logic across layers, and produces inconsistent error shapes. Bean Validation at the controller produces uniform 400 responses with field-level details and runs *before* any service code touches bad input.
@@ -242,11 +246,13 @@ public ResponseEntity<OrderResponse> createOrder(
 }
 ```
 
-For the full Bean Validation annotation catalog, custom validators, and validation groups → see `spring-rest-api.md` § Request Validation.
-
 ---
 
 ## When Documenting APIs
+
+📚 **When wiring Springdoc, annotating controllers with `@Operation` / `@ApiResponses` / `@Schema`, or producing a worked OpenAPI controller example → read [spring-openapi-testing.md](references/spring-openapi-testing.md).**
+
+📚 **When writing MockMvc / `@RestClientTest` tests for REST controllers and clients → read [spring-openapi-testing.md](references/spring-openapi-testing.md).**
 
 ### 🔴 BLOCKING — Every public endpoint is documented in OpenAPI 3 (Springdoc)
 
@@ -257,8 +263,6 @@ Minimum:
 - `@ApiResponses` listing every status code the handler can return
 - `@Schema` on every DTO field that needs explanation, example, or constraint
 - Springdoc dependency: `springdoc-openapi-starter-webmvc-ui` ≥ `2.6.0` (Spring Boot 4)
-
-Worked example with controller + schema annotations → see `spring-rest-api.md` § API Documentation.
 
 ---
 
@@ -284,9 +288,15 @@ Worked example with controller + schema annotations → see `spring-rest-api.md`
 
 ### 🟢 BEST PRACTICE
 - [ ] Sorting and filtering supported with documented query-param conventions
-- [ ] HATEOAS links for discoverability (see `rest-api-fundamentals.md` § HATEOAS)
+- [ ] HATEOAS links for discoverability
 - [ ] ETag + `Cache-Control` on cacheable GETs
 - [ ] Rate-limit headers (`X-RateLimit-*`, `Retry-After`) on 429 responses
+
+📚 **When adding HATEOAS links, ETag / `Cache-Control` headers, or `X-RateLimit-*` / `Retry-After` headers → read [rest-hypermedia-caching-async.md](references/rest-hypermedia-caching-async.md).**
+
+📚 **When implementing HATEOAS with Spring (`EntityModel`, `CollectionModel`, `PagedModel`), ETag caching, or async endpoints → read [spring-pagination-hateoas.md](references/spring-pagination-hateoas.md).**
+
+📚 **When configuring content negotiation in a Spring controller (multiple representations: JSON / XML / CSV) → read [spring-controllers.md](references/spring-controllers.md).**
 
 ---
 

@@ -2,6 +2,17 @@
 
 ---
 
+## Table of Contents
+
+1. [Decision Flowchart: Choosing the Right Approach](#decision-flowchart-choosing-the-right-approach)
+2. [Virtual Threads (Java 21+)](#virtual-threads-java-21)
+3. [Scoped Values (Java 25 — FINAL, JEP 506)](#scoped-values-java-25--final-jep-506)
+4. [Structured Concurrency (Java 25 — 5th Preview, JEP 505)](#structured-concurrency-java-25--5th-preview-jep-505)
+5. [CompletableFuture (Still Relevant)](#completablefuture-still-relevant)
+6. [Best Practices Summary](#best-practices-summary)
+
+---
+
 ## Decision Flowchart: Choosing the Right Approach
 
 ```

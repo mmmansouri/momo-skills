@@ -2,6 +2,15 @@
 
 > Per-project investigation patterns for the feature-planning workflow. Use this checklist during Step 2 (Investigate Codebase) to systematically map existing architecture.
 
+## Table of Contents
+
+- [Backend Investigation (buy-nature-back)](#backend-investigation-buy-nature-back)
+- [Frontend Investigation (buy-nature-front)](#frontend-investigation-buy-nature-front)
+- [Backoffice Investigation (buy-nature-back-office)](#backoffice-investigation-buy-nature-back-office)
+- [E2E Investigation](#e2e-investigation)
+- [Domain Mapping](#domain-mapping)
+- [Investigation Summary Template](#investigation-summary-template)
+
 ---
 
 ## Backend Investigation (buy-nature-back)

@@ -107,7 +107,9 @@ Consider **Jest** for non-Angular projects, when you need built-in snapshot test
 
 ## When Setting Up Component Tests
 
-📚 **References:** [testing-with-testbed.md](references/testing-with-testbed.md) (default Angular TestBed) | [testing-with-testing-library.md](references/testing-with-testing-library.md) (Angular Testing Library — alternative for query-driven tests)
+📚 **When configuring TestBed for a component, testing inputs/outputs, DOM interactions, conditional rendering, router, providers, child components or lifecycle hooks → read [testing-with-testbed.md](references/testing-with-testbed.md).**
+
+📚 **When writing query-driven tests with `getByRole` / `getByTestId`, testing directives or pipes with Angular Testing Library, or considering snapshot testing as an alternative to TestBed → read [testing-with-testing-library.md](references/testing-with-testing-library.md).**
 
 ### 🔴 BLOCKING
 
@@ -171,7 +173,7 @@ fixture.detectChanges();
 
 ## When Testing Services
 
-📚 **References:** [testing-with-testbed.md](references/testing-with-testbed.md)
+📚 **When testing an Angular service — setting up `HttpClientTestingModule`, injecting test doubles via providers, or wiring up `HttpTestingController` for request assertions → read [testing-with-testbed.md](references/testing-with-testbed.md).**
 
 ### 🔴 BLOCKING
 
@@ -214,7 +216,7 @@ TestBed.configureTestingModule({
 
 ## When Mocking
 
-📚 **References:** [mocking-patterns.md](references/mocking-patterns.md)
+📚 **When building Jasmine spies, mocking services / HTTP / Router / forms / store state, or choosing between `createSpyObj` and `spyOn` for a specific collaborator → read [mocking-patterns.md](references/mocking-patterns.md).**
 
 ### 🔴 BLOCKING
 

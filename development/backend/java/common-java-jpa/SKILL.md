@@ -64,7 +64,7 @@ What are you doing?
 
 ## When Designing JPA Entities
 
-📚 **References:** [entity-design.md](references/entity-design.md)
+📚 **When designing `@Entity` classes — annotations, ID strategies, enum/wrapper choices, value objects, audit fields, soft-delete, Lombok constraints → read [entity-design.md](references/entity-design.md).**
 
 ### 🔴 BLOCKING
 
@@ -94,7 +94,7 @@ What are you doing?
 
 ## When Implementing equals/hashCode
 
-📚 **References:** [entity-design.md](references/entity-design.md#equality)
+📚 **When implementing `equals`/`hashCode` on entities — choosing a business key, handling generated IDs, avoiding lazy-association traps → read [entity-design.md](references/entity-design.md#equality).**
 
 ### 🔴 BLOCKING
 
@@ -130,7 +130,7 @@ public boolean equals(Object o) {
 
 ## When Mapping Relationships
 
-📚 **References:** [relationships.md](references/relationships.md)
+📚 **When mapping `@ManyToOne`/`@OneToMany`/`@OneToOne`/`@ManyToMany`, choosing owning side, writing bidirectional helpers, deciding on cascade and join-entity vs `@ManyToMany` → read [relationships.md](references/relationships.md).**
 
 ### 🔴 BLOCKING
 
@@ -193,7 +193,7 @@ For closed hierarchies, prefer **`sealed` Java types + pattern matching at the s
 
 ## When Optimizing Performance
 
-📚 **References:** [performance.md](references/performance.md) — full details on N+1, batching, caching, pagination, virtual threads, AOT.
+📚 **When fixing N+1 queries, configuring batch inserts/updates, enabling second-level cache, sizing pagination, or tuning Hibernate for throughput → read [performance.md](references/performance.md).**
 
 ### 🔴 BLOCKING — N+1 Query Problem
 **Why:** A list endpoint that issues 1 + N queries scales linearly with payload size; under load it's the #1 source of database saturation in Spring services.
@@ -254,7 +254,7 @@ public class Category { }
 
 ## When Targeting Virtual Threads or Native Image
 
-📚 **References:** [performance.md#virtual-threads-and-native-image](references/performance.md)
+📚 **When enabling virtual threads, verifying JDBC driver compatibility, building a GraalVM native image, or tuning `open-in-view` for either → read [performance.md](references/performance.md) (sections "Virtual Threads" and "Native Image / GraalVM").**
 
 ### 🔴 BLOCKING — Disable Open-In-View
 **Why:** `spring.jpa.open-in-view=true` (Boot's legacy default) keeps the persistence context open for the entire HTTP request, preventing release of DB connections and pinning virtual threads on `synchronized` blocks. In native images it forces lazy proxies that GraalVM can't reflectively load.
@@ -279,7 +279,7 @@ spring.threads.virtual.enabled=true
 
 ## When Using Spring Data JPA
 
-📚 **References:** [spring-data-jpa.md](references/spring-data-jpa.md)
+📚 **When writing repositories, derived queries, `@Query`/JPQL, DTO projections, `@Transactional` boundaries, Specifications, or keyset pagination with `Window`/`ScrollPosition` → read [spring-data-jpa.md](references/spring-data-jpa.md).**
 
 ### 🔴 BLOCKING
 

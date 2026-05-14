@@ -2,6 +2,15 @@
 
 > Content guidance for each section of an Epic description. For ADF formatting, see `buy-nature-jira-writer`.
 
+## Table of Contents
+
+- [Section 1: Context](#section-1-context)
+- [Section 2: Scope](#section-2-scope)
+- [Section 3: Technical Approach](#section-3-technical-approach)
+- [Section 4: Story Breakdown](#section-4-story-breakdown)
+- [Section 5: Dependencies](#section-5-dependencies)
+- [Section 6: Open Questions](#section-6-open-questions)
+
 ---
 
 ## Section 1: Context

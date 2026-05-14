@@ -36,7 +36,7 @@ Angular 21 is the current target. Older APIs are still **supported** but modern 
 | `ngOnChanges` | `effect()` with signal inputs | 17+ | 🟡 WARNING |
 | Zone.js change detection | Zoneless (default 21+) | 18+ | 🟡 WARNING |
 
-📚 **Migration commands:** [migration-checklist.md](references/migration-checklist.md)
+📚 **When migrating from legacy Angular APIs (control flow, decorators, NgModules, zones) and you need the `ng generate @angular/core:control-flow` / signal-input / standalone / zoneless migration commands → read [migration-checklist.md](references/migration-checklist.md).**
 
 ### 🔴 BLOCKING
 
@@ -102,7 +102,7 @@ src/app/
 
 ## When Writing Components
 
-📚 **References:** [angular-patterns.md](references/angular-patterns.md)
+📚 **When writing or reviewing a standalone component and you need worked patterns (signal-input templates, signal-output emission, `OnPush` skeletons, deferrable views) → read [angular-patterns.md](references/angular-patterns.md).**
 
 ### 🔴 BLOCKING
 
@@ -205,7 +205,7 @@ const selectedProduct = linkedSignal(() => {
 
 ## When Managing State
 
-📚 **References:** [angular-patterns.md](references/angular-patterns.md#ngrx-signal-store-angular-17)
+📚 **When building a shared (feature/app-scoped) NgRx Signal Store with `withState` / `withComputed` / `withMethods` and `patchState` → read [angular-patterns.md#ngrx-signal-store-angular-17](references/angular-patterns.md#ngrx-signal-store-angular-17).**
 
 | Scope | Solution |
 |-------|----------|
@@ -221,7 +221,9 @@ const selectedProduct = linkedSignal(() => {
 
 ## When Building Forms
 
-📚 **References:** [angular-patterns.md](references/angular-patterns.md#typed-reactive-forms) | [signal-forms.md](references/signal-forms.md) (experimental)
+📚 **When building a Typed Reactive Form with `FormControl<T>`, `nonNullable: true`, and typed `getRawValue()` for submission → read [angular-patterns.md#typed-reactive-forms](references/angular-patterns.md#typed-reactive-forms).**
+
+📚 **When experimenting with Angular 21+ Signal Forms (experimental API, not production) → read [signal-forms.md](references/signal-forms.md).**
 
 ### 🔴 BLOCKING
 
@@ -253,7 +255,7 @@ onSubmit() {
 
 ## When Making HTTP Calls
 
-📚 **References:** [angular-patterns.md](references/angular-patterns.md#http-with-signals)
+📚 **When writing an `HttpClient` service, a functional `HttpInterceptorFn`, or bridging an Observable to a signal with `toSignal()` → read [angular-patterns.md#http-with-signals](references/angular-patterns.md#http-with-signals).**
 
 ### 🔴 BLOCKING
 
@@ -267,7 +269,7 @@ onSubmit() {
 
 ## When Configuring Routing
 
-📚 **References:** [angular-patterns.md](references/angular-patterns.md#routing-standalone)
+📚 **When configuring standalone routes with functional guards (`CanActivateFn`) and lazy loading via `loadComponent` / `loadChildren` → read [angular-patterns.md#routing-standalone](references/angular-patterns.md#routing-standalone).**
 
 ### 🔴 BLOCKING
 
@@ -295,7 +297,7 @@ onSubmit() {
 
 ## When Applying Design Tokens
 
-📚 **References:** [design-tokens-angular.md](references/design-tokens-angular.md) — full token table, Material integration, theming.
+📚 **When styling components with CSS variables, integrating Angular Material with tokens, or wiring light/dark theme switching → read [design-tokens-angular.md](references/design-tokens-angular.md).**
 
 ### 🔴 BLOCKING
 

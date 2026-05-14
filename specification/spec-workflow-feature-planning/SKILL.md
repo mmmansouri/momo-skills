@@ -61,7 +61,9 @@ Clear understanding of:
    - `buy-nature-front/CLAUDE.md` for frontend
    - `buy-nature-back-office/CLAUDE.md` for backoffice
 
-2. **Investigate existing code** using `references/investigation-checklist.md`:
+2. **Investigate existing code** systematically.
+
+   📚 **When investigating the codebase for backend/frontend/backoffice/E2E patterns during Step 2 (grep patterns, folder layouts, domain mapping) → read [investigation-checklist.md](references/investigation-checklist.md).**
 
    **Backend investigation:**
    - Existing entities in the related domain
@@ -103,7 +105,9 @@ Architecture understanding that informs story decomposition and technical approa
 
 ### Actions
 
-1. **Write Epic description** following `spec-templates/references/epic-sections-guide.md`:
+1. **Write Epic description** section by section.
+
+   📚 **When writing the Epic body (Context, Scope, Technical Approach, Story Breakdown, Dependencies, Open Questions) in Step 3 → read [spec-templates/references/epic-sections-guide.md](../spec-templates/references/epic-sections-guide.md).**
 
    | Section | Content Source |
    |---------|--------------|
@@ -152,8 +156,9 @@ Approved Epic content and story plan ready for Jira creation.
 
 1. **Build ADF JSON** for Epic description:
    - Follow `buy-nature-jira-writer` formatting rules
-   - Use ADF templates from `buy-nature-jira-writer/references/adf-advanced-templates.md`
    - Write ADF to temp file
+
+   📚 **When building ADF JSON for Jira (panels, tables, code blocks, advanced node structures) in Step 4 → read [buy-nature-jira-writer/references/adf-advanced-templates.md](../../buy-nature-jira-writer/references/adf-advanced-templates.md).** *(External skill — expected to be available at runtime via the bridged skills tree; not present in `momo-skills/`.)*
 
 2. **Create Epic** in Jira:
    ```bash

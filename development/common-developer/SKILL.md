@@ -63,7 +63,7 @@ happy path, empty cart, invalid customer, payment declined. All 4 pass."
 
 ## When Applying SOLID
 
-📚 **References:** [solid-examples.md](references/solid-examples.md)
+📚 **When designing classes/interfaces, evaluating coupling, or needing worked examples of each SOLID principle → read [solid-examples.md](references/solid-examples.md).**
 
 | Principle | One-line rule |
 |-----------|---------------|
@@ -154,7 +154,11 @@ orderProcessor.process(order)
 
 ## When Writing Clean Code
 
-📚 **References:** [clean-code-catalog.md](references/clean-code-catalog.md) | [refactoring-patterns.md](references/refactoring-patterns.md) | [design-patterns-catalog.md](references/design-patterns-catalog.md)
+📚 **When naming variables/functions, sizing functions/classes, handling comments, errors, or formatting → read [clean-code-catalog.md](references/clean-code-catalog.md).**
+
+📚 **When detecting code smells, restructuring legacy code, or applying a specific refactoring technique (extract method, replace conditional with polymorphism, etc.) → read [refactoring-patterns.md](references/refactoring-patterns.md).**
+
+📚 **When choosing or recognizing a Gang-of-Four pattern (Strategy, Factory, Observer, etc.) to solve a recurring design problem → read [design-patterns-catalog.md](references/design-patterns-catalog.md).**
 
 ### 🔴 BLOCKING
 

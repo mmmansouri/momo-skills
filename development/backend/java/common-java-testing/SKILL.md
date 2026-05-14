@@ -43,7 +43,9 @@ What are you testing?
     └── Awaitility (never Thread.sleep)
 ```
 
-📚 Slice details → [spring-boot-testing.md](references/spring-boot-testing.md) · containers → [testcontainers.md](references/testcontainers.md)
+📚 **When choosing a Spring Boot test slice (`@DataJpaTest`, `@WebMvcTest`, `@RestClientTest`, `@SpringBootTest`) or wiring `@MockitoBean`/`@ServiceConnection` → read [spring-boot-testing.md](references/spring-boot-testing.md).**
+
+📚 **When wiring Testcontainers for JPA/HTTP/messaging integration tests via `@ServiceConnection` (Postgres, Kafka, Redis, etc.) → read [testcontainers.md](references/testcontainers.md).**
 
 ---
 
@@ -86,7 +88,7 @@ For UUIDs, use deterministic seeds: `UUID.fromString("00000000-0000-0000-0000-00
 
 ## When Structuring Tests
 
-📚 **References:** [test-structure.md](references/test-structure.md)
+📚 **When structuring a test — Given-When-Then layout, `whenX_shouldY` naming, one-behaviour-per-test, KISS-over-DRY in test code → read [test-structure.md](references/test-structure.md).**
 
 ### 🔴 Given-When-Then Pattern
 
@@ -126,7 +128,7 @@ void whenValidInput_shouldReturnExpectedResult() {
 
 ## When Using JUnit 5
 
-📚 **References:** [junit5.md](references/junit5.md)
+📚 **When using JUnit 5 features — `@Nested`, `@DisplayName`, `@ParameterizedTest`/`@ParameterizedClass`, lifecycle, exception assertions, grouped assertions → read [junit5.md](references/junit5.md).**
 
 ### 🟢 Key Annotations
 
@@ -166,7 +168,7 @@ assertAll("order validation",
 
 ## When Using Mockito
 
-📚 **References:** [mockito.md](references/mockito.md)
+📚 **When deciding what to mock vs instantiate, writing stubs, using argument matchers, or replacing Spring beans with `@MockitoBean`/`@MockitoSpyBean` → read [mockito.md](references/mockito.md).**
 
 ### 🔴 What NOT to Mock
 
@@ -208,7 +210,7 @@ when(service.process(eq(expectedInput))).thenReturn(result);
 
 ## When Using AssertJ
 
-📚 **References:** [assertj.md](references/assertj.md)
+📚 **When writing assertions — collections, strings, Optionals, exceptions, `extracting()`, recursive comparison, soft assertions → read [assertj.md](references/assertj.md).**
 
 ### 🔴 Always Use AssertJ — Not JUnit Assertions
 
@@ -261,7 +263,7 @@ SoftAssertions.assertSoftly(softly -> {
 
 ## When Testing Spring Applications
 
-📚 **References:** [spring-boot-testing.md](references/spring-boot-testing.md)
+📚 **When testing Spring Boot 4 apps — slice selection (`@DataJpaTest`/`@WebMvcTest`/`@RestClientTest`/`@SpringBootTest`), `MockMvcTester`, `@MockitoBean`, `@ServiceConnection` wiring → read [spring-boot-testing.md](references/spring-boot-testing.md).**
 
 ### 🔴 BLOCKING
 

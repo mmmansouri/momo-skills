@@ -16,7 +16,9 @@ description: >-
 
 ## When Writing New Code
 
-📚 **References:** [pattern-matching.md](references/pattern-matching.md) | [modern-features.md](references/modern-features.md)
+📚 **When choosing data carriers, sealed hierarchies, or `instanceof`/`switch` type-extraction idioms → read [pattern-matching.md](references/pattern-matching.md).**
+
+📚 **When deciding which language feature (records, text blocks, `var`, switch expressions, virtual threads) to use for a new construct, or checking the Java version that introduced it → read [modern-features.md](references/modern-features.md).**
 
 ### 🟢 Data Structures
 | Need | Use | Not |
@@ -41,7 +43,7 @@ description: >-
 
 ## When Refactoring Legacy Code
 
-📚 **References:** [modern-features.md](references/modern-features.md)
+📚 **When migrating Java 8/11 idioms to modern equivalents (lambdas, records, pattern matching, virtual threads, JEPs 506/510/511/513) and you need the version-by-version feature map → read [modern-features.md](references/modern-features.md).**
 
 | Legacy Pattern | Modern Replacement |
 |---------------|-------------------|
@@ -70,7 +72,7 @@ Leave stable code alone when:
 
 ## When Handling Exceptions
 
-📚 **References:** [pitfalls-antipatterns.md](references/pitfalls-antipatterns.md#general-java-anti-patterns)
+📚 **When reviewing `try`/`catch` blocks, choosing checked vs unchecked exceptions, or diagnosing swallowed/rewrapped exceptions → read [pitfalls-language.md](references/pitfalls-language.md#general-java-anti-patterns).**
 
 ### 🔴 BLOCKING
 - **Never catch generic `Exception`/`Throwable`** → Catch specific types
@@ -101,7 +103,7 @@ catch (SQLException e) {
 
 ## When Creating Immutable Objects
 
-📚 **References:** [pitfalls-antipatterns.md](references/pitfalls-antipatterns.md#record-limitations)
+📚 **When designing records/value objects, defending against mutable collection arguments, or auditing immutability claims → read [pitfalls-language.md](references/pitfalls-language.md#record-limitations).**
 
 ### 🔴 BLOCKING
 - **Mutable fields in records without defensive copy** → Use `List.copyOf()`
@@ -136,7 +138,9 @@ List<String> copy = List.copyOf(original);  // True copy - unaffected
 
 ## When Using Streams
 
-📚 **References:** [streams-functional.md](references/streams-functional.md) | [pitfalls-antipatterns.md](references/pitfalls-antipatterns.md#stream-pitfalls)
+📚 **When building stream pipelines, choosing collectors, or deciding sequential vs parallel execution → read [streams-functional.md](references/streams-functional.md).**
+
+📚 **When diagnosing stream bugs (shared-state mutation, consumed streams, infinite streams, bad parallel sources) → read [pitfalls-language.md](references/pitfalls-language.md#stream-pitfalls).**
 
 ### 🔴 BLOCKING
 - **Mutate shared state in streams** → Use `collect()` to new structure
@@ -173,7 +177,9 @@ stream.count();  // IllegalStateException!
 
 ## When Using Optional
 
-📚 **References:** [streams-functional.md](references/streams-functional.md) | [pitfalls-antipatterns.md](references/pitfalls-antipatterns.md#optional-misuse)
+📚 **When writing functional `Optional` chains (`map`/`flatMap`/`orElseGet`) or applying Optional best practices → read [streams-functional.md](references/streams-functional.md).**
+
+📚 **When auditing `Optional` misuse (eager `orElse`, `isPresent()`+`get()`, Optional as field/parameter/collection element) → read [pitfalls-language.md](references/pitfalls-language.md#optional-misuse).**
 
 ### 🔴 BLOCKING
 - **`orElse(method())`** → Use `orElseGet(() -> method())` for lazy evaluation
@@ -204,7 +210,7 @@ optional.orElseThrow(() -> new NotFoundException(id));
 
 ## When Using Concurrency
 
-📚 **References:** [concurrency.md](references/concurrency.md)
+📚 **When designing thread-safe code, sizing executors, adopting virtual threads / Scoped Values / Structured Concurrency, or composing `CompletableFuture` pipelines → read [concurrency.md](references/concurrency.md).**
 
 ### 🔴 BLOCKING
 - **Pool virtual threads** → Create new virtual thread per task
@@ -248,9 +254,11 @@ finally { lock.unlock(); }
 
 ## Performance Quick Wins
 
-📚 **Reference:** [performance.md](references/performance.md) — full guide (JFR, async-profiler, JMH, GC tuning, memory analysis)
+📚 **When the code-level quick wins aren't enough and you need GC tuning, memory-leak analysis, or the full code-level performance checklist → read [performance-tuning.md](references/performance-tuning.md).**
 
-The five most-broken patterns in code review (full examples & rationale in `performance.md`):
+📚 **When you need profiling or benchmarking tools (JFR, async-profiler, JMH, MAT) and a tool-selection decision tree → read [performance-tools.md](references/performance-tools.md).**
+
+The five most-broken patterns in code review (full examples & rationale in `performance-tuning.md`):
 
 1. **String concat in loops** → `StringBuilder` (pre-sized) or `Collectors.joining()`
 2. **Boxed types in tight loops** → primitives (or `LongStream`/`IntStream` for sums)
@@ -258,13 +266,23 @@ The five most-broken patterns in code review (full examples & rationale in `perf
 4. **Unbounded caches** → Caffeine with `maximumSize` + `expireAfterWrite`
 5. **`ThreadLocal` in pooled threads** → call `remove()` in `finally` (or migrate to Scoped Values, JEP 506)
 
-JVM-level Java 25 wins: Compact Object Headers (JEP 519), Generational Shenandoah (JEP 521) — see `performance.md` § JVM Tuning.
+JVM-level Java 25 wins: Compact Object Headers (JEP 519), Generational Shenandoah (JEP 521) — see `performance-tuning.md` § JVM Tuning.
 
 ---
 
 ## Design Patterns Quick Guide
 
-📚 **References:** [design-patterns.md](references/design-patterns.md) (decision tree + index) | [creational](references/design-patterns-creational.md) (Builder, Factory, Singleton) | [structural](references/design-patterns-structural.md) (Adapter, Decorator, Facade, Proxy, Composite, Flyweight) | [behavioral](references/design-patterns-behavioral.md) (Strategy, Observer, Command, CoR, Template, Visitor, State, Memento)
+📚 **When picking a pattern from scratch and you need the decision tree, quick reference table, and modern-Java philosophy → read [design-patterns.md](references/design-patterns.md).**
+
+📚 **When implementing Builder, Factory Method, Abstract Factory, or Singleton (especially the modern record / sealed / enum forms) → read [design-patterns-creational.md](references/design-patterns-creational.md).**
+
+📚 **When implementing Adapter, Decorator, Facade, or Proxy (wrapping patterns — class hierarchies, function composition, dynamic proxies) → read [design-patterns-structural-wrapping.md](references/design-patterns-structural-wrapping.md).**
+
+📚 **When implementing Composite or Flyweight (composition / shared-state patterns with sealed interfaces and `ConcurrentHashMap` factories) → read [design-patterns-structural-composition.md](references/design-patterns-structural-composition.md).**
+
+📚 **When implementing Strategy, Command, Chain of Responsibility, or Template Method (control-flow patterns — functional interfaces, command queues, handler chains, higher-order templates) → read [design-patterns-behavioral-control.md](references/design-patterns-behavioral-control.md).**
+
+📚 **When implementing Observer, Visitor, State, or Memento (state & notification patterns — Flow API, sealed types + pattern matching, record snapshots) → read [design-patterns-behavioral-state.md](references/design-patterns-behavioral-state.md).**
 
 **Modern-Java replacements to favour over textbook GoF:**
 
@@ -291,7 +309,7 @@ For the rest (Adapter, Decorator, Facade, Proxy, Composite, Flyweight, Chain of 
 
 ## When Handling Security
 
-📚 **References:** [security.md](references/security.md)
+📚 **When choosing crypto primitives (password hashing, encryption, signatures, RNGs), defending against injection, or implementing secret/key management in Java code → read [security.md](references/security.md).**
 
 ### 🔴 BLOCKING
 - **Never use MD5/SHA1 for passwords** → Use BCrypt (work factor 12+) or Argon2
@@ -321,7 +339,7 @@ String hash = encoder.encode(password);
 
 ## When Using Modules
 
-📚 **References:** [module-system.md](references/module-system.md)
+📚 **When writing a `module-info.java`, choosing `exports`/`opens` directives, or migrating a classpath project to JPMS → read [module-system.md](references/module-system.md).**
 
 ### 🟢 When to Modularize
 - Building a reusable **library** for external consumers
@@ -348,7 +366,9 @@ module com.example.myapp {
 
 ## When Analyzing Performance
 
-📚 **References:** [performance.md](references/performance.md)
+📚 **When investigating CPU hotspots or benchmarking — and you need the JFR / async-profiler / JMH commands and decision tree → read [performance-tools.md](references/performance-tools.md).**
+
+📚 **When investigating memory leaks, GC pauses, or running the code-level performance checklist (heap dumps, MAT, JVM tuning) → read [performance-tuning.md](references/performance-tuning.md).**
 
 ### 🟢 Tool Selection
 | Question | Tool |

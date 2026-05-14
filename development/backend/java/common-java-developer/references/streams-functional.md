@@ -1,5 +1,17 @@
 # Stream API & Functional Programming
 
+---
+
+## Table of Contents
+
+1. [Stream Pipeline Structure](#stream-pipeline-structure)
+2. [Common Operations](#common-operations)
+3. [Collectors](#collectors)
+4. [Parallel Streams](#parallel-streams)
+5. [Optional Best Practices](#optional-best-practices)
+
+---
+
 ## Stream Pipeline Structure
 
 ```

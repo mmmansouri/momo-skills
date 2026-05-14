@@ -2,6 +2,17 @@
 
 > Use this checklist during Step 3 (Write Spec) to validate the story specification before updating Jira.
 
+## Table of Contents
+
+- [Content Completeness](#content-completeness)
+- [Context Quality](#context-quality)
+- [Functional Spec Quality](#functional-spec-quality)
+- [Technical Spec Quality](#technical-spec-quality)
+- [Acceptance Criteria Quality](#acceptance-criteria-quality)
+- [E2E Companion Quality](#e2e-companion-quality)
+- [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
+- [Final Validation](#final-validation)
+
 ---
 
 ## Content Completeness

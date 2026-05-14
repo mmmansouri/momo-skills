@@ -99,7 +99,7 @@ else:
 
 ## When Performing the Review (Workflow)
 
-📚 **References:** [gh-cli-fallback.md](references/gh-cli-fallback.md)
+📚 **When an MCP `pull_request_*` call fails and you need the equivalent `gh` CLI command to continue the review → read [gh-cli-fallback.md](references/gh-cli-fallback.md).**
 
 ### Step 1 — Fetch PR info and detect mode
 ```

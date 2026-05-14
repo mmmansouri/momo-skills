@@ -30,7 +30,7 @@ Apply these foundational stances to every architectural decision:
 
 ## When Starting Architecture Work
 
-📚 **References:** [design-principles.md](references/design-principles.md)
+📚 **When framing a new architecture problem, gathering NFRs, or grounding decisions in foundational principles (separation of concerns, cohesion/coupling, testability) → read [design-principles.md](references/design-principles.md).**
 
 Ask these questions before proposing any architecture:
 
@@ -47,7 +47,9 @@ Ask these questions before proposing any architecture:
 
 ## When Choosing Architectural Style
 
-📚 **References:** [architectural-styles.md](references/architectural-styles.md) | [decision-framework.md](references/decision-framework.md)
+📚 **When comparing styles (Hexagonal, Clean, CQRS, Microservices, Event-Driven, Layered, Modular Monolith) or needing the strengths/weaknesses of each → read [architectural-styles.md](references/architectural-styles.md).**
+
+📚 **When evaluating trade-offs between candidate styles and producing a structured Pros/Cons/Risk recommendation aligned to NFR priorities → read [decision-framework.md](references/decision-framework.md).**
 
 | Context | Recommended Style |
 |---------|-------------------|
@@ -87,7 +89,7 @@ Each context picks the style that fits its complexity.
 
 ## When Structuring Code
 
-📚 **References:** [code-structures.md](references/code-structures.md)
+📚 **When laying out packages/modules, applying package-by-feature, organizing Hexagonal/Clean layers, or enforcing the dependency rule in code → read [code-structures.md](references/code-structures.md).**
 
 ### 🔴 BLOCKING
 
@@ -180,7 +182,9 @@ class Order {
 
 ## When Documenting Decisions
 
-📚 **References:** [adr-template.md](references/adr-template.md) | [decision-framework.md](references/decision-framework.md)
+📚 **When writing a new ADR or filling Status/Context/Decision/Consequences sections → read [adr-template.md](references/adr-template.md).**
+
+📚 **When structuring the trade-off analysis inside the ADR (options, Pros/Cons/Risk, recommendation rationale) → read [decision-framework.md](references/decision-framework.md).**
 
 ### 🔴 BLOCKING
 

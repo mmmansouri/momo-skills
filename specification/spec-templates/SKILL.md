@@ -12,7 +12,10 @@ description: >-
 
 > **Purpose:** Content guidance for each section of Epics and Stories.
 > **Formatting:** See `buy-nature-jira-writer` for ADF format rules.
-> **References:** See `references/` for detailed section guides.
+
+📚 **When writing or auditing the body of an Epic description (Context, Scope, Technical Approach, Story Breakdown, Dependencies, Open Questions) → read [epic-sections-guide.md](references/epic-sections-guide.md).**
+
+📚 **When writing or auditing the body of a refined Story description (Context, Functional Spec, Technical Spec, Acceptance Criteria, Technical Notes, Out of Scope, Dependencies) → read [story-sections-guide.md](references/story-sections-guide.md).**
 
 ---
 
@@ -20,8 +23,8 @@ description: >-
 
 | Document | Created By | Sections Guide |
 |----------|-----------|----------------|
-| Epic description | `spec-workflow-feature-planning` | `references/epic-sections-guide.md` |
-| Refined Story description | `spec-workflow-story-refinement` | `references/story-sections-guide.md` |
+| Epic description | `spec-workflow-feature-planning` | epic-sections-guide.md |
+| Refined Story description | `spec-workflow-story-refinement` | story-sections-guide.md |
 | Draft Story | `spec-workflow-feature-planning` | Minimal (Context + "To be refined" panel) |
 | E2E companion Story | Both workflows | Test Scenarios mapped to source ACs |
 

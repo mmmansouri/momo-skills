@@ -34,7 +34,7 @@ description: >-
 > 5. Section Naming
 > 6. Severity Markers
 > 7. Explain the Why
-> 8. Bundled scripts well built — see `## When Bundling Scripts` + `references/scripts-guide.md`
+> 8. Bundled scripts well built — 📚 **When auditing bundled scripts → read [scripts-guide.md](references/scripts-guide.md).**
 > 9. Anti-Patterns
 > 10. Size — under 500 lines (`## Skill Size Guidelines`)
 > 11. Checklist for New Skills (final cross-check)
@@ -42,7 +42,7 @@ description: >-
 > 13. Test Coverage — see `## When Testing Skills`
 > 14. File hygiene — no orphan files in `references/` / `scripts/` / `assets/` ; references one level deep from SKILL.md
 >
-> **Bundling scripts** with the skill — also load `When Bundling Scripts` and its `scripts-guide.md` reference.
+> **Bundling scripts** with the skill — 📚 **When bundling scripts with the skill → read [scripts-guide.md](references/scripts-guide.md).**
 
 ---
 

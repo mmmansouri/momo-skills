@@ -2,6 +2,16 @@
 
 > Content guidance for each section of a refined Story description. For ADF formatting, see `buy-nature-jira-writer`.
 
+## Table of Contents
+
+- [Section 1: Context](#section-1-context)
+- [Section 2: Functional Spec](#section-2-functional-spec)
+- [Section 3: Technical Spec](#section-3-technical-spec)
+- [Section 4: Acceptance Criteria](#section-4-acceptance-criteria)
+- [Section 5: Technical Notes](#section-5-technical-notes)
+- [Section 6: Out of Scope](#section-6-out-of-scope)
+- [Section 7: Dependencies](#section-7-dependencies)
+
 ---
 
 ## Section 1: Context

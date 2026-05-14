@@ -1,5 +1,18 @@
 # Pattern Matching, Records & Sealed Classes
 
+---
+
+## Table of Contents
+
+1. [Records](#records)
+2. [Sealed Classes & Interfaces](#sealed-classes--interfaces)
+3. [Pattern Matching for instanceof](#pattern-matching-for-instanceof)
+4. [Pattern Matching for switch](#pattern-matching-for-switch)
+5. [Unnamed Variables and Patterns](#unnamed-variables-and-patterns)
+6. [Switch Expressions vs Statements](#switch-expressions-vs-statements)
+
+---
+
 ## Records
 
 ### When to Use Records
