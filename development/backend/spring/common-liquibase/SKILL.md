@@ -5,7 +5,8 @@ description: >-
   Liquibase Secure 5.1+, Spring Boot 4, PostgreSQL 17, Java 17+/tested with Java 25).
   Use when: creating/organizing changelogs, designing changesets, implementing
   rollback strategies, planning zero-downtime migrations, configuring Liquibase
-  with Spring Boot, or wiring policy checks/flow files in CI/CD.
+  with Spring Boot, wiring policy checks/flow files in CI/CD, or reviewing a PR
+  touching changelog/changeset YAML files under `db/changelog/`.
 ---
 
 # Liquibase Developer Guide

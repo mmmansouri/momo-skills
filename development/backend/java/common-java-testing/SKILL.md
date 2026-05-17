@@ -4,8 +4,9 @@ description: >-
   Java testing guide for Spring Boot 4 / Spring Framework 7 / JUnit 5.13+ /
   Mockito 5+ / AssertJ / Testcontainers. Use when writing unit, slice, or
   integration tests; deciding what to mock (external boundaries only); structuring
-  tests (Given-When-Then); using fluent assertions; or wiring Testcontainers via
-  @ServiceConnection.
+  tests (Given-When-Then); using fluent assertions; wiring Testcontainers via
+  @ServiceConnection; or reviewing test changes in a PR (`*Test.java`, `*IT.java`,
+  `*E2ETest.java`).
 ---
 
 # Java Testing Guide

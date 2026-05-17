@@ -6,8 +6,10 @@ description: >-
   feature/module/service, choosing or evaluating an architectural style
   (Hexagonal, Clean, CQRS, Microservices, Event-Driven, Layered), trade-off
   analysis, ADRs (Architecture Decision Records), C4 diagrams,
-  bounded contexts, package-by-feature, the dependency rule, or structuring
-  code — even when the user does not explicitly say "architecture".
+  bounded contexts, package-by-feature, the dependency rule, structuring
+  code, or auditing architectural decisions in a PR (new modules, layer
+  changes, bounded-context refactors) — even when the user does not
+  explicitly say "architecture".
 ---
 
 # Application Architecture Skill

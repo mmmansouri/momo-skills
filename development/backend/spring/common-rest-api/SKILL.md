@@ -7,8 +7,10 @@ description: >-
   designs an endpoint, picks a status code, builds a controller or client,
   models a resource URI, paginates or filters a collection, defines a request /
   response DTO, validates a request body, handles a REST exception, versions
-  an API, documents one with OpenAPI / Swagger, or migrates from RestTemplate
-  to RestClient / @HttpExchange — even when they don't say "REST". Do NOT use
+  an API, documents one with OpenAPI / Swagger, migrates from RestTemplate
+  to RestClient / @HttpExchange, or reviews a PR touching controllers, DTOs,
+  request validation, exception handlers, or REST endpoints — even when they
+  don't say "REST". Do NOT use
   for GraphQL, gRPC, SOAP, or message-broker integrations (Kafka, RabbitMQ);
   for Spring Boot configuration pitfalls (YAML, profiles, AOP) use
   common-spring-boot-config; for Spring Security use common-security.
@@ -220,11 +222,13 @@ public OrderResponse getOrder(@PathVariable UUID id) {
 
 ### 🟢 Separate DTOs for create / update / response
 
-| DTO type              | Purpose                                | Typical annotations          |
-|-----------------------|----------------------------------------|------------------------------|
-| `*CreationRequest`    | POST body — required fields only       | `@NotNull`, `@NotEmpty`      |
-| `*UpdateRequest`      | PUT body — all mutable fields          | `@Size`, `@Min`              |
-| `*RetrievalResponse`  | GET response — full representation     | `static from()` factory      |
+Distinct shapes prevent **over-posting** (writes accepting read-only fields) and **under-specifying** (responses missing computed fields). Typical separation:
+
+- **Create body** — fields required at insertion time only (validation: `@NotNull`, `@NotEmpty`)
+- **Update body** — mutable fields only (validation: `@Size`, `@Min`)
+- **Read response** — full server-side representation, often with a `static from(Entity)` / `from(Domain)` factory
+
+Pick suffixes deliberately and apply them consistently across the codebase — e.g. `*Request` / `*Response`, `*Dto`, `*CreationRequest` / `*UpdateRequest` / `*RetrievalResponse`, etc. Document the chosen convention in your project's coding-guide skill so the rule is enforceable in review.
 
 ---
 

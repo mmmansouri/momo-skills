@@ -7,7 +7,8 @@ description: >-
   `noUncheckedIndexedAccess`, `verbatimModuleSyntax`, `--erasableSyntaxOnly`
   (Node native TS), or debugging compiler errors like "TS2322 Type 'X' is not
   assignable", "TS2532 Object is possibly undefined", "TS18048 'x' is possibly
-  undefined", "Excessive stack depth comparing types" — even when they don't
+  undefined", "Excessive stack depth comparing types", or when reviewing a PR
+  touching TypeScript files (`*.ts`, `tsconfig*.json`) — even when they don't
   explicitly say "TypeScript". Do NOT use for runtime JavaScript debugging
   (use Node/browser tools), Angular template syntax (use common-frontend-angular),
   Node runtime errors, or build tooling configuration (Vite/esbuild/webpack).

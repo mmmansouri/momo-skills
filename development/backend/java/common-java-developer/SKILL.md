@@ -2,10 +2,11 @@
 name: common-java-developer
 description: >-
   Modern Java development guide (Java 17-25 focus, compatible with 8-16). Use for any Java
-  backend development. Contains modern features (records, pattern matching, sealed classes,
-  virtual threads), Stream API, Optional patterns, design patterns (Builder, Factory, Strategy),
-  performance optimization, and critical pitfalls. For Java 8-16 projects, note that many
-  features require Java 17+. Required for all Java development agents.
+  backend development, or when reviewing a PR touching Java files. Contains modern features
+  (records, pattern matching, sealed classes, virtual threads), Stream API, Optional patterns,
+  design patterns (Builder, Factory, Strategy), performance optimization, and critical pitfalls.
+  For Java 8-16 projects, note that many features require Java 17+. Required for all Java
+  development and review agents.
 ---
 
 # Java Developer Guide (Java 8-25)

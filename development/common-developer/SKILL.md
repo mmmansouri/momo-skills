@@ -3,9 +3,10 @@ name: common-developer
 description: >-
   Software craftsmanship principles for any code contribution: SOLID, DRY,
   KISS, YAGNI, Clean Code, and a self-review protocol. Use this skill whenever
-  the user asks to write a feature, fix a bug, refactor a class, design an
-  interface, evaluate code quality, or improve existing code — even when they
-  don't explicitly say "best practices". Contains the foundational discipline
+  the user asks to write a feature, implement code, fix a bug, refactor a class,
+  design an interface, evaluate code quality, improve existing code, or review
+  any code contribution in a PR — even when they don't explicitly say "best
+  practices". Contains the foundational discipline
   that applies before any language- or framework-specific guidance.
 ---
 

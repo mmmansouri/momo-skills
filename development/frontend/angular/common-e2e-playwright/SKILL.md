@@ -4,8 +4,10 @@ description: >-
   End-to-end testing with Playwright. Use this skill whenever the user asks to
   write an E2E test, automate a UI scenario in the browser, design a Page Object,
   add a fixture, mock a network request, debug a flaky test, configure Playwright,
-  wire E2E tests into CI, or verify a regression in the browser — even when they
-  don't explicitly say "E2E" or "Playwright". Contains both the E2E discipline
+  wire E2E tests into CI, verify a regression in the browser, or review E2E
+  test changes in a PR (`*.spec.ts`, Page Objects, fixtures,
+  `playwright.config.ts`) — even when they don't explicitly say "E2E" or
+  "Playwright". Contains both the E2E discipline
   (what to test, isolation, locator hygiene, async strategy) and the Playwright
   API surface (`getByRole`, `route`, fixtures, `expect`).
 ---

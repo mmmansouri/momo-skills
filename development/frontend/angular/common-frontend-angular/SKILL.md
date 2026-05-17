@@ -5,8 +5,9 @@ description: >-
   whenever the user asks to write or fix an Angular component, manage state with
   signals or NgRx, build a typed reactive form, configure routing or guards, set
   up an HTTP service or interceptor, migrate from older Angular APIs (`*ngIf`,
-  `@Input`, `BehaviorSubject`), go zoneless, apply design tokens, or test an
-  Angular component — even when they don't explicitly say "Angular". Always
+  `@Input`, `BehaviorSubject`), go zoneless, apply design tokens, test an
+  Angular component, or review an Angular PR (components, services, stores,
+  guards, interceptors, routes) — even when they don't explicitly say "Angular". Always
   loaded alongside `common-developer` for foundational craftsmanship rules
   (SOLID, Clean Code, Self-Review).
 ---
@@ -312,6 +313,20 @@ onSubmit() {
 ```scss
 .button { background-color: var(--color-primary-500); padding: var(--space-4); border-radius: var(--radius-md); }
 ```
+
+---
+
+## When Using Angular Material CDK Overlays
+
+> Applies to any Material overlay primitive (`mat-select`, `mat-menu`, `mat-dialog`, `mat-autocomplete`, `mat-tooltip`) — i.e. anything rendered through the CDK `Overlay` service.
+
+### 🟡 WARNING
+
+#### Apply theme classes to `body`, never to `html`
+**Why:** the CDK overlay container is appended to `body`, not inside the component tree. Theme classes set on `<html>` don't cascade into the overlay pane — popups render unthemed (wrong colors, missing typography). Applying themes to `<body>` is the only placement that reaches both the app tree and the overlay container.
+
+#### Avoid CSS `transform` (and `perspective`, `filter`, `will-change: transform`) on any ancestor of an overlay trigger
+**Why:** these properties create a new containing block for `position: fixed/absolute` elements (CSS positioned-ancestor rule). The CDK overlay then positions the pane relative to that ancestor instead of the viewport, misaligning popups (often by tens of pixels, sometimes off-screen). If a card animation needs `transform: scale(...)`, move the overlay trigger outside that subtree or remove the transform on the trigger's parent chain.
 
 ---
 

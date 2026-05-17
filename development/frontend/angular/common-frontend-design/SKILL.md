@@ -4,8 +4,9 @@ description: >-
   Frontend design and UX best practices. Use this skill whenever the user asks
   to design a UI, pick a color palette, choose typography, build a responsive
   layout, audit accessibility (WCAG AA), define design tokens, design a button or
-  card hierarchy, animate a transition, or improve the visual quality of a page —
-  even when they don't explicitly say "design". Always loaded alongside
+  card hierarchy, animate a transition, improve the visual quality of a page,
+  or review UI/design changes in a PR (component templates, SCSS, theme tokens,
+  accessibility) — even when they don't explicitly say "design". Always loaded alongside
   `common-developer` (foundational craftsmanship) and, for Angular projects,
   `common-frontend-angular` (which consumes the design tokens defined here).
 ---

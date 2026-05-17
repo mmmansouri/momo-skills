@@ -6,8 +6,10 @@ description: >-
   @ConditionalOnProperty scope). Use whenever the user mentions application.yml,
   Spring profiles, @Async / @Retry / @Transactional / @Cacheable annotations,
   Resilience4j, conditional beans, or debugging "BeanCreationException" /
-  "config silently overridden" / "@Async ignored" / "retry never fires" issues —
-  even when they don't explicitly say "Spring config". Do NOT use for runtime
+  "config silently overridden" / "@Async ignored" / "retry never fires" issues,
+  or when reviewing a PR touching `application*.yml`, profiles, `@Async`/`@Retry`/
+  `@Transactional`/`@Cacheable` annotations, or Resilience4j config — even when
+  they don't explicitly say "Spring config". Do NOT use for runtime
   REST behavior (use common-rest-api), Spring Security (use common-security), or
   JPA configuration (use common-java-jpa).
 ---

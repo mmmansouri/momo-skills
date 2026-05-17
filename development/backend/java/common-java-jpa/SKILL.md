@@ -7,7 +7,7 @@ description: >-
   implementing equals/hashCode, optimizing queries (N+1, JOIN FETCH, @EntityGraph),
   configuring batch processing, second-level cache, soft-delete, keyset pagination
   (Window/ScrollPosition), or using DTO projections. Triggers on any work involving
-  @Entity, @Repository, EntityManager, or spring-data-jpa.
+  @Entity, @Repository, EntityManager, or spring-data-jpa, or when reviewing a PR touching these elements.
 ---
 
 # JPA Developer Guide — Spring Boot 4 / Hibernate 7 / Java 25

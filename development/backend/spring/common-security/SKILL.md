@@ -8,9 +8,10 @@ description: >-
   AccessDeniedException, "403 Forbidden"), CORS / CSRF, secrets management,
   cryptography, SSRF, deserialization, security headers, audit logging,
   rate limiting, dependency CVE scanning, the Spring Security 6 → 7 migration
-  (`authorizeHttpRequests`, `PathPatternRequestMatcher`, `csrf.spa()`), or
-  hardening Spring Boot Actuator — even when they don't explicitly say
-  "security". Do NOT use for infrastructure security (firewalls, WAF, network
+  (`authorizeHttpRequests`, `PathPatternRequestMatcher`, `csrf.spa()`),
+  hardening Spring Boot Actuator, or when reviewing a PR touching auth, JWT,
+  crypto, input validation, or security configuration — even when they don't
+  explicitly say "security". Do NOT use for infrastructure security (firewalls, WAF, network
   segmentation), penetration testing methodology, or self-hosted Vault setup.
 ---
 

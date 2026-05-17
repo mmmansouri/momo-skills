@@ -5,8 +5,9 @@ description: >-
   Angular TestBed (with Angular Testing Library as an alternative). Use this
   skill whenever the user asks to write a unit test for a component, service,
   pipe or directive, spy on a service, mock an HTTP call, test an async
-  observable, test a signal or effect, set up TestBed, or pick between Jasmine
-  and Jest — even when they don't explicitly say "test". Always loaded alongside
+  observable, test a signal or effect, set up TestBed, pick between Jasmine
+  and Jest, or review unit/component test changes in a PR (`*.spec.ts`) — even
+  when they don't explicitly say "test". Always loaded alongside
   `common-developer` (foundational craftsmanship) and, for Angular projects,
   `common-frontend-angular` (component / service shapes under test).
 ---
