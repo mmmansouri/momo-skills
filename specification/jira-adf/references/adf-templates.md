@@ -408,11 +408,31 @@ Common link types: `Relates`, `Blocks`, `Clones`, `Duplicates`.
 
 Full ADF structure for an Epic created by the feature-planning workflow.
 
+> **Locked sections.** The `Brief Source` info panel and the `Story Breakdown`
+> H2 + 5-column table are a machine-readable contract. Planning tooling reads
+> them back from Jira to drive the per-Story creation step, so the heading
+> texts, column count, and column names are not free-form. See the
+> [Convention](#epic-template-convention) note below.
+
 ```json
 {
   "type": "doc",
   "version": 1,
   "content": [
+    {
+      "type": "panel",
+      "attrs": { "panelType": "info" },
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            { "type": "text", "text": "Brief Source: ", "marks": [{ "type": "strong" }] },
+            { "type": "text", "text": "<verbatim user brief — copy/paste, do not paraphrase>" }
+          ]
+        }
+      ]
+    },
+    { "type": "rule" },
     {
       "type": "heading",
       "attrs": { "level": 2 },
@@ -492,26 +512,29 @@ Full ADF structure for an Epic created by the feature-planning workflow.
           "content": [
             { "type": "tableHeader", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Story", "marks": [{ "type": "strong" }] }] }] },
             { "type": "tableHeader", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Labels", "marks": [{ "type": "strong" }] }] }] },
-            { "type": "tableHeader", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Dependencies", "marks": [{ "type": "strong" }] }] }] },
-            { "type": "tableHeader", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Parallel?", "marks": [{ "type": "strong" }] }] }] }
+            { "type": "tableHeader", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Depends On", "marks": [{ "type": "strong" }] }] }] },
+            { "type": "tableHeader", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Parallel", "marks": [{ "type": "strong" }] }] }] },
+            { "type": "tableHeader", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "E2E", "marks": [{ "type": "strong" }] }] }] }
           ]
         },
         {
           "type": "tableRow",
           "content": [
-            { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Review entity + API endpoints" }] }] },
+            { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "[backend] Review entity + API endpoints" }] }] },
             { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "backend" }] }] },
             { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "None" }] }] },
-            { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Yes" }] }] }
+            { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Yes" }] }] },
+            { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "e2e-front, e2e-backoffice" }] }] }
           ]
         },
         {
           "type": "tableRow",
           "content": [
-            { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "Review list/form components" }] }] },
+            { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "[frontend] Review list/form components" }] }] },
             { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "frontend" }] }] },
-            { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "API Story" }] }] },
-            { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "No (needs API)" }] }] }
+            { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "1" }] }] },
+            { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "No" }] }] },
+            { "type": "tableCell", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "e2e-front" }] }] }
           ]
         }
       ]
@@ -549,6 +572,36 @@ Full ADF structure for an Epic created by the feature-planning workflow.
   ]
 }
 ```
+
+### Epic Template Convention
+
+The `Brief Source` panel and `Story Breakdown` table are the two pieces of
+the Epic description that planning tooling reads back. Treat their schema as
+a contract, not a suggestion:
+
+| Section | Required shape |
+|---|---|
+| `Brief Source` panel | First node = `panel` with `panelType: "info"`. Its first paragraph starts with the literal label `Brief Source` followed by `:`, `—`, or `-`. Everything after the separator is the **verbatim** user brief — copy/paste, no paraphrase, no truncation, no translation. |
+| `Story Breakdown` heading | An H2 heading whose text is exactly `Story Breakdown`. |
+| `Story Breakdown` table | Single `table` node immediately following the H2. **5 header columns in this order:** `Story`, `Labels`, `Depends On`, `Parallel`, `E2E`. The legacy trailing `?` on `Parallel` is tolerated; everything else must match exactly. |
+
+**Column semantics:**
+
+- **Story** — full Story title including any `[<app>]` prefix. This is the
+  exact summary that will be POSTed to Jira when row N is created.
+- **Labels** — comma-separated list. The first label is the routing label
+  (e.g. `backend`, `frontend`, `backoffice`). Cross-cutting labels follow.
+- **Depends On** — comma-separated 1-based row indices, or the literal
+  `Story N`, or one of the sentinels `None`, `-`, `—`, `n/a` (empty list).
+- **Parallel** — `Yes` / `No` (`true` / `false` / `oui` / `non` / `1` / `0`
+  also accepted).
+- **E2E** — comma-separated list of E2E companion routing labels
+  (`e2e-front`, `e2e-backoffice`), or one of the empty sentinels above.
+
+A planner that drifts from this contract — renames a column, drops the panel,
+splits the table across nodes — produces an Epic that cannot be replayed.
+Tooling will refuse to operate on it rather than silently creating wrong
+Stories.
 
 ---
 
