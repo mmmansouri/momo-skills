@@ -68,6 +68,8 @@ script path, status name or DTO convention is delegated to the project's own
 
 📚 **When building the ADF JSON for Epic/Story descriptions (panels, tables, code blocks, advanced node structures) → read [jira-adf/references/adf-templates.md](../jira-adf/references/adf-templates.md).**
 
+> 🔴 **Stories created here are DRAFTS.** The default `jira_create_us` body is the "Draft - refinement pending" panel — no Functional Spec, no Technical Spec, no Acceptance Criteria. **If the user supplied per-Story ACs, file paths, or any detailed scope in their original brief, do NOT push drafts.** Switch to the *Story Refinement* workflow below for each Story (build a refined ADF body and pass it as the `adf_file` argument to `jira_create_us`), or — simpler — refine each Story in a follow-up pass before transitioning to "Ready". The script project-wide will exit with code 2 if you pass an ADF arg whose file is missing, but it will silently produce a draft if you omit the arg entirely; treat the omitted-arg case as a draft on purpose, never as an oversight.
+
 1. Build ADF JSON for the Epic description (write to temp file).
 2. Create the Epic using the project's `jira_create_epic` script (path varies per project — see `<project>-jira` §"Quick Reference").
 3. For each Story in the breakdown :
