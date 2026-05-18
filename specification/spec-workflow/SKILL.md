@@ -64,20 +64,54 @@ script path, status name or DTO convention is delegated to the project's own
 
 **Output of Step 3:** approved Epic content and Story plan ready for Jira creation.
 
-### Step 4 — Create Jira Tickets
+### Step 4 — Create Jira Tickets (Envelope + Story Breakdown Loop)
 
-📚 **When building the ADF JSON for Epic/Story descriptions (panels, tables, code blocks, advanced node structures) → read [jira-adf/references/adf-templates.md](../jira-adf/references/adf-templates.md).**
+📚 **When building the ADF JSON for Epic/Story descriptions (panels, tables, code blocks, advanced node structures) → read [jira-adf/references/adf-templates.md](../jira-adf/references/adf-templates.md). §12 (Epic Description Template) locks the Brief Source panel + 5-column Story Breakdown table that this step depends on.**
 
-> 🔴 **Stories created here are DRAFTS.** The default `jira_create_us` body is the "Draft - refinement pending" panel — no Functional Spec, no Technical Spec, no Acceptance Criteria. **If the user supplied per-Story ACs, file paths, or any detailed scope in their original brief, do NOT push drafts.** Switch to the *Story Refinement* workflow below for each Story (build a refined ADF body and pass it as the `adf_file` argument to `jira_create_us`), or — simpler — refine each Story in a follow-up pass before transitioning to "Ready". The script project-wide will exit with code 2 if you pass an ADF arg whose file is missing, but it will silently produce a draft if you omit the arg entirely; treat the omitted-arg case as a draft on purpose, never as an oversight.
+> 🔴 **Stories created here are DRAFTS — by design, with no escape hatch in this workflow.** The default Story body is the "Draft - refinement pending" panel. **Do not** attempt to push a refined body from here, even if the user supplied detailed scope. If detailed scope was given, finish this workflow first (Epic + drafts + companions + links), then run the *Story Refinement* workflow once per Story to upgrade each draft into a fully refined spec before transitioning to "Ready". This separation is what makes the workflow drift-resistant: the planning agent never types Story titles or labels as CLI args after the envelope is committed.
 
-1. Build ADF JSON for the Epic description (write to temp file).
-2. Create the Epic using the project's `jira_create_epic` script (path varies per project — see `<project>-jira` §"Quick Reference").
-3. For each Story in the breakdown :
-   - Build draft ADF (minimal: Context paragraph + "To be refined" panel).
-   - Create the Story under the Epic via the project's `jira_create_us` script.
-4. For each E2E companion Story : create + link to its source Story using `jira_link_issues` with link type **"Relates"**.
-5. Link blocking dependencies between Stories using link type **"Blocks"**.
-6. Report results to the user : Epic key, all Story keys, E2E companion keys, links created.
+1. **Bootstrap the planning workspace.** Resolve a per-brief workspace via the
+   project's workspace module (`<project>-jira` §"Spec Workspaces"). The
+   workspace slug is derived deterministically from the verbatim brief (a
+   sha256 prefix in Buy Nature's case), so the same brief always lands on the
+   same directory. Run the project's housekeeping CLI first to evict expired
+   workspaces.
+
+2. **Author the envelope, once.** Write a single `envelope.json` to the
+   workspace containing the Epic's `title`, routing `labels`, and the full
+   `description` ADF document. The ADF **must** include a Brief Source info
+   panel (verbatim brief text) and a 5-column Story Breakdown table
+   (`Story | Labels | Depends On | Parallel | E2E`) whose rows define every
+   Story to be created.
+
+3. **Create the Epic via the envelope script.** The project's
+   `jira_create_epic` script (path varies per project — see `<project>-jira`
+   §"Quick Reference") takes `--envelope <ws>/envelope.json` and:
+   - validates the envelope shape,
+   - parses the Story Breakdown table out of the ADF,
+   - extracts the Brief Source panel text and cross-checks its slug against
+     the workspace (mismatch = refuses to POST, prevents paraphrase drift),
+   - applies idempotency (exact-summary JQL search before POST).
+
+4. **Create draft Stories index-by-index from the Story Breakdown.** The
+   project's `jira_create_us --from-epic <EPIC> --index N` script re-reads
+   the table from the Epic description and constructs the Story title + label
+   from row N. The agent **does not** pass a title or label as a CLI
+   argument — drift between plan and execution becomes physically impossible.
+
+5. **Create E2E companion Stories.** Use the `--e2e-companion <STORY> --app <e2e-app>`
+   mode of `jira_create_us` per the row's E2E column (project-specific
+   routing — see `<project>-jira`). Companions are linked to their source
+   Story automatically; if the project's script does not auto-link, follow
+   with `jira_link_issues ... "Relates"`.
+
+6. **Link blocking dependencies** between Stories using link type **"Blocks"**
+   per the `Depends On` column.
+
+7. **Report results** to the user: Epic key, every Story key with its title
+   (re-fetched from Jira to prove no drift), E2E companion keys, links
+   created. Explicitly state that Stories are drafts and refinement happens
+   via the project's Story Refinement workflow.
 
 ---
 
@@ -163,6 +197,8 @@ This skill is project-agnostic. The following items are **always** delegated to 
 | Auth setup (env detection, credentials) | `<project>-jira` §"Authentication" |
 | E2E companion routing rules | `<project>-jira` §"When Labelling a Story" |
 | DTO conventions, API prefixes, package layout | `<project>-jira` §"When Specifying ..." (if present) |
+| Workspace lifecycle (workspace module + housekeeping CLI + envelope schema) | `<project>-jira` §"Spec Workspaces" |
+| Brief Source panel + Story Breakdown table schema (ADF) | `jira-adf/references/adf-templates.md` §12 |
 
 If a referenced item is missing from `<project>-jira`, treat it as a project setup gap — flag it to the user and propose the addition rather than improvising.
 
