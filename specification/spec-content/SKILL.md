@@ -53,7 +53,7 @@ Every User Story must satisfy all 6 criteria:
 | **N**egotiable | Can scope be discussed? | Over-specified implementation details |
 | **V**aluable | Does it deliver user or business value? | Pure technical task with no user impact |
 | **E**stimable | Can the team estimate it? | Unknown technology or vague scope |
-| **S**mall | Fits in one sprint? | More than 8 ACs or 8+ story points |
+| **S**mall | Fits in one sprint? | More than 8 ACs or ≥ 13 story points (see `common-story-sizing` Rule 2) |
 | **T**estable | Can you write a test for it? | "System should be user-friendly" |
 
 ### 🔴 BLOCKING — INVEST Compliance
@@ -187,9 +187,14 @@ Stories created during feature-planning are drafts — they will be refined late
 
 ## When Splitting a Large Story
 
-If a Story has more than **8 ACs** or estimates at **8+ story points**, split it.
+📚 **For the full sizing & splitting playbook (5 BLOCKING rules — vertical slice / 13 SP warning / demoable in isolation / 6-10 per Epic / E2E per macro-Story — plus SPIDR, Richard Lawrence's 9 patterns, the worked anti-pattern catalog, and the pre-push self-check) → read `common-story-sizing`.**
 
-### Splitting Strategies
+If a Story has more than **8 ACs** or estimates at **≥ 13 story points**
+(Fibonacci-warning convention — see `common-story-sizing` Rule 2), try to split it
+using a **vertical** technique (SPIDR or Lawrence patterns). If no vertical split
+exists, keep it at 13 SP — never force a horizontal split.
+
+### Splitting Strategies — Quick Reference
 
 | Strategy | Description | Example |
 |---|---|---|
@@ -199,9 +204,18 @@ If a Story has more than **8 ACs** or estimates at **8+ story points**, split it
 | **By user role** | Split by actor | Customer views orders vs Admin manages orders |
 | **By component** | Split by app / codebase | Backend API vs Frontend UI vs Admin UI |
 
+These five high-level strategies stay project-agnostic. For the deeper toolbox
+(SPIDR — Spike / Path / Interface / Data / Rules — and Lawrence's nine patterns)
+load `common-story-sizing`.
+
 ### 🔴 BLOCKING — Splitting Quality
 
 - Each resulting Story must still satisfy INVEST independently.
+- Each split Story must be a **vertical slice** (touches all layers needed to
+  deliver observable behaviour). Horizontal splits ("rewrite DTOs", "add
+  migration", "rename entity") are forbidden — see `common-story-sizing` Rule 1.
+- Each split Story must be **demoable in isolation** on the day its PR merges —
+  no "wait until Story B is also merged" demos. See `common-story-sizing` Rule 3.
 - Each split Story must deliver value on its own (avoid "Part 1 / Part 2 / Part 3" if Part 1 alone delivers nothing observable).
 
 ---
@@ -309,7 +323,7 @@ Single source of truth — use this before pushing any Epic or Story to Jira.
 
 ### 🟢 BEST PRACTICE
 
-- [ ] Story points estimated (1 / 2 / 3 / 5 / 8 — split if 8)
+- [ ] Story points estimated (1 / 2 / 3 / 5 / 8 / 13 — re-assess for vertical split at ≥ 13; see `common-story-sizing` Rule 2)
 - [ ] Priority set appropriately
 - [ ] Technical Notes for non-obvious constraints
 - [ ] Companion E2E Story linked with "Relates"
