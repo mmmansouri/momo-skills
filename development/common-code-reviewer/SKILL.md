@@ -2,13 +2,17 @@
 name: common-code-reviewer
 description: >-
   Code review workflow for GitHub PRs via the `gh` CLI with atomic
-  `gh api ... --input payload.json` submissions. Use this skill whenever the
+  `gh api ... --input payload.json` submissions, plus the checkbox-based
+  resolution protocol that lets a downstream fix author tick `- [ ] Fixed`
+  → `- [x] Fixed` on each addressed comment. Use this skill whenever the
   user asks to review a PR, audit a pull request, comment on changes, post
   inline review comments, submit a review, resolve review threads, re-review
-  after fixes, check a teammate's diff, or look at a merge request — even
+  after fixes, check a teammate's diff, look at a merge request, OR fix
+  review feedback by ticking checkbox tasks on existing comments — even
   when they don't explicitly say "review". Contains the workflow, severity
-  tagging, gh CLI integration, thread resolution, and the output contract
-  for inline comments and review summaries.
+  tagging (🔴 / 🟡 / 🟢), gh CLI integration, thread resolution, the output
+  contract for inline comments and review summaries, and the fix-author
+  resolution protocol (PATCH on comment body, false-fix detection).
 ---
 
 # Code Review Skill
@@ -31,6 +35,7 @@ Apply these foundational stances to every review:
 2. **Apply loaded skills** — review rules come from the skills currently loaded in your context (e.g., `common-security`, `common-rest-api`, `common-frontend-angular`), not from a static checklist embedded here.
 3. **One atomic call** — the entire review (summary body + event + every inline comment) is submitted in a **single** `gh api ... --input payload.json` request. Never split into per-comment calls.
 4. **Tag every comment** — every inline comment carries a 🔴 / 🟡 / 🟢 marker.
+5. **Track actionable comments** — every 🔴 BLOCKING and 🟡 WARNING inline comment ends with a `- [ ] Fixed` checkbox so the fix author (typically a downstream dev agent) can mark it done in place. 🟢 BEST PRACTICE comments are suggestions and carry no checkbox.
 
 ### 🔴 BLOCKING
 
@@ -79,6 +84,37 @@ if (foo == null) throw new InvalidOrderException(\"items required\");
      --method POST \
      --input <repo>/.claude/reviews/pr-<n>/payload.json
 ```
+
+#### Append a `- [ ] Fixed` checkbox to every 🔴 BLOCKING and 🟡 WARNING inline comment
+**Why:** the checkbox is the contract between the reviewer and the downstream fix author. The fix author (e.g. `buy-nature-dev` Path C) fetches the PR's inline comments, filters the ones whose body still contains `- [ ]`, applies the fix, and edits the comment to flip `- [ ]` → `- [x]`. The unchecked-checkbox count becomes the to-do queue, and the checked count becomes the re-review evidence ("fix author claims these are fixed — verify"). 🟢 BEST PRACTICE comments are explicitly excluded: they are suggestions, not actions, and a checkbox would imply they must be addressed.
+
+##### WRONG
+````
+🔴 **BLOCKING** — Null check missing
+
+`processOrder(order)` dereferences `order.items` without a null guard.
+
+**Suggestion:**
+```java
+if (order.items == null) throw new InvalidOrderException("items required");
+```
+[no checkbox → dev cannot signal done in place, reviewer cannot derive the to-do queue]
+````
+
+##### CORRECT
+````
+🔴 **BLOCKING** — Null check missing
+
+`processOrder(order)` dereferences `order.items` without a null guard.
+
+**Suggestion:**
+```java
+if (order.items == null) throw new InvalidOrderException("items required");
+```
+
+---
+- [ ] Fixed
+````
 
 #### Tag every inline comment with a 🔴 / 🟡 / 🟢 marker matching its review action
 **Why:** the marker drives the review's submission event — any 🔴 ⇒ `REQUEST_CHANGES`, only 🟡 / 🟢 ⇒ `APPROVE`. Without explicit tagging the agent (and the next re-review pass) cannot derive the correct event mechanically, leading to mis-submitted reviews where blocking issues land as `APPROVE`.
@@ -162,15 +198,27 @@ For each changed file, apply rules from the **skill loaded in your context that 
 
 Skip in INITIAL mode. For each **unresolved** thread:
 
-1. Fetch current code:
+1. **Read the checkbox state first.** Parse the original 🔴 / 🟡 comment
+   body — if it contains `- [x] Fixed`, the fix author claims the fix is
+   in. Treat this as a **strong hint**, not a verdict: still verify the
+   code below. If it contains `- [ ] Fixed`, the fix author has not
+   signaled done → downgrade your confidence accordingly.
+2. Fetch current code:
    `gh api repos/<owner>/<repo>/contents/<path>?ref=<PR_head> --jq .content | base64 -d`.
-2. Compare the original issue with the current code; check if `position`
+3. Compare the original issue with the current code; check if `position`
    is null (⇒ the diff hunk changed under the comment ⇒ likely fixed).
-3. **If FIXED** → resolve via `scripts/resolve-thread.sh <thread.id>`
-   (see [thread-resolution-graphql.md](references/thread-resolution-graphql.md)).
-4. **If NOT FIXED** → leave unresolved; include it in the new `comments[]`
-   payload if you want to repost / emphasize.
-5. Scan for NEW issues not covered by existing threads.
+4. **If FIXED (code confirms it)** → resolve via
+   `scripts/resolve-thread.sh <thread.id>` (see
+   [thread-resolution-graphql.md](references/thread-resolution-graphql.md)).
+   This applies whether or not the checkbox was ticked — the reviewer
+   validates the code, not the box.
+5. **If checkbox `- [x]` BUT code NOT FIXED** → **false-fix**. Leave the
+   thread unresolved, repost in `comments[]` with a clear
+   `🔴 **REOPENED** — claimed fixed but <reason>` line, and do NOT
+   un-tick the box (the dev's claim stays visible for audit).
+6. **If NOT FIXED and unchecked** → leave unresolved; repost only if you
+   want to emphasize.
+7. Scan for NEW issues not covered by existing threads.
 
 ### Step 3 — Build the payload file
 
@@ -216,6 +264,20 @@ load-bearing.
 
 ---
 
+## When the Fix is Applied (Resolution Protocol)
+
+📚 **When a fix author addresses a 🔴 / 🟡 inline comment (flipping its
+`- [ ] Fixed` checkbox, editing the comment, or reasoning about box ↔
+thread divergence) → read
+[fix-resolution-protocol.md](references/fix-resolution-protocol.md).**
+
+The reviewer never executes the protocol — this skill defines the
+contract; the fix author (a separate downstream agent) reads the
+reference and applies it. Re-review (`Step 2B` above) reads the resulting
+checkbox state.
+
+---
+
 ## When Errors Occur
 
 | Error | Response |
@@ -241,11 +303,28 @@ When producing review artifacts, deliver each in this exact form:
 | **Submission** | Single `gh api ... --input payload.json` call with `body`, `event`, `comments[]`. |
 | **Thread resolution** | `scripts/resolve-thread.sh <thread_id>` — never an inline `gh api graphql` block in the conversation. |
 
-### Inline Comment Template
+### Inline Comment Templates
+
+**🔴 BLOCKING / 🟡 WARNING — with checkbox footer:**
 ````
 🔴 **BLOCKING** — <one-line title>
 
 <2-3 sentence explanation of the issue and its concrete consequence>
+
+**Suggestion:**
+```<lang>
+<concrete fix>
+```
+
+---
+- [ ] Fixed
+````
+
+**🟢 BEST PRACTICE — no checkbox (suggestion, not an action):**
+````
+🟢 **BEST PRACTICE** — <one-line title>
+
+<2-3 sentence explanation>
 
 **Suggestion:**
 ```<lang>
@@ -300,19 +379,25 @@ When producing review artifacts, deliver each in this exact form:
 ### Resolution Progress
 | Status | Count |
 |--------|-------|
-| ✅ Resolved | X |
-| ⬜ Still Open | X |
+| ✅ Resolved (checked + code OK) | X |
+| ⚠️ False-fix (checked but code NOT fixed) | X |
+| ⬜ Still Open (unchecked) | X |
 | 🆕 New Issues | X |
 
 ### 📋 Task Tracker
 | Status | File | Line | Issue |
 |--------|------|------|-------|
-| ✅ | `path` | 42 | 🔴 fixed |
-| ⬜ | `path` | 78 | 🟡 still present |
+| ✅ | `path` | 42 | 🔴 fixed (box ticked, code verified) |
+| ⚠️ | `path` | 55 | 🔴 false-fix — claimed done but still broken |
+| ⬜ | `path` | 78 | 🟡 still present, unchecked |
 | 🆕 | `path` | 12 | 🔴 new |
 
-**Progress: X/Y resolved (Z%) — N new**
+**Progress: X/Y resolved (Z%) — N new, F false-fix**
 
 ### Recommendation
 **APPROVE | REQUEST_CHANGES** — <justification>
 ```
+
+A `⚠️ False-fix` row counts as `REQUEST_CHANGES` (the issue is still
+present and the fix author's claim was wrong — same severity as the
+original 🔴).

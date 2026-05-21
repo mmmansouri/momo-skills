@@ -1,0 +1,72 @@
+# Fix Resolution Protocol
+
+> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+
+This reference is the **contract for fix authors** (the agent that
+consumes the review — typically a dev agent in fix-review mode, e.g.
+`buy-nature-dev` Path C). The reviewer never executes this protocol; it
+owns only the contract definition. The fix author reads this file.
+
+---
+
+## When Marking a Comment Fixed
+
+### 🔴 BLOCKING
+
+#### Mark a comment fixed by editing its body — flip `- [ ]` → `- [x]`, never repost
+**Why:** the checkbox state IS the persistent signal across runs. Posting
+a reply ("done!") does not flip the box, and a re-review pass driven by
+the parent skill's `Step 2B` will see the box still unchecked and re-flag
+the issue. Editing the original comment is the only operation the
+re-review skill knows how to read.
+
+#### Edit via PATCH with `--input <file>` — never inline the body
+**Why:** the same anti-quoting rule that governs the initial review
+applies to the edit. Comment bodies contain backticks, dollars, fenced
+code. Use `gh api` PATCH with a file payload:
+
+```bash
+# Build <repo>/.claude/reviews/pr-<n>/edit-<comment_id>.json containing:
+# {"body": "<original body with - [ ] flipped to - [x]>"}
+
+gh api repos/<owner>/<repo>/pulls/comments/<comment_id> \
+  --method PATCH \
+  --input <repo>/.claude/reviews/pr-<n>/edit-<comment_id>.json
+```
+
+The body must preserve the original comment **byte-for-byte** except for
+the single `- [ ]` → `- [x]` substitution. Rewriting the suggestion,
+trimming whitespace, or "improving" the wording corrupts the audit trail
+and may confuse re-review's checkbox detection.
+
+---
+
+## When the Box and the Thread Diverge
+
+### 🟡 WARNING
+
+#### Checking the box does NOT resolve the GitHub thread — that stays the reviewer's call
+**Why:** `- [x] Fixed` means "fix author claims the fix is in".
+`resolve-thread.sh` means "reviewer has verified the code matches". They
+are decoupled by design: the fix author cannot self-certify a fix as
+valid. Re-review (`Step 2B` of the parent skill) reads the checkbox,
+re-verifies against the current code, and *then* resolves the thread.
+
+**Identity note:** PATCH on a comment only succeeds if the editor
+authored the comment. When the reviewer and the fix author run as the
+same bot identity (e.g. `rahman-momo-bot[bot]` in Buy Nature), the edit
+goes through. When the identities differ, the fix author must instead
+**reply** to the thread with a `- [x] Fixed (claimed)` line and let the
+reviewer flip the original box in the next pass.
+
+---
+
+## When Handling 🟢 BEST PRACTICE Comments
+
+### 🟢 BEST PRACTICE
+
+#### Skip 🟢 comments — they carry no checkbox by design
+🟢 suggestions are not actions. If a 🟢 suggestion is implemented anyway,
+the resulting diff in the next push speaks for itself; no edit is
+required. Leave the 🟢 comment alone — the lack of checkbox is the
+signal.
