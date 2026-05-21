@@ -6,7 +6,8 @@ description: >-
   deciding whether to merge two siblings into one macro-Story, or auditing a
   Story Breakdown table for over- or under-decomposition. Companion to
   `spec-content` (INVEST table) — this skill holds the deep treatment: vertical
-  slicing, SPIDR (Cohn), Lawrence's 9 patterns, the 13 SP warning rule, the
+  slicing, SPIDR (Cohn), Lawrence's 9 patterns, the 8 SP warning / 13 SP hard cap,
+  the runner-budget sized rule (≤ 10 ACs / ≤ 8 SP / ≤ 200 KB spec ADF), the
   demoable-in-isolation test, and the worked anti-pattern catalog. Make sure
   to use it whenever the user mentions sizing, splitting, decomposition,
   granularity, vertical slice, macro-Story, SPIDR, story points threshold, or
@@ -28,13 +29,13 @@ For companion guidance on WHAT to write in a Story body (INVEST, AC quality)
 load `spec-content`; for the HOW sequence (planning vs refinement steps) load
 `spec-workflow`. See "Related Skills" at the bottom for the full list.
 
-The five 🔴 BLOCKING rules at the top are the contract. The catalogue of
+The six 🔴 BLOCKING rules at the top are the contract. The catalogue of
 splitting techniques (SPIDR, Lawrence) and the worked examples are how you
 apply the rules in practice.
 
 ---
 
-## 🔴 BLOCKING — The Five Sizing Rules
+## 🔴 BLOCKING — The Six Sizing Rules
 
 ### Rule 1 — Every Story is a VERTICAL SLICE (within a single deployable unit)
 
@@ -84,26 +85,34 @@ Story-E: "[admin]   Return UI + remove legacy dialog (depends on Story-D)"
 "[mock-api] Serve full v3 API surface and replace v2 admin console"
 ```
 
-### Rule 2 — 13 Story Points is the WARNING threshold
+### Rule 2 — 8 Story Points is the WARNING threshold, 13 SP is the HARD CAP
 
-If a Story estimates at **≥ 13 SP**, that is a signal to attempt a vertical
+If a Story estimates at **≥ 8 SP**, that is a signal to attempt a vertical
 split via SPIDR or Lawrence patterns (catalogue below). If after honest analysis
-no clean vertical split exists, keep the Story at 13 SP **rather than splitting
-it horizontally**. A 13 SP vertical Story is healthier than two 6 SP horizontal
-half-Stories that depend on each other.
+no clean vertical split exists, document the rationale and proceed.
 
-**Why:** 13 is the Fibonacci-warning convention in the agile community
-(Mountain Goat / Atlassian community) — not a hard cap, but the size at which
-estimation uncertainty starts to dominate. Mike Cohn's wording: *"if your
-story points are consistently hitting the highest numbers, re-assess and break
-down."* The literature explicitly rejects splitting at a smaller threshold
-when it would force horizontal decomposition.
+If a Story estimates at **≥ 13 SP**, that is a 🔴 BLOCK — split is mandatory.
+A 13 SP "vertical demoable" Story has historically blown the runner budget
+(see Rule 6 and the BNAT-432 cost incident: 13 SP / 12 ACs / 247 KB spec →
+$132 burned at hard-timeout for 80 % of the work non-committed). The agile
+intuition that "13 SP vertical is healthier than two 6 SP horizontal halves"
+remains correct *for human teams*; it fails for the agent runner where every
+extra minute past the soft deadline grows cache_read replay cost super-linearly.
+
+**Why the threshold moved 13 → 8 (warning) / never → 13 (BLOCK):**
+
+- 13 SP was the Fibonacci-warning convention in agile literature (Mountain
+  Goat / Atlassian community) — calibrated for human pair-programming weeks,
+  not for an LLM agent with a hard runtime ceiling.
+- BNAT-431 (10 ACs, ~8 SP) succeeded in 14m59 / $9.24.
+- BNAT-432 (12 ACs, 13 SP) hit hard timeout at $132 with zero commit pushed.
+- The 8/13 split realigns the warning to where the runner actually fails.
 
 **Estimation scale used by this skill:**
 
 | 1 | 2 | 3 | 5 | 8 | 13 | ~~21~~ |
 |---|---|---|---|---|---|---|
-| trivial | small | small-medium | medium | medium-large | warning threshold | **stop — this is an Epic, not a Story** |
+| trivial | small | small-medium | medium | warning threshold | **BLOCK — must split** | **stop — this is an Epic, not a Story** |
 
 🔴 **BLOCKING corollary:** any work estimated at 21+ SP is by definition an
 Epic. Convert it to an Epic and apply this skill's full breakdown process —
@@ -196,6 +205,64 @@ each E2E targets exactly one source Story. A 1:N batched E2E is a horizontal
 slice in disguise: it hides which Story actually owns the user-visible
 behaviour.
 
+### Rule 6 — Runner-Budget Sized (mandatory for any agent-runner project)
+
+A Story must be implementable in a single agent runner pass without exceeding
+the runner's soft-deadline (~70 % of hard timeout — for the buy-nature
+`claude -p` runner that means ≤ ~30 min of productive work). When a Story
+exceeds the hard caps below, splitting is **mandatory** — even when each
+resulting half remains vertical (Rule 1) and demoable (Rule 3).
+
+**Hard caps — any ONE violation triggers 🔴 BLOCK:**
+
+| Signal | Hard cap | Why |
+|---|---|---|
+| Acceptance Criteria count | > 10 | More than 10 ACs cannot be both implemented and tested in a single runner pass without thrashing the cache. |
+| Story Points | > 8 | Intersects with Rule 2; runner cost grows super-linearly past 8 SP. |
+| Refined spec ADF size | > 200 KB | Large spec means large prefetch; every sub-agent turn replays the brief in cache. |
+| Architectural concerns | > 3 | E.g. back domain + back service + UI page = 3 ✅; add admin layer = 4 ⇒ split. |
+
+**Soft warns — ≥ 2 triggers 🟡 WARN, ≥ 3 triggers 🔴 BLOCK:**
+
+- new files estimated > 15
+- Story touches > 2 layers (backend + UI + E2E counts as 3)
+- concurrency / threading in scope (per-resource lock, ExecutorService, retry poller, etc.)
+- new background scheduler or long-running task in scope
+- combines non-trivial backend work with "+ admin UI" or "+ admin page"
+
+**Why:** the agent runner is constrained by a hard timeout (typical 25-45 min)
+and the LLM prompt cache replays the cumulative conversation on every turn.
+Cache_read cost grows super-linearly with run length. A 13 SP "vertical
+demoable" Story can blow the budget despite passing Rules 1-5 — see the
+BNAT-432 cost incident: **12 ACs / 13 SP / 247 KB spec / dispatcher + UI =
+$132 burned at hard timeout for 80 % of the work non-committed**, while
+BNAT-431 (10 ACs / 8 SP) succeeded in 14 min 59 / $9.24 with similar surface
+area.
+
+**How to split under Rule 6:**
+
+1. Apply SPIDR / Lawrence first to find a clean vertical seam.
+2. Default pattern for backend-with-admin-UI Stories:
+   - Story A: "backend X core + tests" (vertical slice — operator can verify
+     via curl + logs + admin API).
+   - Story B: "admin UI for X" linked by `Depends On` Story A (rides the
+     infrastructure; demoable as a UI workflow).
+   This is the **Major-Effort** split (Lawrence pattern 6).
+3. Forbidden splits (these violate Rule 1):
+   - "tests vs no-tests"
+   - "happy path vs error paths"
+   - "DTOs only vs service only"
+   - "data layer vs business logic"
+
+**Compatibility with Rule 1:** Rule 6 splits ARE vertical inside each half.
+The backend-only Story is demoable from outside (curl / admin API / log
+inspection), and the UI Story rides on it. Both pass Rule 3 by design.
+
+**Validation procedure:** before pushing a refined Story description to Jira,
+run the four hard-cap checks (AC count, SP, spec KB, concerns count). One
+violation = re-decompose. The check costs <1 minute; the alternative is a
+$130+ runner failure on the first implementation attempt.
+
 ---
 
 ## When Producing an Audit Output
@@ -209,7 +276,7 @@ contract — not a flat enumeration of every rule that is not perfect.
 ```yaml
 verdict: BLOCK | WARN | PASS          # BLOCK if ≥1 BLOCKING rule violated
 deepest_defect:                       # single most damaging issue, REQUIRED on BLOCK
-  rule: 1 | 2 | 3 | 4 | 5
+  rule: 1 | 2 | 3 | 4 | 5 | 6
   story_ids: [BNAT-XXX, ...]          # or row numbers when no Jira key
   symptom: "<one sentence>"
   fix: "<one sentence — collapse / split / re-label / drop>"
@@ -238,18 +305,21 @@ invited the team to negotiate each one separately.
 
 1. If any Story violates Rule 1 (vertical slice) → that is the deepest defect.
 2. Else if any Story violates Rule 3 (demoable in isolation) → that is the deepest.
-3. Else if Rule 4 is violated (count outside 6-10) → that is the deepest.
-4. Else if any Story violates Rule 2 (≥ 13 SP without split rationale) → that is the deepest.
-5. Else if Rule 5 is violated (E2E inflation) → that is the deepest.
+3. Else if any Story violates Rule 6 (runner-budget hard cap) → that is the deepest.
+4. Else if Rule 4 is violated (count outside 6-10) → that is the deepest.
+5. Else if any Story violates Rule 2 (≥ 8 SP warning / ≥ 13 SP BLOCK without rationale) → that is the deepest.
+6. Else if Rule 5 is violated (E2E inflation) → that is the deepest.
 
-The order reflects causality: Rule 1 violations cause Rule 3 + 4 violations;
-fixing Rule 1 collapses the cascade.
+The order reflects causality: Rule 1 violations cause Rule 3 + 4 + 6 violations;
+fixing Rule 1 collapses the cascade. Rule 6 ranks above Rule 4 because a
+Story that blows the runner budget cannot ship at all — fixing it forces
+re-counting the Epic anyway.
 
 ### Verdict Mapping
 
 | Condition | Verdict |
 |---|---|
-| ≥ 1 BLOCKING rule violated (Rule 1, 2, 3, 4, or 5) | `BLOCK` |
+| ≥ 1 BLOCKING rule violated (Rule 1, 2, 3, 4, 5, or 6) | `BLOCK` |
 | Only 🟡 WARNING items from the Quick Self-Check | `WARN` |
 | All 🔴 BLOCKING checks pass and ≤ 1 🟡 WARNING item | `PASS` |
 
@@ -392,11 +462,17 @@ Run through this list before writing the envelope JSON.
       observable behaviour) — Rule 1.
 - [ ] Each Story carries EXACTLY ONE app routing label — Rule 1 corollary
       (cross-app Stories are orphaned by per-app routing).
-- [ ] No Story estimates above 13 SP — Rule 2.
+- [ ] No Story estimates above 13 SP; Stories ≥ 8 SP have a documented
+      no-split rationale — Rule 2.
 - [ ] Each Story is demoable in isolation — Rule 3 self-test passed.
 - [ ] Story count is in the 6-10 band (or justified outside it) — Rule 4.
 - [ ] E2E companions: 1-per-Story OR row annotated `no-E2E: <rationale>`;
       no batching (1 E2E for N>1 Stories) — Rule 5.
+- [ ] Each Story passes Rule 6 hard caps: AC count ≤ 10, SP ≤ 8, refined
+      spec ADF ≤ 200 KB, architectural concerns ≤ 3 — Rule 6.
+- [ ] No Story carries ≥ 3 Rule 6 soft-warn signals (new files > 15,
+      > 2 layers touched, concurrency, scheduler, "+ admin UI" alongside
+      non-trivial backend).
 
 🟡 **WARNING:**
 
@@ -407,6 +483,8 @@ Run through this list before writing the envelope JSON.
       task descriptions, not user-value statements).
 - [ ] Each E2E companion title names a user-facing scenario, not an
       implementation detail.
+- [ ] No Story carries 2 Rule 6 soft-warn signals (one signal alone is fine;
+      two together is a yellow flag — re-examine the split rationale).
 
 🟢 **BEST PRACTICE:**
 
