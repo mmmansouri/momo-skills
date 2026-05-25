@@ -60,6 +60,17 @@ then runs exactly one command:
     --input <repo>/.claude/reviews/pr-<n>/payload.json
 ```
 
+#### Submit through the host project's review identity — never the ambient `gh auth` account
+**Why:** a review and its inline comments are attributed to whatever identity the submitting `gh` call authenticates as. If that is a human operator's personal account, the reviewer/author separation the workflow depends on is broken — the "review" carries no independent authority and re-review gating cannot trust who posted it. The submit must run as the **reviewer** identity the host project designates, consistently across the initial review AND the re-review (mixing the two — bot on one pass, personal account on the other — is the exact failure this rule prevents).
+
+Treat **`$REVIEW_GH`** as the review-submitting command. The host project (its agent definition or a companion skill) defines it; when undefined it is plain `gh`, so single-identity projects are unaffected:
+
+```bash
+REVIEW_GH="${REVIEW_GH:-gh}"   # host overrides with a role-scoped wrapper
+```
+
+Use `$REVIEW_GH` for **every PR-mutating call** — the review submit (Step 4), the re-review submit, and thread resolution (Step 2B). Read-only calls (Step 1 fetch) may use plain `gh`. The plain `gh api …` shown in the examples below illustrates the **payload shape and endpoint**, not the invocation — the invocation always goes through `$REVIEW_GH`. After submitting, **assert the author** (Step 5): the latest review's `.user.login` must be the intended reviewer — if it is the operator's personal account, FAIL LOUD and re-submit through `$REVIEW_GH`.
+
 #### Never inline a comment body in a shell command — write the entire payload to a JSON file first
 **Why:** inline comment bodies always contain backticks (fenced code blocks), dollar signs, asterisks, and quotes. Passing them through `-f body="…"`, `printf`, HEREDOC, or any other shell-parsed mechanism leads to a quoting catastrophe — backticks become command substitution, dollars become variable expansion, mismatched quotes break the command. The `--input <file>` flag of `gh api` reads the request body byte-for-byte from disk, bypassing shell parsing entirely. This is not a style preference; it is a hard constraint enforced by the Output Contract below, which **guarantees** shell-unsafe content in every body.
 
@@ -211,7 +222,9 @@ Skip in INITIAL mode. For each **unresolved** thread:
    `scripts/resolve-thread.sh <thread.id>` (see
    [thread-resolution-graphql.md](references/thread-resolution-graphql.md)).
    This applies whether or not the checkbox was ticked — the reviewer
-   validates the code, not the box.
+   validates the code, not the box. Thread resolution **mutates the PR**, so
+   run it under the same **reviewer** identity as the submit (`$REVIEW_GH`,
+   or its `GH_TOKEN`), never the ambient account.
 5. **If checkbox `- [x]` BUT code NOT FIXED** → **false-fix**. Leave the
    thread unresolved, repost in `comments[]` with a clear
    `🔴 **REOPENED** — claimed fixed but <reason>` line, and do NOT
@@ -239,7 +252,7 @@ Shape:
 ### Step 4 — Submit atomically
 
 ```bash
-gh api repos/<owner>/<repo>/pulls/<n>/reviews \
+$REVIEW_GH api repos/<owner>/<repo>/pulls/<n>/reviews \
   --method POST \
   --input <repo>/.claude/reviews/pr-<n>/payload.json
 ```
@@ -250,17 +263,23 @@ gh api repos/<owner>/<repo>/pulls/<n>/reviews \
 | Only 🟡 / 🟢, or all previously-blocking now resolved | `APPROVE` |
 | Inline comments only, no summary verdict | `COMMENT` |
 
-### Step 5 — Verify
+### Step 5 — Verify (state + author)
 
 ```bash
 gh api repos/<owner>/<repo>/pulls/<n>/reviews \
-  --jq '.[-1] | {id, state, html_url, submitted_at}'
+  --jq '.[-1] | {id, state, html_url, submitted_at, author: .user.login}'
 ```
 
-If the most recent review is not the one you just submitted, inspect the
-HTTP response from Step 4 — `gh` returns non-zero on API failure but
-exit code alone is not always reliable; the verification call is
-load-bearing.
+Two assertions, both load-bearing:
+
+1. **The review is the one you just submitted.** If the most recent review
+   is not yours, inspect the HTTP response from Step 4 — `gh` returns
+   non-zero on API failure but exit code alone is not always reliable.
+2. **The author is the reviewer identity, not a personal account.** If
+   `.user.login` is the operator's own account (e.g. it does not match the
+   designated reviewer bot), the submit ran through the wrong identity —
+   fix `$REVIEW_GH` and re-submit. A review under a personal account is a
+   broken review even when its content is correct.
 
 ---
 
@@ -300,8 +319,8 @@ When producing review artifacts, deliver each in this exact form:
 | **Inline comment** | First line = severity marker + bold tag + one-line title. Blank line. 2-3 sentence explanation. Blank line. `**Suggestion:**` + fenced code block with the fix. See template below. |
 | **Initial review summary** | Markdown using the Initial Review template: Overall Assessment, Issues Found counts, Review Tasks table, BLOCKING / WARNING / BEST PRACTICE sections, What's Good, Recommendation. |
 | **Re-review summary** | Markdown using the Re-review template: Overall Assessment, Resolution Progress counts, Task Tracker (✅ / ⬜ / 🆕), Recommendation. |
-| **Submission** | Single `gh api ... --input payload.json` call with `body`, `event`, `comments[]`. |
-| **Thread resolution** | `scripts/resolve-thread.sh <thread_id>` — never an inline `gh api graphql` block in the conversation. |
+| **Submission** | Single `$REVIEW_GH api ... --input payload.json` call (reviewer identity) with `body`, `event`, `comments[]`. |
+| **Thread resolution** | `scripts/resolve-thread.sh <thread_id>` run under the reviewer identity — never an inline `gh api graphql` block in the conversation. |
 
 ### Inline Comment Templates
 

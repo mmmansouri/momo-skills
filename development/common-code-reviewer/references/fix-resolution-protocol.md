@@ -20,16 +20,21 @@ the parent skill's `Step 2B` will see the box still unchecked and re-flag
 the issue. Editing the original comment is the only operation the
 re-review skill knows how to read.
 
-#### Edit via PATCH with `--input <file>` — never inline the body
+#### Edit via PATCH with `--input <file>`, under the fix-author identity — never inline the body
 **Why:** the same anti-quoting rule that governs the initial review
 applies to the edit. Comment bodies contain backticks, dollars, fenced
-code. Use `gh api` PATCH with a file payload:
+code. Use `gh api` PATCH with a file payload. And the edit **mutates the
+PR**, so it runs through the **fix-author** identity the host project
+designates — `$FIX_GH`, the mirror of the reviewer's `$REVIEW_GH`; when
+undefined it is plain `gh`, so single-identity projects are unaffected:
 
 ```bash
+FIX_GH="${FIX_GH:-gh}"   # host overrides with a role-scoped wrapper (e.g. dev role)
+
 # Build <repo>/.claude/reviews/pr-<n>/edit-<comment_id>.json containing:
 # {"body": "<original body with - [ ] flipped to - [x]>"}
 
-gh api repos/<owner>/<repo>/pulls/comments/<comment_id> \
+$FIX_GH api repos/<owner>/<repo>/pulls/comments/<comment_id> \
   --method PATCH \
   --input <repo>/.claude/reviews/pr-<n>/edit-<comment_id>.json
 ```
@@ -52,12 +57,19 @@ are decoupled by design: the fix author cannot self-certify a fix as
 valid. Re-review (`Step 2B` of the parent skill) reads the checkbox,
 re-verifies against the current code, and *then* resolves the thread.
 
-**Identity note:** PATCH on a comment only succeeds if the editor
-authored the comment. When the reviewer and the fix author run as the
-same bot identity (e.g. `rahman-momo-bot[bot]` in Buy Nature), the edit
-goes through. When the identities differ, the fix author must instead
-**reply** to the thread with a `- [x] Fixed (claimed)` line and let the
-reviewer flip the original box in the next pass.
+**Identity note (GitHub Apps vs user PATs):** a GitHub **App** installation
+token with `pull_requests: write` can edit review comments AND reviews
+authored by a **different** actor — authorship is *not* required for App
+tokens. Verified empirically: a `dev` App `PATCH`ing a `reviewer` App's
+inline comment and `PUT`ting its review body both returned HTTP 200 and the
+content actually changed. So a split reviewer/fix-author identity (two
+distinct Apps, the Buy Nature model) still lets the fix author flip
+`- [ ]` → `- [x]` directly via PATCH/PUT — no fallback needed.
+This differs from **user PATs**: a user may only edit comments they
+authored. If (and only if) a fix author runs under a user PAT that did not
+author the comment, fall back to **replying** to the thread with a
+`- [x] Fixed (claimed)` line and let the reviewer flip the original box on
+the next pass.
 
 ---
 
