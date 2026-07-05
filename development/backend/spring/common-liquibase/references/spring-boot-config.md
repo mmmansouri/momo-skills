@@ -297,7 +297,7 @@ class IntegrationTest {
 }
 ```
 
-See [common-java-testing/references/testcontainers.md](../../common-java-testing/references/testcontainers.md) for the full setup (singleton pattern, reusable containers, parallel execution).
+Load the `common-java-testing` skill (Testcontainers reference) for the full setup (singleton pattern, reusable containers, parallel execution).
 
 ### 🟡 Escape hatch: `@DynamicPropertySource`
 

@@ -130,10 +130,14 @@ What problem are you solving?
 
 ## Pattern Catalogs
 
-Detailed implementations are split into three category-specific references:
+Detailed implementations are split into five category-specific references:
 
 📚 **[Creational Patterns](design-patterns-creational.md)** — Builder, Factory Method, Abstract Factory, Singleton
 
-📚 **[Structural Patterns](design-patterns-structural.md)** — Adapter, Decorator (classic + function composition), Facade, Proxy, Composite, Flyweight
+📚 **[Structural Patterns — Wrapping](design-patterns-structural-wrapping.md)** — Adapter, Decorator (classic + function composition), Facade, Proxy
 
-📚 **[Behavioral Patterns](design-patterns-behavioral.md)** — Strategy, Observer, Command, Chain of Responsibility, Template Method, Visitor (with pattern matching), State (sealed + enum), Memento
+📚 **[Structural Patterns — Composition](design-patterns-structural-composition.md)** — Composite, Flyweight
+
+📚 **[Behavioral Patterns — Control Flow](design-patterns-behavioral-control.md)** — Strategy, Command, Chain of Responsibility, Template Method
+
+📚 **[Behavioral Patterns — State & Notification](design-patterns-behavioral-state.md)** — Observer, Visitor (with pattern matching), State (sealed + enum), Memento

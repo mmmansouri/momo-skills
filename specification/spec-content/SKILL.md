@@ -104,7 +104,7 @@ Every Epic has the same six sections:
 | 1 | **Context** | 🔴 Yes | Business need, problem, who benefits, current state |
 | 2 | **Scope** | 🔴 Yes | In Scope (bullet list) + Out of Scope (explicit exclusions) |
 | 3 | **Technical Approach** | 🔴 Yes | Affected components, high-level architecture, key technical choices |
-| 4 | **Story Breakdown** | 🔴 Yes | Table: Story title, labels, dependencies, parallelizable |
+| 4 | **Story Breakdown** | 🔴 Yes | 5-column table (Story / Labels / Depends On / Parallel / E2E) — locked schema, see epic-sections-guide.md §4 |
 | 5 | **Dependencies** | 🔴 Yes | External systems, blocking work, required APIs / assets (or "None") |
 | 6 | **Open Questions** | 🟡 If any | Unresolved decisions |
 
@@ -112,7 +112,7 @@ Every Epic has the same six sections:
 
 - **Context must explain WHY**, not just WHAT.
 - **Out of Scope must be explicit** — even if short. **Why:** prevents scope creep during implementation; the cost of arguing later is higher than the cost of writing it now.
-- **Story Breakdown table must show dependencies and parallelization** — feeds the orchestration / sprint planning that comes after.
+- **Story Breakdown table must show dependencies, parallelization and E2E companions** — feeds the orchestration / sprint planning that comes after.
 
 ---
 

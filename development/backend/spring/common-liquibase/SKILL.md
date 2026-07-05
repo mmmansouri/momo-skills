@@ -359,7 +359,7 @@ spring:
     enabled: false
 ```
 
-For Testcontainers tests: keep Liquibase enabled and let it run against the container — see [common-java-testing/references/testcontainers.md](../common-java-testing/references/testcontainers.md).
+For Testcontainers tests: keep Liquibase enabled and let it run against the container — load the `common-java-testing` skill (Testcontainers reference).
 
 ---
 

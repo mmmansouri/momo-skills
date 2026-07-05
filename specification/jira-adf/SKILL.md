@@ -105,7 +105,7 @@ Every Epic description must contain these ADF sections (content rules → see `s
 | 1 | **Context** | `heading` L2 + `paragraph` |
 | 2 | **Scope** | `heading` L2 + sub-headings L3 `In Scope` / `Out of Scope` + `bulletList` per sub |
 | 3 | **Technical Approach** | `heading` L2 + `paragraph` (+ bullet list if needed) |
-| 4 | **Story Breakdown** | `heading` L2 + `table` (4 columns: Story / Labels / Dependencies / Parallel?) |
+| 4 | **Story Breakdown** | `heading` L2 + `table` (5 columns, locked contract — §12: Story / Labels / Depends On / Parallel / E2E) |
 | 5 | **Dependencies** | `heading` L2 + `bulletList` |
 | 6 | **Open Questions** | `heading` L2 + `bulletList` (omit section if none) |
 

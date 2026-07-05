@@ -98,7 +98,7 @@ catch (SQLException e) {
 ```
 
 ### 🟡 WARNING
-- **Catch-and-rethrow hides exceptions from retry frameworks** → If Resilience4j `@Retry` is configured for `MailException` but you catch and wrap it as `EmailSendingException`, retry never triggers. Let retriable exceptions propagate. See `common-rest-api/references/spring-boot-config-pitfalls.md`
+- **Catch-and-rethrow hides exceptions from retry frameworks** → If Resilience4j `@Retry` is configured for `MailException` but you catch and wrap it as `EmailSendingException`, retry never triggers. Let retriable exceptions propagate. Load the `common-spring-boot-config` skill for the full pitfall.
 
 ---
 
@@ -212,6 +212,8 @@ optional.orElseThrow(() -> new NotFoundException(id));
 ## When Using Concurrency
 
 📚 **When designing thread-safe code, sizing executors, adopting virtual threads / Scoped Values / Structured Concurrency, or composing `CompletableFuture` pipelines → read [concurrency.md](references/concurrency.md).**
+
+📚 **When diagnosing runtime failures (virtual-thread pinning, `ThreadLocal` leaks in pools, race conditions, double-checked locking, AOP self-invocation, memory leaks) → read [pitfalls-runtime.md](references/pitfalls-runtime.md).**
 
 ### 🔴 BLOCKING
 - **Pool virtual threads** → Create new virtual thread per task

@@ -14,7 +14,7 @@ description: >-
   "how many Stories per Epic" — even without saying "common-story-sizing". Do
   NOT use for sprint-planning logistics (velocity, capacity, sprint goals),
   Story-body content authoring (load `spec-content`), or generic Agile
-  methodology — this skill is strictly about Story shape and granularity.
+  methodology.
 ---
 
 # Common Story Sizing
@@ -92,21 +92,15 @@ split via SPIDR or Lawrence patterns (catalogue below). If after honest analysis
 no clean vertical split exists, document the rationale and proceed.
 
 If a Story estimates at **≥ 13 SP**, that is a 🔴 BLOCK — split is mandatory.
-A 13 SP "vertical demoable" Story has historically blown the runner budget
-(see Rule 6 and the BNAT-432 cost incident: 13 SP / 12 ACs / 247 KB spec →
-$132 burned at hard-timeout for 80 % of the work non-committed). The agile
-intuition that "13 SP vertical is healthier than two 6 SP horizontal halves"
-remains correct *for human teams*; it fails for the agent runner where every
-extra minute past the soft deadline grows cache_read replay cost super-linearly.
 
-**Why the threshold moved 13 → 8 (warning) / never → 13 (BLOCK):**
-
-- 13 SP was the Fibonacci-warning convention in agile literature (Mountain
-  Goat / Atlassian community) — calibrated for human pair-programming weeks,
-  not for an LLM agent with a hard runtime ceiling.
-- BNAT-431 (10 ACs, ~8 SP) succeeded in 14m59 / $9.24.
-- BNAT-432 (12 ACs, 13 SP) hit hard timeout at $132 with zero commit pushed.
-- The 8/13 split realigns the warning to where the runner actually fails.
+**Why the threshold moved 13 → 8 (warning) / never → 13 (BLOCK):** 13 SP was
+the Fibonacci-warning convention in agile literature (Mountain Goat /
+Atlassian community) — calibrated for human pair-programming weeks, not for
+an LLM agent with a hard runtime ceiling. The agile intuition that "13 SP
+vertical is healthier than two 6 SP horizontal halves" remains correct *for
+human teams*; it fails for the agent runner, where cost grows super-linearly
+with run length — see the Rule 6 cost incident (BNAT-432 vs BNAT-431) for
+the measured numbers.
 
 **Estimation scale used by this skill:**
 
@@ -368,7 +362,8 @@ Apply SPIDR in order, top-down. The first match wins.
 | **R** — Rules | The Story bundles many business rules, can ship a subset first | "Validate file size" first → "Validate copyright" later |
 
 If none of the five fit, the Story is **not splittable cleanly** — keep it as
-one Story (even at 13 SP) rather than forcing a horizontal split.
+one Story (documenting the no-split rationale per Rule 2) rather than forcing
+a horizontal split.
 
 ---
 
@@ -394,23 +389,20 @@ deferred non-functional concerns (performance, accessibility, security).
 
 ## When Refusing to Split — the legitimate cases
 
-It is correct to keep a Story at 13 SP rather than split it when:
+In the 8-12 SP warning band it is correct to keep a Story whole (with the
+documented no-split rationale Rule 2 requires) when splitting would produce:
 
-1. **Splitting would produce horizontal layers.** A "Replace V2 with V3" Story
-   that touches DTOs + service + controller + tests is **one** vertical Story
-   even at 13 SP — splitting it into "Replace DTOs" + "Migrate service" +
-   "Update controller" violates Rule 1.
+1. **Horizontal layers** — "Replace DTOs" + "Migrate service" + "Update
+   controller" violates Rule 1; a V2→V3 replacement touching DTOs + service
+   + controller + tests is **one** vertical Story.
+2. **Undemoable halves** — "Add Return entity (Liquibase + JPA)" alone is not
+   demoable (Rule 3); merge the entity work into the customer-facing Story.
+3. **Cross-Story technical dependencies inside the same sprint** — if A and B
+   touch the same files and B cannot demo without A's merge, they are one Story.
 
-2. **Splitting would produce undemoable halves.** "Add Return entity (Liquibase
-   + JPA)" is not demoable. "Customer can request a return + admin can approve
-   it" is demoable. Merge the entity work into the customer-facing Story.
-
-3. **Splitting would create cross-Story technical dependencies inside the
-   same sprint.** If A and B touch the same files and B cannot demo without
-   A's merge, they are one Story.
-
-In all three cases, the right move is to **accept the 13 SP** and document
-the work in a single Story body with multiple ACs that map to natural milestones.
+Above 13 SP there is no legitimate refusal: Rules 2 and 6 make the split
+mandatory — find the vertical seam (Major-Effort split, "How to split under
+Rule 6").
 
 ---
 
@@ -424,7 +416,7 @@ Rules 1, 3, 4, 5 simultaneously. The corrected decomposition collapsed
 this to **6 macro-Stories**, each a vertical slice within one app, each
 demoable in isolation.
 
-📚 **When auditing a real Story Breakdown against the five rules, when
+📚 **When auditing a real Story Breakdown against the six rules, when
 explaining horizontal slicing to a stakeholder, or when needing a concrete
 rule-by-rule violation pattern with its corrective decomposition → read
 [worked-example-api-migration.md](references/worked-example-api-migration.md).**

@@ -34,7 +34,7 @@
 ### Related References
 
 - **Security anti-patterns**: See [security.md](security.md) for password hashing, encryption, and SQL injection
-- **Testing anti-patterns**: See [testing.md](testing.md) for shared test state and mocking rules
+- **Testing anti-patterns**: load the `common-java-testing` skill (shared test state and mocking rules)
 - **Concurrency guidance**: See [concurrency.md](concurrency.md) for virtual thread patterns
 
 ---

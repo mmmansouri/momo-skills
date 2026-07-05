@@ -108,17 +108,20 @@ Bullet list of explicit exclusions:
 
 ### Format
 
-ADF table with columns:
+ADF table with **5 columns** — this schema is a locked contract read back by
+planning tooling (`jira-adf/references/adf-templates.md` §12 "Epic Template
+Convention"), not a suggestion:
 
-| Story | Labels | Dependencies | Parallel? |
-|-------|--------|--------------|-----------|
+| Story | Labels | Depends On | Parallel | E2E |
+|-------|--------|------------|----------|-----|
 
 ### What to Include
 
-- **Story:** Descriptive title for each planned story.
-- **Labels:** Routing label (one per component) + cross-cutting labels if any.
-- **Dependencies:** Which other stories must complete first (use story titles — tickets linked later).
-- **Parallel?:** Can this story be worked on simultaneously with others? (Yes/No with reason)
+- **Story:** Full Story title including any `[<app>]` prefix — the exact summary POSTed to Jira when the row is created.
+- **Labels:** Comma-separated; the first label is the routing label (one per component), cross-cutting labels follow.
+- **Depends On:** Comma-separated 1-based row indices, or `Story N`, or an empty sentinel (`None`, `-`, `—`, `n/a`).
+- **Parallel:** `Yes` / `No` — can this story be worked on simultaneously with others?
+- **E2E:** Comma-separated E2E companion routing labels (e.g. `e2e-front`, `e2e-backoffice`); for a deliberate skip, an annotated `no-E2E: <rationale>` (never blank — see `common-story-sizing` Rule 5).
 
 ### Decomposition Guidelines
 
@@ -126,18 +129,16 @@ ADF table with columns:
 - Within a component, split by **CRUD operation** or **functional area**.
 - Each Story should be **independently deliverable** (INVEST).
 - Backend API Stories typically come first (frontend depends on API).
-- E2E companion Stories are listed in the table but created separately (routing rules in the project's `<project>-jira` skill).
+- E2E companions are declared in the `E2E` column — never as separate rows. They are created as tickets separately (routing rules in the project's `<project>-jira` skill).
 
 ### Example
 
-| Story | Labels | Dependencies | Parallel? |
-|---|---|---|---|
-| Review entity + CRUD API | backend | None | Yes |
-| Review submission form | frontend | API Story | No (needs API) |
-| Review moderation panel | admin | API Story | No (needs API) |
-| Review email notification | backend, email-system | API Story | Yes (after API) |
-| E2E: Review API tests | backend | API Story | After API |
-| E2E: Review frontend tests | frontend | Frontend Story | After frontend |
+| Story | Labels | Depends On | Parallel | E2E |
+|---|---|---|---|---|
+| Review entity + CRUD API | backend | None | Yes | no-E2E: API-only, user scenario covered by row 2 |
+| Review submission form | frontend | 1 | No | e2e-front |
+| Review moderation panel | admin | 1 | No | e2e-backoffice |
+| Review email notification | backend, email-system | 1 | Yes | no-E2E: no user-facing scenario |
 
 ---
 

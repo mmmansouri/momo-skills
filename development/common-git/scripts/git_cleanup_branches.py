@@ -37,6 +37,24 @@ def get_merged_branches(repo_path, base_branch):
     return branches
 
 
+def restore_original_branch(repo_path, current, base_branch, stashed):
+    """Return to the branch we started on and re-apply any auto-stash.
+
+    Checking out the original branch is always safe — even a protected one —
+    since we only ever switched away from it to run the cleanup. The stash is
+    popped only after a successful checkout so it can never land on the wrong
+    branch. Returns a warning dict when restoration failed (stash kept), else None.
+    """
+    if not current or current == base_branch:
+        return None
+    code, output = run_git("checkout", current, cwd=repo_path)
+    if code != 0:
+        return {"restore_failed": current, "stash_kept": stashed, "error": output}
+    if stashed:
+        run_git("stash", "pop", cwd=repo_path)
+    return None
+
+
 def cleanup_repo(repo_path, base_branch, dry_run=False, auto=False):
     """Clean up merged branches in a single repo.
 
@@ -64,11 +82,11 @@ def cleanup_repo(repo_path, base_branch, dry_run=False, auto=False):
 
     if not merged:
         # Restore original branch even when nothing to delete.
-        if current and current != base_branch and not is_protected_branch(current, base_branch):
-            run_git("checkout", current, cwd=repo_path)
-            if stashed:
-                run_git("stash", "pop", cwd=repo_path)
-        return {"repo": name, "deleted": [], "dry_run": dry_run, "status": "clean"}
+        warning = restore_original_branch(repo_path, current, base_branch, stashed)
+        result = {"repo": name, "deleted": [], "dry_run": dry_run, "status": "clean"}
+        if warning:
+            result["warning"] = warning
+        return result
 
     deleted = []
     failed = []
@@ -84,12 +102,7 @@ def cleanup_repo(repo_path, base_branch, dry_run=False, auto=False):
         else:
             failed.append({"branch": branch, "error": output})
 
-    # Restore previous branch and stash (skip if previous was protected — we
-    # don't want to leave the user on develop accidentally if they were on it).
-    if current and current != base_branch and not is_protected_branch(current, base_branch):
-        run_git("checkout", current, cwd=repo_path)
-        if stashed:
-            run_git("stash", "pop", cwd=repo_path)
+    warning = restore_original_branch(repo_path, current, base_branch, stashed)
 
     result = {
         "repo": name,
@@ -99,6 +112,8 @@ def cleanup_repo(repo_path, base_branch, dry_run=False, auto=False):
     }
     if failed:
         result["failed"] = failed
+    if warning:
+        result["warning"] = warning
 
     return result
 
