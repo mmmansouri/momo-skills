@@ -7,7 +7,7 @@ description: >-
   Stories, or producing any structured Jira planning artifact. Provides the step
   sequence (HOW). For content guidance (WHAT to write) load `spec-content`. For ADF
   formatting load `jira-adf`. For project-specific labels/scripts load the project's
-  own `<project>-jira` skill (e.g. `buy-nature-jira`).
+  own `*-jira` skill (e.g. `buy-nature-jira`).
 ---
 
 # Spec Workflow
@@ -50,7 +50,7 @@ script path, status name or DTO convention is delegated to the project's own
 
 ### Step 3 — Design the Epic
 
-📚 **When writing the body of the Epic description (Context, Scope, Technical Approach, Story Breakdown, Dependencies, Open Questions) → read [spec-content/references/epic-sections-guide.md](../spec-content/references/epic-sections-guide.md).**
+📚 **When writing the body of the Epic description (Context, Scope, Technical Approach, Story Breakdown, Dependencies, Open Questions) → load the `spec-content` skill and read its references/epic-sections-guide.md.**
 
 1. Write the Epic description section by section (content guidance in `spec-content`).
 2. **Decompose into Stories** following these rules :
@@ -66,9 +66,9 @@ script path, status name or DTO convention is delegated to the project's own
 
 ### Step 4 — Create Jira Tickets (Envelope + Story Breakdown Loop)
 
-📚 **When building the ADF JSON for Epic/Story descriptions (panels, tables, code blocks, advanced node structures) → read [jira-adf/references/adf-templates.md](../jira-adf/references/adf-templates.md). §12 (Epic Description Template) locks the Brief Source panel + 5-column Story Breakdown table that this step depends on.**
+📚 **When building the ADF JSON for Epic/Story descriptions (panels, tables, code blocks, advanced node structures) → load the `jira-adf` skill and read its references/adf-templates.md — §12 (Epic Description Template) locks the Brief Source panel + 5-column Story Breakdown table that this step depends on.**
 
-> 🔴 **Stories created here are DRAFTS — by design, with no escape hatch in this workflow.** The default Story body is the "Draft - refinement pending" panel. **Do not** attempt to push a refined body from here, even if the user supplied detailed scope. If detailed scope was given, finish this workflow first (Epic + drafts + companions + links), then run the *Story Refinement* workflow once per Story to upgrade each draft into a fully refined spec before transitioning to "Ready". This separation is what makes the workflow drift-resistant: the planning agent never types Story titles or labels as CLI args after the envelope is committed.
+> 🔴 **Stories created here are DRAFTS — by design, with no escape hatch in this workflow.** The default Story body is the "Draft - refinement pending" panel. **Do not** attempt to push a refined body from here, even if the user supplied detailed scope. If detailed scope was given, finish this workflow first (Epic + drafts + companions + links), then run the *Story Refinement* workflow once per Story to upgrade each draft into a fully refined spec before transitioning to "Ready". **Why:** this separation is what makes the workflow drift-resistant: the planning agent never types Story titles or labels as CLI args after the envelope is committed.
 
 1. **Bootstrap the planning workspace.** Resolve a per-brief workspace via the
    project's workspace module (`<project>-jira` §"Spec Workspaces"). The
@@ -151,7 +151,7 @@ Present investigation results: existing patterns found, files to create/modify, 
 
 ### Step 3 — Write the Spec
 
-📚 **When writing the body of the refined Story (Context, Functional Spec, Technical Spec, Acceptance Criteria, Technical Notes, Out of Scope, Dependencies) → read [spec-content/references/story-sections-guide.md](../spec-content/references/story-sections-guide.md).**
+📚 **When writing the body of the refined Story (Context, Functional Spec, Technical Spec, Acceptance Criteria, Technical Notes, Out of Scope, Dependencies) → load the `spec-content` skill and read its references/story-sections-guide.md.**
 
 1. Draft the Story description section by section (content guidance in `spec-content`).
 2. Write Acceptance Criteria following `spec-content` §"When Writing Acceptance Criteria" :
@@ -180,8 +180,12 @@ Before any Jira write (Step 4 of either workflow) :
 - Feature planning Step 4 → `spec-content` §"Quality Checklist for Epics" + `<project>-jira` label validation.
 - Story refinement Step 4 → [refinement-checklist.md](references/refinement-checklist.md) (this skill) **and** `spec-content` §"Quality Checklist for Stories".
 
+**Why:** the checklist is the last deterministic gate before an irreversible Jira write; skipping it ships structural defects (missing ACs, no routing label) that the downstream orchestrator can't dispatch on.
+
 🔴 **User approval is mandatory** before any Jira mutation. Show the full content
 (Epic body, Story body, AC list, decomposition table) and wait for explicit "go".
+
+**Why:** a Jira write is outward-facing and awkward to unwind; the user is the sole authority on scope, so an explicit go prevents publishing a spec they would reject.
 
 ---
 

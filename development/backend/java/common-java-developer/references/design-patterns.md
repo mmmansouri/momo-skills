@@ -1,6 +1,6 @@
 # Design Patterns in Modern Java
 
-> Index for the GoF + modern-Java pattern catalog. Detailed implementations live in three category-specific reference files linked at the bottom.
+> Index for the GoF + modern-Java pattern catalog. Detailed implementations live in five category-specific reference files listed at the bottom.
 
 ---
 
@@ -132,12 +132,12 @@ What problem are you solving?
 
 Detailed implementations are split into five category-specific references:
 
-📚 **[Creational Patterns](design-patterns-creational.md)** — Builder, Factory Method, Abstract Factory, Singleton
+📚 **Creational Patterns** (see `design-patterns-creational.md`) — Builder, Factory Method, Abstract Factory, Singleton
 
-📚 **[Structural Patterns — Wrapping](design-patterns-structural-wrapping.md)** — Adapter, Decorator (classic + function composition), Facade, Proxy
+📚 **Structural Patterns — Wrapping** (see `design-patterns-structural-wrapping.md`) — Adapter, Decorator (classic + function composition), Facade, Proxy
 
-📚 **[Structural Patterns — Composition](design-patterns-structural-composition.md)** — Composite, Flyweight
+📚 **Structural Patterns — Composition** (see `design-patterns-structural-composition.md`) — Composite, Flyweight
 
-📚 **[Behavioral Patterns — Control Flow](design-patterns-behavioral-control.md)** — Strategy, Command, Chain of Responsibility, Template Method
+📚 **Behavioral Patterns — Control Flow** (see `design-patterns-behavioral-control.md`) — Strategy, Command, Chain of Responsibility, Template Method
 
-📚 **[Behavioral Patterns — State & Notification](design-patterns-behavioral-state.md)** — Observer, Visitor (with pattern matching), State (sealed + enum), Memento
+📚 **Behavioral Patterns — State & Notification** (see `design-patterns-behavioral-state.md`) — Observer, Visitor (with pattern matching), State (sealed + enum), Memento

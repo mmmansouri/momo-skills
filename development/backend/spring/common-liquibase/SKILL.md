@@ -15,14 +15,6 @@ description: >-
 >
 > **Stack baseline:** Liquibase 5.0+ (Community, FSL license) · Liquibase Secure 5.1+ (commercial, optional) · Spring Boot 4.x · PostgreSQL 17 · Java 17 minimum (verified with Java 25 — requires Liquibase 5.0.2+ for delayed class loading of SnakeYaml/OpenCSV).
 
-📚 **References (read each only when its trigger applies):**
-- 📚 **When designing or modifying changesets (createTable, addColumn, raw SQL, rollback patterns, `modifyChangeSets`, `validCheckSum`) → read [changeset-templates.md](references/changeset-templates.md).**
-- 📚 **When organizing master changelogs, naming files, or moving/renaming changeset files → read [changelog-structure.md](references/changelog-structure.md).**
-- 📚 **When configuring Liquibase in a Spring Boot 4 app (properties, profiles, multi-datasource, Testcontainers, troubleshooting) → read [spring-boot-config.md](references/spring-boot-config.md).**
-- 📚 **When planning a zero-downtime migration (Expand-Contract, NOT NULL on populated tables, renames, drops, FK on populated tables, batched backfill, `CREATE INDEX CONCURRENTLY`) → read [zero-downtime.md](references/zero-downtime.md).**
-- 📚 **When wiring Liquibase into CI/CD (Flow files, Policy Checks, GitHub Actions / Jenkins pipelines, pre/post-deploy contexts) → read [policy-checks-and-flow.md](references/policy-checks-and-flow.md).**
-- 📚 **When reviewing a PR that adds or modifies Liquibase changesets → read [code-review-checklist.md](references/code-review-checklist.md).**
-
 ---
 
 ## Decision Tree — Pick the Right Approach

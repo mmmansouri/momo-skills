@@ -2,8 +2,8 @@
 
 > Built-in utility types shipped with TypeScript, plus custom helpers commonly
 > needed in application code. For type-level programming (conditional types,
-> mapped types, template literals, branded types, real-world patterns), read
-> [advanced-patterns.md](advanced-patterns.md).
+> mapped types, template literals, branded types, real-world patterns), see
+> `advanced-patterns.md`.
 
 ## Table of Contents
 
@@ -90,7 +90,7 @@ type Uncap = Uncapitalize<'Hello'>;  // 'hello'
 ```
 
 For dynamic key transformations using these (e.g. `getName` from `name`),
-read the Template Literal Types section in [advanced-patterns.md](advanced-patterns.md#template-literal-types).
+see the Template Literal Types section in `advanced-patterns.md`.
 
 ---
 

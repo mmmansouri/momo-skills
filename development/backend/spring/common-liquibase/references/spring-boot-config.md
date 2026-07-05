@@ -224,7 +224,7 @@ By default, Liquibase runs during `ApplicationContext` initialization. The appli
 
 1. **Run migrations as a separate Kubernetes Job / init container** before the app starts (recommended for production)
 2. **Increase the readiness probe initial delay** to cover migration time
-3. **Move slow data backfills out of Liquibase** into background jobs gated by a feature flag (Expand-Contract pattern — see [zero-downtime.md](zero-downtime.md))
+3. **Move slow data backfills out of Liquibase** into background jobs gated by a feature flag (Expand-Contract pattern — see `zero-downtime.md`)
 
 ---
 
@@ -371,7 +371,7 @@ Solutions, in order of preference:
 
 1. Verify the `include` order in the master changelog matches dependency direction (parents before children)
 2. With `includeAll`, ensure filenames carry timestamps (`MMYYYY`) — alphabetic order is the default
-3. After moving files, set `logicalFilePath` (see [changelog-structure.md](changelog-structure.md#handling-file-moves--renames))
+3. After moving files, set `logicalFilePath` (see `changelog-structure.md` § Handling File Moves / Renames)
 
 ### Spring Boot 4 Import Failure
 

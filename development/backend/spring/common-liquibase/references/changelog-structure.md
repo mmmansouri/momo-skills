@@ -295,7 +295,7 @@ Validation Failed:
 
 **Solutions:**
 1. Create a NEW changeset for the change (preferred)
-2. Use `validCheckSum: any` (4.27+) for non-functional edits — see [changeset-templates.md](changeset-templates.md#validchecksum-any)
+2. Use `validCheckSum: any` (4.27+) for non-functional edits — see `changeset-templates.md` § validCheckSum: any
 
 ---
 

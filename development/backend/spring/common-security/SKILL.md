@@ -21,11 +21,6 @@ description: >-
 >
 > **Stack baseline:** Spring Boot 4.x · Spring Framework 7.x · Spring Security 7.x · Java 25 LTS · OWASP Top 10 (2025) · Argon2id (Password4j) preferred for new password hashing.
 
-📚 **References (read each only when its trigger applies):**
-- 📚 **When you need OWASP Top 10 mapping, defense-in-depth diagrams, allowlist/denylist patterns, security headers, SSRF detail, STRIDE threat modeling, audit logging or rate-limiting recipes → read [security-fundamentals.md](references/security-fundamentals.md).**
-- 📚 **When writing or reviewing pure-Java security code (PreparedStatement, ProcessBuilder, XPath/LDAP/XXE escaping, ObjectInputFilter, AES-GCM, RSA, BCrypt/Argon2 APIs, defensive copies, sealed classes) → read [java-security.md](references/java-security.md).**
-- 📚 **When configuring Spring Security 7 (SecurityFilterChain, JWT resource server, OAuth2 login, MFA, method security, CORS, CSRF, password encoders, actuator chain, Problem Details, MockMvc tests) → read [spring-security.md](references/spring-security.md).**
-
 ---
 
 ## Decision Trees
@@ -108,13 +103,13 @@ What's the session model?
 | **BCrypt** | Good default, broad compat | Work factor ≥ 10 (72-byte password limit) |
 | **PBKDF2-HMAC-SHA-256** | FIPS-140 compliance | ≥ 600 000 iterations |
 
-📚 **Encoder configuration (Spring & raw Java) → [spring-security.md#password-encoders](references/spring-security.md#password-encoders) and [java-security.md#password-hashing](references/java-security.md#password-hashing).**
+📚 **When implementing password hashing or migrating encoders → read [spring-security.md#password-encoders](references/spring-security.md#password-encoders) and [java-security.md#password-hashing](references/java-security.md#password-hashing).**
 
 ---
 
 ## When Implementing Authentication
 
-📚 **For full JWT resource server, OAuth2 login, custom UserDetailsService and Spring Security 7 MFA setup → read [spring-security.md](references/spring-security.md).**
+📚 **When implementing a JWT resource server, OAuth2 login, a custom UserDetailsService or Spring Security 7 MFA → read [spring-security.md](references/spring-security.md).**
 
 ### 🔴 BLOCKING — Validate every JWT claim that affects trust
 
@@ -139,7 +134,7 @@ What's the session model?
 
 ## When Implementing Authorization
 
-📚 **For method security, custom `AuthorizationManager`, URL-based auth in Spring Security 7 → read [spring-security.md](references/spring-security.md).**
+📚 **When implementing method security, a custom `AuthorizationManager`, or URL-based authorization in Spring Security 7 → read [spring-security.md](references/spring-security.md).**
 
 ### 🔴 BLOCKING — Authorize on the resource, not only the role
 
@@ -166,13 +161,13 @@ new MvcRequestMatcher(...)            // → PathPatternRequestMatcher
 AuthorizationManager#check(...)       // → #authorize()
 ```
 
-📚 **Full migration matrix and lambda-DSL examples → [spring-security.md#whats-new-in-spring-security-7](references/spring-security.md#whats-new-in-spring-security-7).**
+📚 **When migrating a Spring Security 6 configuration to 7 (lambda DSL, renamed matchers and managers) → read [spring-security.md#whats-new-in-spring-security-7](references/spring-security.md#whats-new-in-spring-security-7).**
 
 ---
 
 ## When Designing Secure Features (A04 — Insecure Design)
 
-📚 **STRIDE framework, defense-in-depth code example, secure design patterns → [security-fundamentals.md#threat-modeling-stride](references/security-fundamentals.md#threat-modeling-stride).**
+📚 **When threat-modeling a new feature or applying defense-in-depth design → read [security-fundamentals.md#threat-modeling-stride](references/security-fundamentals.md#threat-modeling-stride).**
 
 ### 🔴 BLOCKING — Threat-model before writing the first endpoint
 
@@ -191,7 +186,7 @@ Grant the minimum permissions needed; prefer time-bounded scopes (token TTL, ses
 
 ## When Configuring CORS & CSRF
 
-📚 **Full CORS chain, SPA CSRF wiring, cookie-based CSRF for JS clients → [spring-security.md#cors-configuration](references/spring-security.md#cors-configuration).**
+📚 **When configuring the CORS chain or wiring CSRF for an SPA or JS client → read [spring-security.md#cors-configuration](references/spring-security.md#cors-configuration).**
 
 ### 🔴 BLOCKING — CORS must be configured inside the SecurityFilterChain, not as a global filter
 
@@ -215,7 +210,7 @@ Grant the minimum permissions needed; prefer time-bounded scopes (token TTL, ses
 
 ## When Managing Secrets
 
-📚 **Secret storage hierarchy (HSM → KMS → Vault → env vars) and Kubernetes Secrets recipes → [security-fundamentals.md#secrets-management](references/security-fundamentals.md#secrets-management).**
+📚 **When choosing where to store secrets or wiring Kubernetes Secrets → read [security-fundamentals.md#secrets-management](references/security-fundamentals.md#secrets-management).**
 
 ### 🔴 BLOCKING — Never hardcode secrets in source or committed config
 
@@ -240,7 +235,7 @@ private String apiKey;
 
 ## When Securing Spring Boot Actuator
 
-📚 **Full actuator security chain (`@Order(1)`, `EndpointRequest` matcher, separate management port) and YAML config → [spring-security.md#actuator-security](references/spring-security.md#actuator-security).**
+📚 **When securing the Actuator endpoints (dedicated `@Order(1)` chain, `EndpointRequest` matcher, separate management port) → read [spring-security.md#actuator-security](references/spring-security.md#actuator-security).**
 
 ### 🔴 BLOCKING — Treat actuator as a privileged surface, never as default-public
 
@@ -256,7 +251,7 @@ private String apiKey;
 
 ## When Using Cryptography
 
-📚 **AES-GCM, RSA, digital signatures, secure random recipes → [java-security.md#cryptography](references/java-security.md#cryptography).**
+📚 **When implementing symmetric or asymmetric encryption, digital signatures, or secure random → read [java-security.md#cryptography](references/java-security.md#cryptography).**
 
 ### 🔴 BLOCKING — Use vetted libraries, never roll your own primitives
 
@@ -271,7 +266,7 @@ private String apiKey;
 
 ## When Making Server-Side HTTP Calls (A10 — SSRF Prevention)
 
-📚 **Full SSRF code, URL parsing bypasses, DNS rebinding mitigations → [security-fundamentals.md#ssrf-prevention-a10](references/security-fundamentals.md#ssrf-prevention-a10).**
+📚 **When making a server-side HTTP call to a user-influenced URL (SSRF, parser bypasses, DNS rebinding) → read [security-fundamentals.md#ssrf-prevention-a10](references/security-fundamentals.md#ssrf-prevention-a10).**
 
 ### 🔴 BLOCKING — Validate every user-influenced URL against a host allowlist
 
@@ -286,7 +281,7 @@ private String apiKey;
 
 ## When Handling Serialization
 
-📚 **`ObjectInputFilter` recipes, secure `Serializable` patterns → [java-security.md#serialization-security](references/java-security.md#serialization-security).**
+📚 **When deserializing untrusted data or hardening a `Serializable` type → read [java-security.md#serialization-security](references/java-security.md#serialization-security).**
 
 ### 🔴 BLOCKING — Never deserialize untrusted Java-serialized data
 
@@ -313,13 +308,13 @@ log.error("Internal error", e);
 return ResponseEntity.status(500).body(Map.of("error", "An unexpected error occurred"));
 ```
 
-📚 **RFC 7807 Problem Details for security errors → [spring-security.md#exception-handling](references/spring-security.md#exception-handling).**
+📚 **When returning RFC 7807 Problem Details for a security error → read [spring-security.md#exception-handling](references/spring-security.md#exception-handling).**
 
 ---
 
 ## When Implementing Security Logging (A09)
 
-📚 **Structured logging recipes, AOP authorization-failure aspect, retention table → [security-fundamentals.md#audit-logging](references/security-fundamentals.md#audit-logging).**
+📚 **When implementing structured audit logging or an authorization-failure aspect → read [security-fundamentals.md#audit-logging](references/security-fundamentals.md#audit-logging).**
 
 ### 🔴 BLOCKING — Log every security-relevant event, with structure
 

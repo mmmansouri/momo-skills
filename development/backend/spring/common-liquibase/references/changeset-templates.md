@@ -180,7 +180,7 @@ databaseChangeLog:
           columnName: status
 ```
 
-🟡 On a populated table, **adding a NOT NULL column with default rewrites every row** on older PostgreSQL versions (<11). Modern PG handles this in metadata only when the default is constant — but verify on your version. For variable defaults, use Expand-Contract (see [zero-downtime.md](zero-downtime.md)).
+🟡 On a populated table, **adding a NOT NULL column with default rewrites every row** on older PostgreSQL versions (<11). Modern PG handles this in metadata only when the default is constant — but verify on your version. For variable defaults, use Expand-Contract (see `zero-downtime.md`).
 
 ---
 
@@ -339,7 +339,7 @@ databaseChangeLog:
           columnDataType: text
 ```
 
-🔴 **Renaming a column on a live system breaks any app pod still reading the old name.** Use Expand-Contract: add new column → dual-write → switch reads → drop old. See [zero-downtime.md](zero-downtime.md).
+🔴 **Renaming a column on a live system breaks any app pod still reading the old name.** Use Expand-Contract: add new column → dual-write → switch reads → drop old. See `zero-downtime.md`.
 
 ---
 

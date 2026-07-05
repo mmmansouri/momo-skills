@@ -175,10 +175,7 @@ else:
 
 ## When Performing the Review (Workflow)
 
-📚 **All gh CLI commands for the workflow below are documented in
-[gh-cli-fallback.md](references/gh-cli-fallback.md)** (the historical
-filename is preserved — gh is no longer a fallback, it is the canonical
-transport).
+📚 **When running any gh CLI command of the workflow below (auth, read ops, atomic submission, error recovery) → read [gh-cli-fallback.md](references/gh-cli-fallback.md).** (The historical filename is preserved — gh is no longer a fallback, it is the canonical transport.)
 
 ### Step 1 — Fetch PR info and detect mode
 ```bash

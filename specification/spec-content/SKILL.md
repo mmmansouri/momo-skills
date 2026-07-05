@@ -6,7 +6,7 @@ description: >-
   writing Acceptance Criteria, splitting a large User Story, choosing the right
   Jira labels (étiquettes), or running a quality gate before pushing to Jira.
   Project-agnostic: WHAT to write and how to judge it, not WHERE to write it
-  (that's `jira-adf` for ADF format and `<project>-jira` for project specifics).
+  (that's `jira-adf` for ADF format and the project's own `*-jira` skill for project specifics).
   Make sure to use this skill whenever the user mentions specs, user stories,
   acceptance criteria, story points, INVEST, story splitting, étiquettes,
   composant cible, or Jira labels — even if they don't say "spec-content"
@@ -95,7 +95,7 @@ Admin can export order reports as CSV
 
 ## When Structuring an Epic
 
-📚 **For full content guidance per section → read [epic-sections-guide.md](references/epic-sections-guide.md).**
+📚 **When writing the content of each Epic section → read [epic-sections-guide.md](references/epic-sections-guide.md).**
 
 Every Epic has the same six sections:
 
@@ -118,7 +118,7 @@ Every Epic has the same six sections:
 
 ## When Structuring a Refined Story
 
-📚 **For full content guidance per section → read [story-sections-guide.md](references/story-sections-guide.md).**
+📚 **When writing the content of each refined-Story section → read [story-sections-guide.md](references/story-sections-guide.md).**
 
 Every refined Story has the same seven sections:
 
@@ -143,7 +143,7 @@ Stories created during feature-planning are drafts — they will be refined late
 
 ## When Writing Acceptance Criteria
 
-📚 **For format examples (checklist vs Given/When/Then) and coverage patterns → read [acceptance-criteria-patterns.md](references/acceptance-criteria-patterns.md).**
+📚 **When writing the AC bullets and picking a format (checklist vs Given/When/Then) → read [acceptance-criteria-patterns.md](references/acceptance-criteria-patterns.md).**
 
 ### 🔴 BLOCKING — AC Structure
 
@@ -151,6 +151,8 @@ Stories created during feature-planning are drafts — they will be refined late
 - Each AC has **specific, verifiable bullets**.
 - ACs cover **happy path AND error / edge cases**.
 - **No vague language** ("works correctly", "handles errors properly", "is fast").
+
+**Why:** an AC without a numbered ID and concrete, verifiable bullets can't be mapped to a test or to diff evidence during functional review, so the Story ships with unprovable scope.
 
 ### 🟡 WARNING — AC Quality
 
@@ -187,7 +189,7 @@ Stories created during feature-planning are drafts — they will be refined late
 
 ## When Splitting a Large Story
 
-📚 **For the full sizing & splitting playbook (5 BLOCKING rules — vertical slice / 13 SP warning / demoable in isolation / 6-10 per Epic / E2E per macro-Story — plus SPIDR, Richard Lawrence's 9 patterns, the worked anti-pattern catalog, and the pre-push self-check) → read `common-story-sizing`.**
+📚 **When a Story trips the size ceiling (> 8 ACs or ≥ 13 SP) and you need the full sizing & splitting playbook → load the `common-story-sizing` skill (5 BLOCKING rules — vertical slice / 13 SP warning / demoable in isolation / 6-10 per Epic / E2E per macro-Story — plus SPIDR, Richard Lawrence's 9 patterns, the worked anti-pattern catalog, and the pre-push self-check).**
 
 If a Story has more than **8 ACs** or estimates at **≥ 13 story points**
 (Fibonacci-warning convention — see `common-story-sizing` Rule 2), try to split it
@@ -217,6 +219,8 @@ load `common-story-sizing`.
 - Each split Story must be **demoable in isolation** on the day its PR merges —
   no "wait until Story B is also merged" demos. See `common-story-sizing` Rule 3.
 - Each split Story must deliver value on its own (avoid "Part 1 / Part 2 / Part 3" if Part 1 alone delivers nothing observable).
+
+**Why:** a horizontal split leaves each fragment un-demoable and mutually blocking, so the Epic can't ship incrementally — the whole point of splitting is to release value Story by Story.
 
 ---
 
@@ -251,6 +255,8 @@ implementation. **A Story without a routing label is a planning gap.**
 - If a Story genuinely touches a component that has no mapping, do **not** apply an
   approximate label — propose adding the missing entry to the project's mapping
   and wait for the user's decision.
+
+**Why:** the orchestrator dispatches on the exact label string, so an invented or approximate label silently routes the implementation to the wrong codebase (or nowhere).
 
 ### Worked Example (project-agnostic)
 

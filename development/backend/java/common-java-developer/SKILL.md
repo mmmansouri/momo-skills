@@ -77,7 +77,9 @@ Leave stable code alone when:
 
 ### 🔴 BLOCKING
 - **Never catch generic `Exception`/`Throwable`** → Catch specific types
+  **Why:** a generic catch also swallows the `RuntimeException`s and programming errors you never meant to handle, hiding real bugs behind a handler written for something else.
 - **Never leave catch blocks empty** → Log or rethrow
+  **Why:** an empty catch discards the failure silently, so execution continues in a corrupted state and the root cause never surfaces in any log or trace.
 
 ### 🟢 BEST PRACTICE
 - **Use checked exceptions** for recoverable conditions (I/O, network, database)
@@ -108,6 +110,7 @@ catch (SQLException e) {
 
 ### 🔴 BLOCKING
 - **Mutable fields in records without defensive copy** → Use `List.copyOf()`
+  **Why:** the canonical constructor stores the caller's collection reference, so the caller can keep mutating it after construction — silently breaking the record's immutability and thread-safety guarantees.
 
 ```java
 // 🔴 WRONG - list can be modified externally
@@ -145,7 +148,9 @@ List<String> copy = List.copyOf(original);  // True copy - unaffected
 
 ### 🔴 BLOCKING
 - **Mutate shared state in streams** → Use `collect()` to new structure
+  **Why:** side-effecting into a shared collection is a data race under parallel execution and has undefined ordering even when sequential — `collect()` performs a well-defined, thread-safe reduction instead.
 - **Reuse a consumed stream** → Create new stream each time
+  **Why:** a stream is a single-use pipeline; its terminal operation consumes it, so touching it again throws `IllegalStateException`.
 
 ```java
 // 🔴 WRONG - mutating external state
@@ -184,8 +189,11 @@ stream.count();  // IllegalStateException!
 
 ### 🔴 BLOCKING
 - **`orElse(method())`** → Use `orElseGet(() -> method())` for lazy evaluation
+  **Why:** `orElse` eagerly evaluates its argument even when the Optional is present — a hidden cost or side effect on the happy path.
 - **`isPresent()` + `get()`** → Use `map().orElse()` chain
+  **Why:** the isPresent/get pair reintroduces the very null-check-then-dereference dance Optional exists to remove, and dropping the guard throws `NoSuchElementException`.
 - **`Optional.get()` directly** → Use `orElseThrow()`
+  **Why:** a bare `get()` on an empty Optional throws a contextless `NoSuchElementException`, whereas `orElseThrow()` documents intent and lets you supply a meaningful exception.
 
 ```java
 // 🔴 WRONG - expensiveMethod() ALWAYS called even if value present
@@ -217,6 +225,7 @@ optional.orElseThrow(() -> new NotFoundException(id));
 
 ### 🔴 BLOCKING
 - **Pool virtual threads** → Create new virtual thread per task
+  **Why:** virtual threads are cheap and designed to be created one-per-task; capping them in a fixed pool serializes work and reintroduces the exact thread-starvation limit they were built to remove.
 
 ```java
 // 🔴 WRONG - defeats the purpose of virtual threads
@@ -306,7 +315,7 @@ For the rest (Adapter, Decorator, Facade, Proxy, Composite, Flyweight, Chain of 
 
 ## When Writing Tests
 
-📚 **See `common-java-testing`** — single source of truth for JUnit 5, Mockito, AssertJ, Spring Boot 4 / Spring Framework 7 testing slices, Testcontainers, and the test-pyramid / Given-When-Then conventions.
+📚 **When writing or reviewing Java tests → load the `common-java-testing` skill** — single source of truth for JUnit 5, Mockito, AssertJ, Spring Boot testing slices, Testcontainers, and Given-When-Then conventions.
 
 ---
 
@@ -316,9 +325,13 @@ For the rest (Adapter, Decorator, Facade, Proxy, Composite, Flyweight, Chain of 
 
 ### 🔴 BLOCKING
 - **Never use MD5/SHA1 for passwords** → Use BCrypt (work factor 12+) or Argon2
+  **Why:** MD5/SHA1 are fast, general-purpose hashes — a GPU brute-forces billions per second, whereas BCrypt/Argon2 are deliberately slow and salted to resist offline cracking of a stolen hash table.
 - **Never hardcode secrets** → Use environment variables
+  **Why:** a secret committed to source is exposed forever in VCS history to anyone with repo access, and rotating it then requires a code change and redeploy.
 - **Never build SQL with string concatenation** → Use parameterized queries
+  **Why:** concatenating user input into a query lets an attacker inject SQL syntax; bind parameters keep data separate from the statement so input can never alter its structure.
 - **Never use `Random` for security tokens** → Use `SecureRandom`
+  **Why:** `java.util.Random` is a predictable linear-congruential PRNG whose future output can be reconstructed from a few samples, making its tokens guessable; `SecureRandom` draws from a cryptographic entropy source.
 
 ### 🟢 Algorithm Quick Reference
 | Need | Use |
@@ -383,9 +396,13 @@ module com.example.myapp {
 
 ### 🔴 BLOCKING (Performance Anti-Patterns)
 - **String concatenation in loops** → Use `StringBuilder`
+  **Why:** `String` is immutable, so `+=` allocates and copies a whole new character array every iteration — O(n²) time and garbage that a single `StringBuilder` buffer avoids.
 - **Boxed types in tight loops** → Use primitives
+  **Why:** autoboxing allocates a wrapper object per iteration and adds unboxing overhead, creating GC pressure that a primitive `int`/`long` avoids entirely.
 - **Unbounded caches** → Use `Caffeine` with max size
+  **Why:** a cache that never evicts grows with every unique key until it exhausts the heap — a slow but certain memory leak; a bounded eviction policy caps the footprint.
 - **ThreadLocal not cleaned in pooled threads** → Call `remove()`
+  **Why:** pooled threads are reused, so a `ThreadLocal` left set leaks its value into the next unrelated task and can pin a classloader, eventually causing `OutOfMemoryError`.
 
 ```bash
 # JFR - start recording

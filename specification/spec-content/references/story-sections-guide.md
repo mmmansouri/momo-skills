@@ -175,7 +175,7 @@ Bullet list of files to create or modify:
 **H2 heading:** `Acceptance Criteria`
 **H3 per AC:** `AC{N}: {Descriptive Title}`
 
-📚 **For format and coverage patterns → read [acceptance-criteria-patterns.md](acceptance-criteria-patterns.md).**
+For format and coverage patterns, see `acceptance-criteria-patterns.md`.
 
 ### Format
 

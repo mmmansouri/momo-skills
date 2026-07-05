@@ -94,7 +94,7 @@ Marks can be combined: `"marks": [{ "type": "strong" }, { "type": "code" }]` →
 
 ## When Building an Epic Description
 
-📚 **For the ready-to-fill ADF template (full Epic with all 6 sections including Story Breakdown table) → read [adf-templates.md §Epic Description Template](references/adf-templates.md#epic-description-template).**
+📚 **When building the full Epic description ADF (all 6 sections including the Story Breakdown table) → read [adf-templates.md §Epic Description Template](references/adf-templates.md#epic-description-template).**
 
 ### 🔴 BLOCKING — Required Section Structure
 
@@ -109,6 +109,8 @@ Every Epic description must contain these ADF sections (content rules → see `s
 | 5 | **Dependencies** | `heading` L2 + `bulletList` |
 | 6 | **Open Questions** | `heading` L2 + `bulletList` (omit section if none) |
 
+**Why:** downstream tooling re-parses these exact sections back out of the Epic ADF — the Story Breakdown table drives draft-Story creation — so a renamed or missing section makes the Epic non-replayable.
+
 ### 🟢 BEST PRACTICE — Readability
 
 - Insert `rule` nodes between major sections for visual separation.
@@ -121,7 +123,7 @@ Every Epic description must contain these ADF sections (content rules → see `s
 
 ### Draft Story (Feature Planning Output)
 
-📚 **For the ready-to-fill ADF template (minimal draft with "To be refined" panel) → read [adf-templates.md §Draft Story Template](references/adf-templates.md#draft-story-template).**
+📚 **When building the draft Story description ADF (minimal body with the "To be refined" panel) → read [adf-templates.md §Draft Story Template](references/adf-templates.md#draft-story-template).**
 
 Minimal content:
 
@@ -130,7 +132,7 @@ Minimal content:
 
 ### Refined Story (Story Refinement Output)
 
-📚 **For the full ready-to-fill ADF template (Context, Functional Spec, Technical Spec with API Endpoints + Data Model tables, ACs, Technical Notes, Out of Scope, Dependencies) → read [adf-templates.md §Refined Story Template](references/adf-templates.md#refined-story-template).**
+📚 **When building the refined Story description ADF (Context, Functional Spec, Technical Spec with API Endpoints + Data Model tables, ACs, Technical Notes, Out of Scope, Dependencies) → read [adf-templates.md §Refined Story Template](references/adf-templates.md#refined-story-template).**
 
 ### 🔴 BLOCKING — Required Section Structure
 
@@ -144,9 +146,11 @@ Minimal content:
 | 6 | **Out of Scope** | `heading` L2 + `bulletList` |
 | 7 | **Dependencies** | `heading` L2 + `bulletList` with `link` marks (omit if empty) |
 
+**Why:** the refinement and functional-review tooling reads these exact sections back from the Story ADF; a missing or renamed section breaks that re-read and hides scope from implementers.
+
 ### E2E Companion Story
 
-📚 **For the ready-to-fill ADF template (Context + Test Scenarios mapped 1:1 to source Story ACs) → read [adf-templates.md §E2E Companion Story Template](references/adf-templates.md#e2e-companion-story-template).**
+📚 **When building the E2E companion Story ADF (Context + Test Scenarios mapped 1:1 to source Story ACs) → read [adf-templates.md §E2E Companion Story Template](references/adf-templates.md#e2e-companion-story-template).**
 
 Minimal content:
 
@@ -169,7 +173,9 @@ bulletList:
   - listItem with paragraph: "Error / edge case handling"
 ```
 
-📚 **For multiple AC examples (checklist, Given/When/Then, error cases, edge cases) → read [adf-templates.md §AC Templates](references/adf-templates.md#ac-block-template).**
+**Why:** the functional-review tooling maps each `AC{N}` heading to evidence in the diff; a non-uniform AC block can't be parsed, so coverage checking silently fails.
+
+📚 **When building the AC blocks in ADF (checklist, Given/When/Then, error cases, edge cases) → read [adf-templates.md §AC Templates](references/adf-templates.md#ac-block-template).**
 
 ### Quality Rules
 

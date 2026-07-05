@@ -2,7 +2,7 @@
 
 > Type-level programming and real-world patterns. For built-in utility types
 > (`Partial`, `Pick`, `Omit`, `Awaited`, `NoInfer`, etc.) and custom helpers
-> (`DeepPartial`, `Mutable`, `ValueOf`), read [utility-types.md](utility-types.md).
+> (`DeepPartial`, `Mutable`, `ValueOf`), see `utility-types.md`.
 
 ## Table of Contents
 

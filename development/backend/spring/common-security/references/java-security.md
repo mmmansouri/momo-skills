@@ -333,7 +333,7 @@ Constructor signature: `Argon2PasswordEncoder(saltLength, hashLength, parallelis
 | **BCrypt** | `new BCryptPasswordEncoder(10)` — work factor ≥ 10 |
 | **PBKDF2** (FIPS) | `new Pbkdf2PasswordEncoder("", 16, 600000, PBKDF2WithHmacSHA256)` — ≥ 600 000 iter |
 
-For a `DelegatingPasswordEncoder` that supports algorithm migration, see [spring-security.md#password-encoders](spring-security.md#password-encoders) (sibling reference in this skill).
+For a `DelegatingPasswordEncoder` that supports algorithm migration, see `spring-security.md` § Password Encoders (sibling reference in this skill).
 
 ---
 

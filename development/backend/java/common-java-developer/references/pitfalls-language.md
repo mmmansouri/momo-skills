@@ -1,7 +1,7 @@
 # Java Language Pitfalls & Anti-Patterns
 
 > Language-level pitfalls — `Optional`, Streams, Records, and general Java anti-patterns.
-> Runtime / concurrency / framework pitfalls live in [pitfalls-runtime.md](pitfalls-runtime.md).
+> Runtime / concurrency / framework pitfalls live in `pitfalls-runtime.md`.
 
 ---
 
@@ -33,9 +33,9 @@
 
 ### Related References
 
-- **Security anti-patterns**: See [security.md](security.md) for password hashing, encryption, and SQL injection
+- **Security anti-patterns**: see `security.md` for password hashing, encryption, and SQL injection
 - **Testing anti-patterns**: load the `common-java-testing` skill (shared test state and mocking rules)
-- **Concurrency guidance**: See [concurrency.md](concurrency.md) for virtual thread patterns
+- **Concurrency guidance**: see `concurrency.md` for virtual thread patterns
 
 ---
 

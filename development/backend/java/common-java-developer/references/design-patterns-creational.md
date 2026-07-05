@@ -270,4 +270,4 @@ public class ConfigManager {
 
 ### 🔴 Avoid: Double-Checked Locking without `volatile`
 
-**Why:** Without `volatile`, JIT instruction reordering can publish a partially-constructed instance to another thread. Use enum or static holder instead. See [pitfalls-runtime.md](pitfalls-runtime.md#-double-checked-locking-without-volatile) for the full anti-pattern.
+**Why:** Without `volatile`, JIT instruction reordering can publish a partially-constructed instance to another thread. Use enum or static holder instead. See `pitfalls-runtime.md` § Double-Checked Locking without `volatile` for the full anti-pattern.

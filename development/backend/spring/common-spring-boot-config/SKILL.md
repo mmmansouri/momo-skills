@@ -23,8 +23,7 @@ failure modes where the application boots but behaves silently wrong (overridden
 YAML keys, ignored AOP annotations, retries that never trigger, beans missing
 when a feature flag flips).
 
-📚 **When debugging any of the pitfalls below, or reviewing a Spring Boot
-configuration file or AOP-annotated bean → read [spring-boot-config-pitfalls.md](references/spring-boot-config-pitfalls.md).**
+📚 **When diagnosing a silently-overridden YAML property, an @Async / @Retry / @Transactional / @Cacheable annotation that seems ignored, a Resilience4j retry that never fires, or an @ConditionalOnProperty chain that breaks → read [spring-boot-config-pitfalls.md](references/spring-boot-config-pitfalls.md).**
 
 ---
 

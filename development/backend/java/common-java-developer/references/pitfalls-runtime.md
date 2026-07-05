@@ -1,7 +1,7 @@
 # Java Runtime, Concurrency & Framework Pitfalls
 
 > Runtime-level pitfalls — virtual threads, memory leaks, concurrency bugs, Spring AOP proxies.
-> Language-level pitfalls (Optional / Stream / Record / generic anti-patterns) live in [pitfalls-language.md](pitfalls-language.md).
+> Language-level pitfalls (Optional / Stream / Record / generic anti-patterns) live in `pitfalls-language.md`.
 
 ---
 

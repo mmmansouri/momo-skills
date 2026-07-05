@@ -365,7 +365,7 @@ liquibase --contextFilter=pre-deploy update    # Stage 1
 liquibase --contextFilter=post-deploy update   # Stage 2
 ```
 
-This forces the Expand-Contract pattern at the pipeline level — see [zero-downtime.md](zero-downtime.md).
+This forces the Expand-Contract pattern at the pipeline level — see `zero-downtime.md`.
 
 ---
 

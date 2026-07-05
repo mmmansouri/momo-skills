@@ -383,7 +383,7 @@ class OrderControllerE2ETest {
 
 `@MockitoBean` is **not** supported on `@Configuration` or `@Component` classes (unlike the old `@MockBean`). Place it only on test classes.
 
-📚 More details on bean overrides: [spring-boot-testing.md](spring-boot-testing.md#bean-overrides)
+📚 More details on bean overrides: see `spring-boot-testing.md` § Bean Overrides.
 
 ### Prefer Constructor Injection
 
