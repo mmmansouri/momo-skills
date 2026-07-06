@@ -35,11 +35,12 @@ description: >-
 The context window is a **public good**. Claude is already very smart — only add context it doesn't already have.
 **Why:** every paragraph a skill loads competes with the user's actual task; content Claude can regenerate natively is pure cost.
 
-Challenge each piece of information:
-- "Does Claude really need this explanation?"
-- "Does this paragraph justify its token cost?"
+Challenge each piece: "Does Claude really need this explanation?" / "Does it justify its token cost?" ✅ Prefer concise examples over verbose explanations.
 
-✅ **Prefer concise examples over verbose explanations.**
+### 🔴 Don't Re-teach Native Knowledge
+
+Never re-teach what the model already knows natively (GoF pattern bodies, WCAG, HTTP semantics, language basics). Keep only decision tables (scenario → choice) and house rules the model cannot guess.
+**Why:** re-taught fundamentals cost tokens at every load and go stale silently, while the model's native knowledge is free and current.
 
 ### 🔴 Set Appropriate Degrees of Freedom
 
@@ -80,9 +81,10 @@ Three-level loading system:
 Skills must not contain malware, exploit code, or any content that could compromise system security. A skill's contents should not surprise the user in their intent if described. Don't go along with requests to create misleading skills or skills designed to facilitate unauthorized access, data exfiltration, or other malicious activities. Things like a "roleplay as an XYZ" are OK though.
 **Why:** skill bodies execute with the user's full trust and permissions; hidden intent is indistinguishable from an attack.
 
-### Composability
+### 🔴 Single Owner Across Skills
 
-Skills can load simultaneously. Design yours to work alongside others — don't assume it's the only capability available.
+Skills load simultaneously — design yours to compose with others, never assuming it's the only capability available. Each piece of knowledge has exactly ONE owning skill; other skills point to it ("load `<skill>` and read its `references/<file>.md`"), never copy it.
+**Why:** cross-skill copies drift independently and double token cost; an agent loading both gets contradictory guidance with no signal for which copy is current.
 
 ---
 
@@ -391,7 +393,7 @@ Skills tuned only for Opus often under-guide Haiku.
 | **Information dump** (500 lines of prose) | agent gets lost, skips content | use tables, bullets, WRONG/CORRECT pairs |
 | **No priority indicators** | everything looks equally important | add 🔴/🟡/🟢 severity markers |
 | **References only at bottom, or bare links** | agent sees the link too late, or without knowing *when* to read it | put 📚 at section start using `📚 **When <trigger> → read <ref>**` |
-| **Duplicate content** (SKILL.md AND references/) | wasted tokens, content drifts apart | content in ONE place only |
+| **Duplicate content** (SKILL.md AND references/, or copied across skills) | wasted tokens, copies drift apart | ONE place only — single owning skill, others point to it |
 | **Generic section names** ("Best Practices") | agent doesn't know when to apply | use "When X" naming (structural exemptions above) |
 | **Vague instructions** ("validate properly") | Claude interprets loosely | be specific, use scripts |
 | **Passive/conditional voice** ("You should...") | agent treats it as optional | use imperative mood ("Validate...", "Add...") |
@@ -411,9 +413,7 @@ Skills tuned only for Opus often under-guide Haiku.
 - **Comprehensive** (full guide) — 300–500 lines ; 3–6 reference files
 
 ### If SKILL.md > 500 lines
-1. Extract detailed examples to references/
-2. Keep only WRONG/CORRECT pairs in SKILL.md
-3. Consider splitting into multiple skills
+Extract detailed examples to references/, keep only WRONG/CORRECT pairs in SKILL.md, or split into multiple skills.
 
 ---
 
@@ -463,6 +463,7 @@ notes: "<free-form context, optional>"
 - [ ] Every negation includes a concrete alternative
 - [ ] Content uses hierarchical indented structure (Section > Rule > Detail)
 - [ ] Every 🔴 BLOCKING **named rule** has a `**Why:**` line (recap checklists, legends, templates exempt)
+- [ ] No re-taught native knowledge (decision tables + house rules only); duplicated topics have a single owning skill
 - [ ] Output contract defined (schema/template/worked example) if skill produces content
 - [ ] End-to-end Input→Output example included (not only rule-level WRONG/CORRECT)
 - [ ] If skill bundles scripts: each handles errors explicitly + no voodoo constants + execute-vs-read intent stated
