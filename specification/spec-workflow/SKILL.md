@@ -53,9 +53,15 @@ script path, status name or DTO convention is delegated to the project's own
 📚 **When writing the body of the Epic description (Context, Scope, Technical Approach, Story Breakdown, Dependencies, Open Questions) → load the `spec-content` skill and read its references/epic-sections-guide.md.**
 
 1. Write the Epic description section by section (content guidance in `spec-content`).
-2. **Decompose into Stories** following these rules :
-   - Split by **component** first (one label per Story — see `spec-content` §"When Setting Labels").
-   - Within a component, split by **functional area** or **CRUD operation**.
+2. **Decompose into Stories** — sizing and splitting are owned by the
+   `common-story-sizing` skill (load it): apply its six BLOCKING rules
+   (vertical slice, SP caps, demoable-in-isolation, Story-count band,
+   1 E2E per macro-Story, runner-budget) and its SPIDR / Lawrence split
+   catalogue. Never split mechanically by component / layer / CRUD
+   operation — that yields horizontal slices that fail its Rules 1 and 3.
+   - One label per Story still holds (`spec-content` §"When Setting Labels");
+     when a genuinely vertical slice spans two components, split it along
+     the component seam into linked Stories.
    - Each Story must satisfy INVEST (`spec-content` §"When Writing a User Story").
    - Order Stories by **dependency** (API Stories before UI Stories that consume them).
    - Mark each Story as **parallelizable** or **blocked-by**.

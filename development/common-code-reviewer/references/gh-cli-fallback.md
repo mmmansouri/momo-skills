@@ -1,8 +1,8 @@
 # GitHub CLI Reference for Code Review
 
 > This is the **primary** reference for posting reviews via the GitHub REST
-> API using the `gh` CLI. The MCP path has been retired (see SKILL.md
-> §"When Posting a Review" for the rationale).
+> API using the `gh` CLI. The MCP path has been retired (see the
+> **Transport** note in SKILL.md's header for the rationale).
 >
 > The historical filename `gh-cli-fallback.md` is preserved so that legacy
 > links keep working — but `gh` is no longer a fallback, it is the canonical

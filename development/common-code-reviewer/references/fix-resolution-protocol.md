@@ -57,6 +57,13 @@ are decoupled by design: the fix author cannot self-certify a fix as
 valid. Re-review (`Step 2B` of the parent skill) reads the checkbox,
 re-verifies against the current code, and *then* resolves the thread.
 
+> **Host projects may override the thread-resolution step.** When the
+> reviewer identity lacks the `resolveReviewThread` GraphQL scope (common
+> for narrowly-scoped GitHub Apps), a host project may skip resolution
+> entirely and drive its verdicts from checkbox counting alone. The
+> checkbox contract in this file is unaffected — only the cosmetic
+> resolution step is host-overridable.
+
 **Identity note (GitHub Apps vs user PATs):** a GitHub **App** installation
 token with `pull_requests: write` can edit review comments AND reviews
 authored by a **different** actor — authorship is *not* required for App
