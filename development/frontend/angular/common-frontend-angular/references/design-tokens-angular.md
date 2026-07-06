@@ -1,51 +1,14 @@
-# Design Tokens in Angular
+# Design Tokens in Angular — Material Integration
 
-> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
-> See also: `common-frontend-design` skill for token definitions and design system principles.
+> Token definitions, naming, category scales, and the never-hardcode rule are **owned by the `common-frontend-design` skill** — load it. This file covers only the Angular-specific consumption: Material palette wiring, component SCSS usage, and light/dark theme switching.
 
 ## Table of Contents
 
-- [Use CSS Variables, Not Hardcoded Values](#use-css-variables-not-hardcoded-values)
-- [Token Categories](#token-categories)
 - [Integration with Angular Material](#integration-with-angular-material)
 - [Component with Design Tokens](#component-with-design-tokens)
-- [Responsive Design with Tokens](#responsive-design-with-tokens)
 - [Theming Support (Light/Dark)](#theming-support-lightdark)
 
 ---
-
-## Use CSS Variables, Not Hardcoded Values
-
-```scss
-// ❌ WRONG - Hardcoded values
-.button {
-  background-color: #22c55e;
-  padding: 16px;
-  border-radius: 8px;
-  font-size: 16px;
-  color: #ffffff;
-}
-
-// ✅ CORRECT - Design tokens via CSS variables
-.button {
-  background-color: var(--color-primary-500);
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  font-size: var(--text-base);
-  color: var(--color-white);
-}
-```
-
-## Token Categories
-
-| Category | CSS Variable Pattern | Example |
-|----------|---------------------|---------|
-| Colors | `--color-{name}-{shade}` | `--color-primary-600` |
-| Spacing | `--space-{size}` | `--space-8` (32px) |
-| Typography | `--text-{size}` | `--text-lg` |
-| Border Radius | `--radius-{size}` | `--radius-lg` |
-| Shadows | `--shadow-{size}` | `--shadow-md` |
-| Breakpoints | `--breakpoint-{size}` | `--breakpoint-lg` |
 
 ## Integration with Angular Material
 
@@ -94,33 +57,11 @@ $my-theme: mat.define-light-theme((
   color: var(--color-text-primary);
   margin-bottom: var(--space-2);
 }
-
-.item-card__price {
-  font-size: var(--text-lg);
-  color: var(--color-primary-600);
-  font-weight: var(--font-bold);
-}
-```
-
-## Responsive Design with Tokens
-
-```scss
-@media (min-width: 768px) {  // --breakpoint-md
-  .item-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-6);
-  }
-}
-
-@media (min-width: 1024px) {  // --breakpoint-lg
-  .item-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-8);
-  }
-}
 ```
 
 ## Theming Support (Light/Dark)
+
+Theme token *values* (palettes per theme) are defined in `common-frontend-design`; the Angular mechanics:
 
 ```scss
 :root {

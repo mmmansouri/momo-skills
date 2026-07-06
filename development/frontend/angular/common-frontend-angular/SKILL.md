@@ -298,21 +298,9 @@ onSubmit() {
 
 ## When Applying Design Tokens
 
-📚 **When styling components with CSS variables, integrating Angular Material with tokens, or wiring light/dark theme switching → read [design-tokens-angular.md](references/design-tokens-angular.md).**
+Token definitions, naming, and the never-hardcode 🔴 rule are **owned by the `common-frontend-design` skill** — load it when styling.
 
-### 🔴 BLOCKING
-
-#### Use CSS variables, never hardcoded colors / spacing / typography
-**Why:** hardcoded values fork the design system the moment a theme switch is needed. Variables let dark mode, brand re-skinning, and accessibility tweaks happen by changing one `:root` block instead of grepping the codebase. Every value the design team owns must live in a token.
-
-##### WRONG
-```scss
-.button { background-color: #22c55e; padding: 16px; border-radius: 8px; }
-```
-##### CORRECT
-```scss
-.button { background-color: var(--color-primary-500); padding: var(--space-4); border-radius: var(--radius-md); }
-```
+📚 **When integrating Angular Material palettes with tokens or wiring light/dark theme switching → read [design-tokens-angular.md](references/design-tokens-angular.md).**
 
 ---
 
