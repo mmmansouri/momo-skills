@@ -268,8 +268,7 @@ SoftAssertions.assertSoftly(softly -> {
 
 ### 🔴 BLOCKING
 
-- **Use `@MockitoBean`, not `@MockBean`** — `@MockBean` was removed in Spring Boot 4.0
-- **Use `@MockitoSpyBean`, not `@SpyBean`** — same removal
+- **Use `@MockitoBean` / `@MockitoSpyBean`, not `@MockBean` / `@SpyBean`, on Boot 3.4+** — version boundary: `@MockitoBean` exists since Spring Framework 6.2 (Boot 3.4); `@MockBean`/`@SpyBean` are deprecated on Boot 3.4–3.x and **removed in Boot 4.0**. On Boot ≤3.3 only `@MockBean` exists.
 - **Use `@ServiceConnection`, not `@DynamicPropertySource`** for Testcontainers wiring
 
 **Why:** `@MockBean` / `@SpyBean` were Spring Boot extensions; Spring Framework 6.2 promoted them to first-class framework annotations (`@MockitoBean` / `@MockitoSpyBean`) and Boot 4 removed the deprecated names.

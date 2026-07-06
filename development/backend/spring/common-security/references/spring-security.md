@@ -608,6 +608,8 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
 ### RFC 7807 Problem Details
 
+> The RFC 7807 envelope itself is owned by `common-rest-api` (load it and read its `references/rest-errors-rfc7807.md`). Below is only how to emit one from a security filter, where `@RestControllerAdvice` can't run.
+
 ```java
 @Component
 public class SecurityProblemDetailsHandler implements

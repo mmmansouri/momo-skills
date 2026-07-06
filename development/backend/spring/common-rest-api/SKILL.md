@@ -46,6 +46,13 @@ DELETE /orders/123            POST /deleteOrder
 🔴 /customer  · /order  · /product
 ```
 
+### 🟡 URI cosmetics — lowercase, hyphens, no extensions, no trailing slash
+
+```
+✅ /user-profiles · /order-items · /orders/123
+🔴 /UserProfiles  · /order_items · /orders/123.json · /orders/
+```
+
 ### 🟡 Limit nesting depth to 2-3 levels
 
 Beyond two levels, prefer top-level resources with query parameters over deeper paths.
@@ -68,8 +75,6 @@ GET /products?fields=id,name,price
 ---
 
 ## When Choosing HTTP Methods and Status Codes
-
-📚 **When picking a status code outside the common cases below, or needing the full per-method status-code matrix and 4xx / 5xx catalog → read [rest-uris-methods-status.md](references/rest-uris-methods-status.md).**
 
 ### 🔴 BLOCKING — Method must match its semantics (safety + idempotence)
 
@@ -95,6 +100,8 @@ Key rules to keep in mind without re-reading the full reference:
 - **GET / PUT / PATCH that returns no body → 204 No Content**
 - **400 = malformed request** ; **422 = valid syntax but semantic error** ; **409 = business-rule conflict**
 - **401 = not authenticated** ; **403 = authenticated but forbidden**
+
+Status codes beyond these cases follow standard RFC 9110 semantics — intentionally not restated here.
 
 ---
 
@@ -160,7 +167,7 @@ Key rules to keep in mind without re-reading the full reference:
 
 📚 **When implementing offset or cursor pagination with Spring Data `Pageable` / a custom `PageResponse` → read [spring-pagination-hateoas.md](references/spring-pagination-hateoas.md).**
 
-📚 **When choosing between offset and cursor pagination, or designing sort / filter / sparse-fieldset query-param conventions → read [rest-pagination-filtering-versioning.md](references/rest-pagination-filtering-versioning.md).**
+📚 **When designing sort / filter / sparse-fieldset query-param conventions, or shaping offset / cursor response envelopes → read [rest-pagination-filtering.md](references/rest-pagination-filtering.md).**
 
 ### 🔴 BLOCKING — Never return unbounded collections
 
@@ -180,8 +187,6 @@ Rule of thumb: under 10k rows → offset is fine ; over 10k or real-time feed �
 ---
 
 ## When Versioning APIs
-
-📚 **When comparing URI / header / media-type / query versioning trade-offs in depth → read [rest-pagination-filtering-versioning.md](references/rest-pagination-filtering-versioning.md).**
 
 📚 **When wiring Spring Framework 7's `@ApiVersion` / `ApiVersionConfigurer` → read [spring-rest-clients.md](references/spring-rest-clients.md).**
 
@@ -296,7 +301,7 @@ Minimum:
 - [ ] ETag + `Cache-Control` on cacheable GETs
 - [ ] Rate-limit headers (`X-RateLimit-*`, `Retry-After`) on 429 responses
 
-📚 **When adding HATEOAS links, ETag / `Cache-Control` headers, or `X-RateLimit-*` / `Retry-After` headers → read [rest-hypermedia-caching-async.md](references/rest-hypermedia-caching-async.md).**
+📚 **When adding HATEOAS links, async `202 Accepted` job endpoints, or `X-RateLimit-*` / `Retry-After` headers → read [rest-hypermedia-async.md](references/rest-hypermedia-async.md).**
 
 📚 **When implementing HATEOAS with Spring (`EntityModel`, `CollectionModel`, `PagedModel`), ETag caching, or async endpoints → read [spring-pagination-hateoas.md](references/spring-pagination-hateoas.md).**
 

@@ -346,7 +346,7 @@ void shouldChargeCustomer() {
 
 ### 🔴 BLOCKING — Use `@MockitoBean`, Not `@MockBean`
 
-**Why:** `@MockBean` and `@SpyBean` were Spring Boot extensions; Spring Framework 6.2 promoted them to first-class framework annotations (`@MockitoBean` / `@MockitoSpyBean`) and Spring Boot 4 **removed** the deprecated names. New tests must use the framework annotations.
+**Why:** `@MockBean` and `@SpyBean` were Spring Boot extensions; Spring Framework 6.2 promoted them to first-class framework annotations (`@MockitoBean` / `@MockitoSpyBean`) and Spring Boot 4 **removed** the deprecated names. New tests must use the framework annotations. Version boundary: `@MockitoBean` exists since Boot 3.4 (SF 6.2); on Boot ≤3.3 only `@MockBean` exists.
 
 ### Annotation Selection
 

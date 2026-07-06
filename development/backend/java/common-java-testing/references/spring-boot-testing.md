@@ -22,7 +22,7 @@
 
 ## Bean Overrides
 
-Spring Framework 6.2 promoted bean override annotations from Spring Boot to the framework itself. Spring Boot 4 **removed** the deprecated `@MockBean` / `@SpyBean`.
+Spring Framework 6.2 promoted bean override annotations from Spring Boot to the framework itself. Spring Boot 4 **removed** the deprecated `@MockBean` / `@SpyBean`. Version boundary: `@MockitoBean` exists since Boot 3.4 (SF 6.2); on Boot ≤3.3 only `@MockBean` exists.
 
 ### 🔴 BLOCKING — Always Use the Framework Annotations
 

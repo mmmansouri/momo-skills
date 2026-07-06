@@ -153,7 +153,7 @@ class OrderControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private OrderService orderService;
 
     @Autowired

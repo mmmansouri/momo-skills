@@ -23,8 +23,6 @@ failure modes where the application boots but behaves silently wrong (overridden
 YAML keys, ignored AOP annotations, retries that never trigger, beans missing
 when a feature flag flips).
 
-📚 **When diagnosing a silently-overridden YAML property, an @Async / @Retry / @Transactional / @Cacheable annotation that seems ignored, a Resilience4j retry that never fires, or an @ConditionalOnProperty chain that breaks → read [spring-boot-config-pitfalls.md](references/spring-boot-config-pitfalls.md).**
-
 ---
 
 ## When Writing application.yml / application-{profile}.yml
@@ -35,11 +33,23 @@ Each root key (`spring:`, `server:`, `management:`, etc.) must appear **only onc
 
 **Why** : YAML 1.2 spec resolves duplicate mapping keys by keeping the last occurrence; the entire first block is discarded with no warning. A `spring.datasource` block followed 200 lines later by another `spring:` block deletes the datasource config — the app fails at runtime with no compile-time signal.
 
+**Detection** : grep for `^spring:` (or any root key) — it must appear only once per file; IDE YAML plugins (IntelliJ) warn on duplicates; `yq` can detect them in CI.
+
 ### 🔴 BLOCKING — Production-safe defaults in base config
 
 Every property in base `application.yml` applies to **all profiles, including production**. Dev-friendly defaults (`thymeleaf.cache: false`, test mail servers, debug flags) belong in `application-dev.yml` only.
 
 **Why** : a forgotten `cache: false` in base config silently degrades production performance for the lifetime of the deployment. Profile files are the only place where dev-only behavior cannot leak.
+
+| Property Type | Where to Define | Examples |
+|---------------|----------------|---------|
+| Structural (ports, paths, changelog) | Base `application.yml` | `server.port`, `spring.liquibase.change-log` |
+| Dev conveniences | `application-dev.yml` ONLY | `spring.thymeleaf.cache: false` |
+| Test config | `application-test.yml` ONLY | `spring.mail.host: smtp.mailtrap.io` |
+| Security/secrets | Env vars or secret store | `spring.mail.password`, API keys |
+| Feature flags | Profile-specific files | `app.feature.x.enabled` |
+
+**Review rule** : for every property in base `application.yml`, ask — "Is this safe for production as-is?"
 
 ---
 
@@ -48,6 +58,13 @@ Every property in base `application.yml` applies to **all profiles, including pr
 ### 🟡 WARNING — Never stack two AOP annotations on the same method
 
 Each annotation creates its own proxy layer. Stacking them produces unpredictable proxy ordering. Calling an annotated method from **inside the same class** bypasses the proxy entirely.
+
+| Combination | Safe? | Why |
+|-------------|-------|-----|
+| `@Transactional` + `@Async` on same method | **NO** | `@Async` runs in new thread; `@Transactional` context is lost |
+| `@Retry` + `@Async` on same method | **NO** | Retry wraps the async submission, not the actual execution |
+| `@Transactional` on caller + `@Async` on separate bean | YES | Separate proxy beans, clear boundaries |
+| `@Retry` on one bean + `@Async` on another | YES | Each annotation on its own bean method |
 
 **Pattern** : delegate between separate beans — one bean per AOP concern.
 
@@ -66,6 +83,22 @@ public class AsyncEmailSender {
         retryService.sendWithRetry(to);
     }
 }
+```
+
+**Self-invocation trap** — a direct call from inside the same class never goes through the proxy:
+
+```java
+// 🔴 WRONG — @Async silently ignored
+@Service
+public class OrderService {
+    public void processOrder(UUID id) {
+        sendNotification(id);  // Direct call, NOT through proxy!
+    }
+    @Async
+    public void sendNotification(UUID id) { ... }  // @Async never activates
+}
+
+// ✅ CORRECT — move the annotated method to a separate bean and inject it
 ```
 
 ---
@@ -103,6 +136,14 @@ public class EmailConfig { ... }
 
 @Service
 @ConditionalOnProperty(prefix = "app.email", name = "enabled", havingValue = "true")
+public class EmailService { ... }
+```
+
+**Alternative** : guard dependents with `@ConditionalOnBean` instead of repeating the property condition:
+
+```java
+@Service
+@ConditionalOnBean(JavaMailSender.class)  // Only created if mailSender bean exists
 public class EmailService { ... }
 ```
 

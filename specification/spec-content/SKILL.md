@@ -196,31 +196,11 @@ If a Story has more than **8 ACs** or estimates at **≥ 13 story points**
 using a **vertical** technique (SPIDR or Lawrence patterns). If no vertical split
 exists, keep it at 13 SP — never force a horizontal split.
 
-### Splitting Strategies — Quick Reference
-
-| Strategy | Description | Example |
-|---|---|---|
-| **By workflow step** | Split along process steps | Checkout: address → payment → confirmation |
-| **By data variation** | Split by entity type | CRUD products vs CRUD categories |
-| **By operation** | Split CRUD operations | Create product, Update product, Delete product |
-| **By user role** | Split by actor | Customer views orders vs Admin manages orders |
-| **By component** | Split by app / codebase | Backend API vs Frontend UI vs Admin UI |
-
-These five high-level strategies stay project-agnostic. For the deeper toolbox
-(SPIDR — Spike / Path / Interface / Data / Rules — and Lawrence's nine patterns)
-load `common-story-sizing`.
-
-### 🔴 BLOCKING — Splitting Quality
-
-- Each resulting Story must still satisfy INVEST independently.
-- Each split Story must be a **vertical slice** (touches all layers needed to
-  deliver observable behaviour). Horizontal splits ("rewrite DTOs", "add
-  migration", "rename entity") are forbidden — see `common-story-sizing` Rule 1.
-- Each split Story must be **demoable in isolation** on the day its PR merges —
-  no "wait until Story B is also merged" demos. See `common-story-sizing` Rule 3.
-- Each split Story must deliver value on its own (avoid "Part 1 / Part 2 / Part 3" if Part 1 alone delivers nothing observable).
-
-**Why:** a horizontal split leaves each fragment un-demoable and mutually blocking, so the Epic can't ship incrementally — the whole point of splitting is to release value Story by Story.
+The split-technique toolbox (workflow-step / operation / data-variation / role /
+component strategies, SPIDR, Lawrence's 9 patterns) and the splitting-quality
+rules (vertical slice, demoable in isolation, value on its own) are **owned by
+`common-story-sizing`** — load it; this skill keeps only the trigger above and
+the INVEST table.
 
 ---
 
@@ -292,7 +272,7 @@ Before saving the Story:
 |---|---|---|
 | **Developer Story** | "Refactor X" has no user value | Reframe: what user benefit does the refactor enable? Or convert to a Task under the Epic. |
 | **Vague ACs** | "Should work properly" | Replace with specific, testable criteria |
-| **Giant Story** | 10+ ACs, cannot finish in one sprint | Split using strategies above |
+| **Giant Story** | 10+ ACs, cannot finish in one sprint | Split using `common-story-sizing` strategies |
 | **Missing dependencies** | Blocked mid-sprint | List all dependencies in description |
 | **Missing routing label** | Orchestrator can't dispatch the work | Add a label from `<project>-jira/references/<project>-labels.md` |
 | **Multiple routing labels** | Story touches several codebases at once | Split by component and link with "Relates" |

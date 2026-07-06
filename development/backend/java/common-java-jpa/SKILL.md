@@ -2,7 +2,7 @@
 name: common-java-jpa
 description: >-
   JPA, Hibernate 7.x, and Spring Data JPA 4.x best practices for Spring Boot 4.x
-  / Spring Framework 7.x projects on Java 25 (Jakarta Persistence 3.2).
+  / Spring Framework 7.x projects (Java 17 minimum, tested with Java 25; Jakarta Persistence 3.2).
   Use when: designing entities, mapping relationships (@ManyToOne/@OneToMany),
   implementing equals/hashCode, optimizing queries (N+1, JOIN FETCH, @EntityGraph),
   configuring batch processing, second-level cache, soft-delete, keyset pagination
@@ -10,15 +10,17 @@ description: >-
   @Entity, @Repository, EntityManager, or spring-data-jpa, or when reviewing a PR touching these elements.
 ---
 
-# JPA Developer Guide — Spring Boot 4 / Hibernate 7 / Java 25
+# JPA Developer Guide — Spring Boot 4 / Hibernate 7
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 >
-> **Stack baseline (May 2026):**
+> **Stack baseline:**
 > - Spring Boot **4.0+**, Spring Framework **7.0+**
 > - Spring Data JPA **4.0**, Hibernate ORM **7.1+**
 > - Jakarta Persistence **3.2** (Jakarta EE 11)
-> - Java **25 LTS**, HikariCP **7.0**
+> - Java **17 minimum** (tested with Java 25), HikariCP **7.0**
+>
+> Rules tied to a newer version are tagged inline (e.g. `[Hibernate 7]`, `(Spring Data JPA 4)`).
 
 ---
 

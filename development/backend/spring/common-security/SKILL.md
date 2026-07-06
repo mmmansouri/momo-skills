@@ -1,8 +1,8 @@
 ---
 name: common-security
 description: >-
-  Application security guide for Spring Boot 4 / Spring Security 7 / Java 25
-  aligned with OWASP Top 10 (2025). Use whenever the user mentions injection
+  Application security guide for Spring Boot 4 / Spring Security 7 (Java 17
+  minimum, tested with Java 25) aligned with OWASP Top 10 (2025). Use whenever the user mentions injection
   (SQL, command, XSS, log, XPath, LDAP, XXE), authentication (login, JWT,
   OAuth2, OIDC, MFA, password hashing), authorization (RBAC, @PreAuthorize,
   AccessDeniedException, "403 Forbidden"), CORS / CSRF, secrets management,
@@ -19,7 +19,7 @@ description: >-
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 >
-> **Stack baseline:** Spring Boot 4.x · Spring Framework 7.x · Spring Security 7.x · Java 25 LTS · OWASP Top 10 (2025) · Argon2id (Password4j) preferred for new password hashing.
+> **Stack baseline:** Spring Boot 4.x · Spring Framework 7.x · Spring Security 7.x · Java 17 minimum (tested with Java 25) · OWASP Top 10 (2025) · Argon2id (Password4j) preferred for new password hashing. Rules tied to a newer version name their boundary inline (e.g. "REMOVED in Spring Security 7").
 
 ---
 
