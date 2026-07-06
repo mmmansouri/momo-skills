@@ -33,7 +33,7 @@
 
 ### Related References
 
-- **Security anti-patterns**: see `security.md` for password hashing, encryption, and SQL injection
+- **Security anti-patterns**: load the `common-security` skill for password hashing, encryption, and SQL injection
 - **Testing anti-patterns**: load the `common-java-testing` skill (shared test state and mocking rules)
 - **Concurrency guidance**: see `concurrency.md` for virtual thread patterns
 

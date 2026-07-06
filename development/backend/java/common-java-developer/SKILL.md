@@ -284,17 +284,7 @@ JVM-level Java 25 wins: Compact Object Headers (JEP 519), Generational Shenandoa
 
 ## Design Patterns Quick Guide
 
-📚 **When picking a pattern from scratch and you need the decision tree, quick reference table, and modern-Java philosophy → read [design-patterns.md](references/design-patterns.md).**
-
-📚 **When implementing Builder, Factory Method, Abstract Factory, or Singleton (especially the modern record / sealed / enum forms) → read [design-patterns-creational.md](references/design-patterns-creational.md).**
-
-📚 **When implementing Adapter, Decorator, Facade, or Proxy (wrapping patterns — class hierarchies, function composition, dynamic proxies) → read [design-patterns-structural-wrapping.md](references/design-patterns-structural-wrapping.md).**
-
-📚 **When implementing Composite or Flyweight (composition / shared-state patterns with sealed interfaces and `ConcurrentHashMap` factories) → read [design-patterns-structural-composition.md](references/design-patterns-structural-composition.md).**
-
-📚 **When implementing Strategy, Command, Chain of Responsibility, or Template Method (control-flow patterns — functional interfaces, command queues, handler chains, higher-order templates) → read [design-patterns-behavioral-control.md](references/design-patterns-behavioral-control.md).**
-
-📚 **When implementing Observer, Visitor, State, or Memento (state & notification patterns — Flow API, sealed types + pattern matching, record snapshots) → read [design-patterns-behavioral-state.md](references/design-patterns-behavioral-state.md).**
+📚 **When picking a design pattern and you need the decision tree, quick reference table, and modern-Java philosophy → read [design-patterns.md](references/design-patterns.md)** — the single pattern reference.
 
 **Modern-Java replacements to favour over textbook GoF:**
 
@@ -309,7 +299,7 @@ JVM-level Java 25 wins: Compact Object Headers (JEP 519), Generational Shenandoa
 | State machine | Sealed interface of state records |
 | Memento | Record as immutable snapshot |
 
-For the rest (Adapter, Decorator, Facade, Proxy, Composite, Flyweight, Chain of Responsibility, Template, Command, Abstract Factory): consult the reference — each section shows both the classical and the modern Java 17+ form.
+For every other GoF pattern (Adapter, Decorator, Facade, Proxy, Composite, Flyweight, Chain of Responsibility, Template Method, Command, Abstract Factory): apply the modern-Java idiom from the table above — the classic GoF implementations are standard knowledge and are intentionally not restated here.
 
 ---
 
@@ -321,7 +311,7 @@ For the rest (Adapter, Decorator, Facade, Proxy, Composite, Flyweight, Chain of 
 
 ## When Handling Security
 
-📚 **When choosing crypto primitives (password hashing, encryption, signatures, RNGs), defending against injection, or implementing secret/key management in Java code → read [security.md](references/security.md).**
+📚 **When choosing crypto primitives (password hashing, encryption, key derivation, signatures, RNGs), defending against injection, or implementing secret/key management in Java code → load the `common-security` skill** — the single owner for application security (Java + Spring).
 
 ### 🔴 BLOCKING
 - **Never use MD5/SHA1 for passwords** → Use BCrypt (work factor 12+) or Argon2
@@ -333,23 +323,7 @@ For the rest (Adapter, Decorator, Facade, Proxy, Composite, Flyweight, Chain of 
 - **Never use `Random` for security tokens** → Use `SecureRandom`
   **Why:** `java.util.Random` is a predictable linear-congruential PRNG whose future output can be reconstructed from a few samples, making its tokens guessable; `SecureRandom` draws from a cryptographic entropy source.
 
-### 🟢 Algorithm Quick Reference
-| Need | Use |
-|------|-----|
-| Password storage | BCrypt or Argon2 |
-| Data encryption | AES-256-GCM |
-| Random tokens | `SecureRandom` + Base64 |
-| Hashing (integrity) | SHA-256 |
-| Signatures | ECDSA or RSA-PSS |
-
-```java
-// 🔴 WRONG
-String hash = MessageDigest.getInstance("MD5").digest(password.getBytes());
-
-// ✅ CORRECT (Spring Security)
-BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
-String hash = encoder.encode(password);
-```
+Algorithm selection tables, code examples, and the full security workflow live in `common-security` (single owner) — do not restate them here.
 
 ---
 

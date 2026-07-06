@@ -12,6 +12,7 @@
 - [CORS Configuration](#cors-configuration)
 - [CSRF Configuration](#csrf-configuration)
   - SPA (`csrf.spa()`) · Cookie-based · Stateless API
+- [TLS Configuration](#tls-configuration)
 - [Security Headers](#security-headers)
 - [Password Encoders](#password-encoders)
   - DelegatingPasswordEncoder · Argon2 (Password4j) · Custom delegation
@@ -417,6 +418,32 @@ public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
             session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .build();
 }
+```
+
+---
+
+## TLS Configuration
+
+```yaml
+# application.yml — enforce TLS 1.2+ with strong ciphers
+server:
+  ssl:
+    enabled: true
+    key-store: classpath:keystore.p12
+    key-store-password: ${KEYSTORE_PASSWORD}
+    key-store-type: PKCS12
+    protocol: TLS
+    enabled-protocols: TLSv1.3,TLSv1.2
+    ciphers:
+      - TLS_AES_256_GCM_SHA384
+      - TLS_AES_128_GCM_SHA256
+      - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+```
+
+```properties
+# JVM-wide: disable weak protocols/algorithms (java.security file or system property)
+jdk.tls.disabledAlgorithms=SSLv3, TLSv1, TLSv1.1, RC4, DES, MD5withRSA, \
+    DH keySize < 1024, EC keySize < 224, 3DES_EDE_CBC, anon, NULL
 ```
 
 ---

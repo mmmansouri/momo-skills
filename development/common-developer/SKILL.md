@@ -159,7 +159,7 @@ orderProcessor.process(order)
 
 📚 **When detecting code smells, restructuring legacy code, or applying a specific refactoring technique (extract method, replace conditional with polymorphism, etc.) → read [refactoring-patterns.md](references/refactoring-patterns.md).**
 
-📚 **When choosing or recognizing a Gang-of-Four pattern (Strategy, Factory, Observer, etc.) to solve a recurring design problem → read [design-patterns-catalog.md](references/design-patterns-catalog.md).**
+📚 **When choosing which Gang-of-Four pattern fits a recurring design problem → read the decision table in [design-patterns-catalog.md](references/design-patterns-catalog.md)** — the GoF implementations themselves are standard knowledge and are intentionally not restated.
 
 ### 🔴 BLOCKING
 

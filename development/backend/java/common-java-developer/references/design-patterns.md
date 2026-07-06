@@ -1,6 +1,6 @@
 # Design Patterns in Modern Java
 
-> Index for the GoF + modern-Java pattern catalog. Detailed implementations live in five category-specific reference files listed at the bottom.
+> Decision surface for the GoF + modern-Java pattern catalog. Pattern implementations are standard knowledge and are intentionally not restated — pick with the tree and tables below, then apply the modern-Java idiom.
 
 ---
 
@@ -9,7 +9,6 @@
 1. [Pattern Selection Decision Tree](#pattern-selection-decision-tree)
 2. [Quick Reference Table](#quick-reference-table)
 3. [Modern Java Pattern Philosophy](#modern-java-pattern-philosophy)
-4. [Pattern Catalogs](#pattern-catalogs)
 
 ---
 
@@ -125,19 +124,3 @@ What problem are you solving?
 - Framework integration requiring specific interfaces
 - Legacy code compatibility
 - Team familiarity and maintainability
-
----
-
-## Pattern Catalogs
-
-Detailed implementations are split into five category-specific references:
-
-📚 **Creational Patterns** (see `design-patterns-creational.md`) — Builder, Factory Method, Abstract Factory, Singleton
-
-📚 **Structural Patterns — Wrapping** (see `design-patterns-structural-wrapping.md`) — Adapter, Decorator (classic + function composition), Facade, Proxy
-
-📚 **Structural Patterns — Composition** (see `design-patterns-structural-composition.md`) — Composite, Flyweight
-
-📚 **Behavioral Patterns — Control Flow** (see `design-patterns-behavioral-control.md`) — Strategy, Command, Chain of Responsibility, Template Method
-
-📚 **Behavioral Patterns — State & Notification** (see `design-patterns-behavioral-state.md`) — Observer, Visitor (with pattern matching), State (sealed + enum), Memento

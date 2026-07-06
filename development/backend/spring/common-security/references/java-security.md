@@ -6,7 +6,7 @@
   - SQL · Command · XPath · LDAP · XXE
 - [Serialization Security](#serialization-security)
 - [Cryptography](#cryptography)
-  - AES-GCM · RSA · Digital Signatures · Secure Random
+  - AES-GCM · RSA · Digital Signatures · Secure Random · Key Derivation (KDF/HKDF)
 - [Password Hashing](#password-hashing)
   - BCrypt · Argon2 · Algorithm comparison · OWASP 2025 parameters
 - [Immutability for Security](#immutability-for-security)
@@ -279,6 +279,37 @@ String token = new BigInteger(256, secureRandom).toString(32);
 // 🔴 WRONG - Not cryptographically secure
 Random random = new Random();  // Predictable!
 ```
+
+### Key Derivation (KDF) — Java 25+
+
+Use the built-in **`javax.crypto.KDF`** API (FINAL in Java 25, JEP 510) to derive symmetric keys from a shared secret, password, or master key — no third-party library needed. Supported algorithms include **HKDF** (HMAC-based) and **Argon2** (via providers).
+
+```java
+import javax.crypto.KDF;
+import javax.crypto.spec.HKDFParameterSpec;
+import javax.crypto.SecretKey;
+
+// HKDF-SHA256: derive a 32-byte AES key from a shared secret + salt + context
+KDF hkdf = KDF.getInstance("HKDF-SHA256");
+
+HKDFParameterSpec params = HKDFParameterSpec.ofExtract()
+    .addIKM(sharedSecret)        // input keying material
+    .addSalt(salt)
+    .thenExpand("aes-key-v1".getBytes(), 32);   // info + length
+
+SecretKey aesKey = hkdf.deriveKey("AES", params);
+```
+
+**When to use KDF (vs `MessageDigest` or `BCrypt`):**
+
+| Need | Use |
+|---|---|
+| Derive AES key from ECDH/X25519 shared secret | `KDF` (HKDF-SHA256) |
+| Derive multiple keys from one master secret | `KDF` (HKDF, distinct `info`) |
+| Hash a user password for storage | **BCrypt / Argon2** (not `KDF`) |
+| Generic data integrity hash | `MessageDigest` (SHA-256) |
+
+🔴 **BLOCKING — Don't roll your own HKDF** with `Mac` + `MessageDigest` on Java 25+ ; the built-in `KDF` is reviewed, side-channel-aware, and provider-pluggable.
 
 ---
 
