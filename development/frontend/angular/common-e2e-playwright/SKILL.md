@@ -332,9 +332,7 @@ export default defineConfig({
 
 ## When Running in CI
 
-📚 **When wiring Playwright into GitHub Actions, sharding tests across workers, uploading reports/traces as artifacts, or installing browsers with `--with-deps` → read [ci-github-actions.md](references/ci-github-actions.md).**
-
-📚 **When configuring Docker runners (docker-compose for the full stack), choosing reporters (HTML/JUnit/GitHub), tuning CI performance (caching, parallel jobs), or troubleshooting CI-only failures → read [ci-docker-reporting.md](references/ci-docker-reporting.md).**
+📚 **When wiring E2E into CI — local-mode workflow (local-e2e profile, port 4201), docker-compose stack, or the e2e:ci reporting scripts → read [ci.md](references/ci.md).**
 
 ### 🔴 BLOCKING
 
@@ -359,4 +357,4 @@ When producing E2E artifacts, deliver each in this exact form:
 | **Page object** (`pages/*.page.ts`) | Class with `Locator` properties + action methods returning `Promise<void>` or the next page object. No assertions, no test data. |
 | **Custom fixture** (`fixtures/index.ts`) | `base.extend<T>({...})` with setup before `await use(...)` and cleanup after. Re-export `expect`. |
 | **Config** (`playwright.config.ts`) | `defineConfig` with `forbidOnly`, `retries`, `trace`, `screenshot`, `video`, project list, `webServer` for local dev. |
-| **CI workflow** | Steps: checkout → setup-node → `npm ci` → `npx playwright install --with-deps` → `npx playwright test` → upload report on failure. See `ci-github-actions.md`. |
+| **CI workflow** | Steps: checkout → setup-node → `npm ci` → `npx playwright install --with-deps` → `npx playwright test` → upload report on failure. See `ci.md`. |

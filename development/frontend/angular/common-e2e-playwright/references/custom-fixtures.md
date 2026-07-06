@@ -2,268 +2,43 @@
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
 
+The `base.extend<T>({ ... })` mechanism, built-in fixtures (`page`, `context`,
+`request`), the setup → `use()` → teardown lifecycle, and fixture dependency
+resolution are native Playwright knowledge — see the official fixtures docs. This
+reference keeps only the house fixtures: the **two-tier authenticated page**, the
+**test-vs-worker scope** decision, and the **cleanup** convention.
+
 ## Table of Contents
 
-- [Fixtures Overview](#fixtures-overview)
-- [Built-in Fixtures](#built-in-fixtures)
-- [Creating Custom Fixtures](#creating-custom-fixtures)
-- [Fixture Lifecycle](#fixture-lifecycle)
-- [Fixture Dependencies](#fixture-dependencies)
-- [Worker-Scoped Fixtures](#worker-scoped-fixtures)
-- [Authenticated Page Fixture](#authenticated-page-fixture)
-- [Test Data Fixtures](#test-data-fixtures)
-- [Database Fixtures with Testcontainers](#database-fixtures-with-testcontainers)
-- [Fixture Options](#fixture-options)
-- [Fixtures Quick Reference](#fixtures-quick-reference)
-- [Fixtures Common Patterns](#fixtures-common-patterns)
-- [Fixtures Anti-Patterns](#fixtures-anti-patterns)
+- [Test vs Worker Scope](#test-vs-worker-scope)
+- [Authenticated Page Fixture (Two-Tier Auth)](#authenticated-page-fixture-two-tier-auth)
+- [Cleanup Fixtures](#cleanup-fixtures)
+- [Testcontainers Database Fixtures](#testcontainers-database-fixtures)
 
 ---
 
-## Custom Fixtures
+## Test vs Worker Scope
 
-### Fixtures Overview
+| Scope | Runs | Cleanup | Use for |
+|-------|------|---------|---------|
+| `test` (default) | Once per test | After each test | Isolated state: page objects, per-test data |
+| `worker` | Once per worker | After all tests in the worker | Expensive shared setup: DB container, admin account |
 
-Fixtures are reusable setups that provide initialized objects to tests. Playwright's fixture system allows dependency injection, automatic cleanup, and shared state management.
+### 🔴 BLOCKING
 
-**Benefits:**
-- DRY: Define setup once, reuse across tests
-- Automatic cleanup: Teardown happens even if test fails
-- Dependency injection: Fixtures can depend on other fixtures
-- Type-safe: Full TypeScript support
-
----
-
-### Built-in Fixtures
-
-#### 🔴 BLOCKING - Core Fixtures
-
-Playwright provides these fixtures out of the box:
-
-```typescript
-import { test, expect } from '@playwright/test';
-
-test('example test', async ({ page, context, browser, request }) => {
-  // page: Fresh browser page for this test
-  await page.goto('/products');
-
-  // context: Browser context (isolated session)
-  const newPage = await context.newPage();
-
-  // browser: Browser instance
-  const browserVersion = browser.version();
-
-  // request: API request context
-  const response = await request.get('/api/products');
-});
-```
-
-**Common Built-in Fixtures:**
-
-| Fixture | Type | Description |
-|---------|------|-------------|
-| `page` | `Page` | Isolated browser page |
-| `context` | `BrowserContext` | Browser context (cookies, storage) |
-| `browser` | `Browser` | Browser instance |
-| `request` | `APIRequestContext` | HTTP client for API calls |
-| `browserName` | `string` | Current browser name |
+- **Test-scoped** for anything a test mutates (page, cart, per-test entities).
+- **Worker-scoped** only for expensive read-mostly setup. Worker fixtures share
+  one instance across every test in the worker, so they must never hold state a
+  test can corrupt.
 
 ---
 
-### Creating Custom Fixtures
+## Authenticated Page Fixture (Two-Tier Auth)
 
-#### 🔴 BLOCKING - Creating Fixtures
-
-```typescript
-// fixtures/index.ts
-import { test as base } from '@playwright/test';
-import { LoginPage } from '../pages/login.page';
-import { CatalogPage } from '../pages/catalog.page';
-
-// Define custom fixture types
-type MyFixtures = {
-  loginPage: LoginPage;
-  catalogPage: CatalogPage;
-};
-
-// Extend base test with custom fixtures
-export const test = base.extend<MyFixtures>({
-  loginPage: async ({ page }, use) => {
-    // Setup: Create page object
-    const loginPage = new LoginPage(page);
-
-    // Provide to test
-    await use(loginPage);
-
-    // Teardown: Optional cleanup
-    // (automatically runs even if test fails)
-  },
-
-  catalogPage: async ({ page }, use) => {
-    const catalogPage = new CatalogPage(page);
-    await catalogPage.goto(); // Navigate before test
-    await use(catalogPage);
-  },
-});
-
-export { expect } from '@playwright/test';
-```
-
-**Usage:**
-```typescript
-import { test, expect } from './fixtures';
-
-test('should login', async ({ loginPage }) => {
-  await loginPage.goto();
-  await loginPage.login('user@test.com', 'password');
-  await expect(loginPage.page).toHaveURL('/dashboard');
-});
-```
-
----
-
-### Fixture Lifecycle
-
-#### Setup → Use → Teardown Pattern
-
-```typescript
-export const test = base.extend<{ tempFile: string }>({
-  tempFile: async ({}, use) => {
-    console.log('SETUP: Creating temp file');
-    const filePath = '/tmp/test-data.json';
-    await fs.writeFile(filePath, JSON.stringify({ test: true }));
-
-    console.log('USE: Test is running');
-    await use(filePath);
-
-    console.log('TEARDOWN: Cleaning up temp file');
-    await fs.unlink(filePath);
-  },
-});
-```
-
-**Execution Order:**
-```
-1. SETUP: Creating temp file
-2. USE: Test is running
-3. (Test code executes)
-4. TEARDOWN: Cleaning up temp file (even if test fails)
-```
-
----
-
-### Fixture Dependencies
-
-#### 🔴 BLOCKING - Fixtures Can Depend on Other Fixtures
-
-```typescript
-type MyFixtures = {
-  apiHelper: ApiHelper;
-  authenticatedPage: Page;
-  testUser: User;
-};
-
-export const test = base.extend<MyFixtures>({
-  // Simple fixture
-  apiHelper: async ({ request }, use) => {
-    const helper = new ApiHelper(request);
-    await use(helper);
-  },
-
-  // Fixture depending on apiHelper
-  testUser: async ({ apiHelper }, use) => {
-    const user = await apiHelper.createUser({
-      email: 'test@example.com',
-      password: 'Test123!',
-    });
-    await use(user);
-
-    // Cleanup
-    await apiHelper.deleteUser(user.id);
-  },
-
-  // Fixture depending on testUser and page
-  authenticatedPage: async ({ page, testUser, apiHelper }, use) => {
-    const token = await apiHelper.login(testUser.email, 'Test123!');
-    await page.goto('/');
-    await page.evaluate(t => localStorage.setItem('token', t), token);
-    await use(page);
-
-    // Cleanup
-    await page.evaluate(() => localStorage.clear());
-  },
-});
-```
-
-**Dependency Graph:**
-```
-authenticatedPage
-├── page (built-in)
-├── testUser
-│   └── apiHelper
-│       └── request (built-in)
-└── apiHelper
-```
-
----
-
-### Worker-Scoped Fixtures
-
-#### 🔴 BLOCKING - Share State Across Tests
-
-Worker-scoped fixtures run once per worker process, shared across all tests in that worker.
-
-```typescript
-type WorkerFixtures = {
-  adminUser: User;
-};
-
-export const test = base.extend<{}, WorkerFixtures>({
-  adminUser: [
-    async ({ browser }, use) => {
-      console.log('Creating admin user (once per worker)');
-      const user = await createUserInDatabase({
-        email: 'admin@test.com',
-        role: 'ADMIN',
-      });
-
-      await use(user);
-
-      console.log('Deleting admin user');
-      await deleteUserFromDatabase(user.id);
-    },
-    { scope: 'worker' },
-  ],
-});
-```
-
-**Usage:**
-```typescript
-test('admin can view users', async ({ page, adminUser }) => {
-  // adminUser is shared across all tests in this worker
-  await loginAs(page, adminUser);
-  await page.goto('/admin/users');
-});
-
-test('admin can create user', async ({ page, adminUser }) => {
-  // Same adminUser instance as previous test
-  await loginAs(page, adminUser);
-  await createUser(page, 'newuser@test.com');
-});
-```
-
-#### Scope Comparison
-
-| Scope | Runs | Cleanup | Use Case |
-|-------|------|---------|----------|
-| `test` (default) | Once per test | After each test | Isolated state (page, test data) |
-| `worker` | Once per worker | After all tests in worker | Shared state (database, user accounts) |
-
----
-
-### Authenticated Page Fixture
-
-#### 🔴 BLOCKING - Two-Tier Authentication
+House auth is two-tier OAuth2 (`client_credentials` grant, then `password`
+grant, both on `/oauth/token`). An `AuthHelper` performs both grants over the API
+and drops the resulting token into `localStorage`, so tests start already logged
+in without paying the UI login cost on every spec.
 
 ```typescript
 // fixtures/auth.fixture.ts
@@ -272,44 +47,30 @@ import { ApiHelper } from '../utils/api-helper';
 
 type AuthFixtures = {
   apiHelper: ApiHelper;
-  authenticatedPage: Page;
-  adminPage: Page;
+  authenticatedPage: Page;   // logged in as a customer
+  adminPage: Page;           // logged in as an admin
 };
 
 export const test = base.extend<AuthFixtures>({
   apiHelper: async ({ request }, use) => {
-    const helper = new ApiHelper(request);
-    await use(helper);
+    await use(new ApiHelper(request));
   },
 
   authenticatedPage: async ({ page, apiHelper }, use) => {
-    // Two-tier auth:
-    // 1. Client credentials (OAuth2)
-    // 2. User login (password grant)
-    const token = await apiHelper.loginAsCustomer(
-      'john.doe@example.com',
-      'password123'
-    );
-
-    // Store token in browser
+    // Two-tier: client_credentials grant, then password grant.
+    const token = await apiHelper.loginAsCustomer('john.doe@example.com', 'password123');
     await page.goto('/');
-    await page.evaluate(t => {
-      localStorage.setItem('access_token', t);
-    }, token);
+    await page.evaluate(t => localStorage.setItem('access_token', t), token);
 
     await use(page);
 
-    // Cleanup
     await page.evaluate(() => localStorage.clear());
   },
 
   adminPage: async ({ page, apiHelper }, use) => {
     const token = await apiHelper.loginAsAdmin('admin@example.com', 'admin123');
-
     await page.goto('/');
-    await page.evaluate(t => {
-      localStorage.setItem('access_token', t);
-    }, token);
+    await page.evaluate(t => localStorage.setItem('access_token', t), token);
 
     await use(page);
 
@@ -321,6 +82,7 @@ export { expect } from '@playwright/test';
 ```
 
 **Usage:**
+
 ```typescript
 import { test, expect } from './fixtures/auth.fixture';
 
@@ -335,314 +97,38 @@ test('should access admin panel', async ({ adminPage }) => {
 });
 ```
 
+The `AuthHelper.loginViaApi` implementation (the two `/oauth/token` POSTs) lives
+in [page-objects-playwright.md](page-objects-playwright.md#two-tier-authentication-integration).
+
 ---
 
-### Test Data Fixtures
+## Cleanup Fixtures
 
-#### 🔴 BLOCKING - Factory-Based Test Data
+### 🔴 BLOCKING
+
+Every fixture that creates data cleans it up **after `use()`** — teardown runs
+even when the test fails, so entities never leak between tests.
 
 ```typescript
-// fixtures/test-data.fixture.ts
-type TestDataFixtures = {
-  testProduct: Product;
-  testProducts: Product[];
-  testOrder: Order;
-};
-
-export const test = base.extend<TestDataFixtures>({
+export const test = base.extend<{ testProduct: Product }>({
   testProduct: async ({ apiHelper }, use) => {
-    const product = await apiHelper.createProduct({
-      name: `Test Product ${Date.now()}`,
-      price: 99.99,
-      stock: 10,
-    });
-
+    const product = await apiHelper.createProduct({ name: `Test ${Date.now()}`, price: 99.99 });
     await use(product);
-
-    // Cleanup
-    await apiHelper.deleteProduct(product.id);
-  },
-
-  testProducts: async ({ apiHelper }, use) => {
-    const products = await Promise.all([
-      apiHelper.createProduct({ name: 'Product 1', price: 10 }),
-      apiHelper.createProduct({ name: 'Product 2', price: 20 }),
-      apiHelper.createProduct({ name: 'Product 3', price: 30 }),
-    ]);
-
-    await use(products);
-
-    // Cleanup all
-    await Promise.all(products.map(p => apiHelper.deleteProduct(p.id)));
-  },
-
-  testOrder: async ({ apiHelper, testProduct, authenticatedPage }, use) => {
-    // Create order for test product
-    const order = await apiHelper.createOrder({
-      userId: 'test-user-id',
-      items: [{ productId: testProduct.id, quantity: 1 }],
-    });
-
-    await use(order);
-
-    await apiHelper.deleteOrder(order.id);
+    await apiHelper.deleteProduct(product.id);   // runs even on failure
   },
 });
 ```
 
-**Usage:**
-```typescript
-test('should display product details', async ({ page, testProduct }) => {
-  await page.goto(`/products/${testProduct.id}`);
-  await expect(page.getByText(testProduct.name)).toBeVisible();
-  await expect(page.getByTestId('product-price')).toHaveText(`€${testProduct.price}`);
-});
-
-test('should list products', async ({ page, testProducts }) => {
-  await page.goto('/products');
-  for (const product of testProducts) {
-    await expect(page.getByText(product.name)).toBeVisible();
-  }
-});
-```
+Never share a mutable entity through a module-level variable — create a fresh one
+per test (test scope) so the suite stays parallelizable. Data-factory fixtures
+are covered in [test-data.md](test-data.md).
 
 ---
 
-### Database Fixtures with Testcontainers
+## Testcontainers Database Fixtures
 
-#### 🔴 BLOCKING - Worker-Scoped Database
-
-```typescript
-import { GenericContainer, StartedTestContainer } from 'testcontainers';
-import { Pool } from 'pg';
-
-type DatabaseFixtures = {
-  dbContainer: StartedTestContainer;
-  dbPool: Pool;
-};
-
-export const test = base.extend<{}, DatabaseFixtures>({
-  dbContainer: [
-    async ({}, use) => {
-      console.log('Starting PostgreSQL container...');
-      const container = await new GenericContainer('postgres:15')
-        .withEnvironment({
-          POSTGRES_USER: 'test',
-          POSTGRES_PASSWORD: 'test',
-          POSTGRES_DB: 'testdb',
-        })
-        .withExposedPorts(5432)
-        .start();
-
-      await use(container);
-
-      console.log('Stopping PostgreSQL container...');
-      await container.stop();
-    },
-    { scope: 'worker' },
-  ],
-
-  dbPool: [
-    async ({ dbContainer }, use) => {
-      const pool = new Pool({
-        host: dbContainer.getHost(),
-        port: dbContainer.getMappedPort(5432),
-        user: 'test',
-        password: 'test',
-        database: 'testdb',
-      });
-
-      await use(pool);
-
-      await pool.end();
-    },
-    { scope: 'worker' },
-  ],
-});
-```
-
-**Usage:**
-```typescript
-test('should save user to database', async ({ page, dbPool }) => {
-  // Create user via UI
-  await page.goto('/signup');
-  await page.getByLabel('Email').fill('user@test.com');
-  await page.getByRole('button', { name: 'Sign Up' }).click();
-
-  // Verify in database
-  const result = await dbPool.query('SELECT * FROM users WHERE email = $1', [
-    'user@test.com',
-  ]);
-  expect(result.rows).toHaveLength(1);
-  expect(result.rows[0].email).toBe('user@test.com');
-});
-```
-
----
-
-### Fixture Options
-
-#### 🟢 BEST PRACTICE - Configurable Fixtures
-
-```typescript
-type OptionsFixture = {
-  loginPage: LoginPage;
-  locale: 'en' | 'fr';
-};
-
-export const test = base.extend<OptionsFixture>({
-  locale: ['en', { option: true }], // Default value
-
-  loginPage: async ({ page, locale }, use) => {
-    // Use locale option
-    await page.goto(`/${locale}/login`);
-    const loginPage = new LoginPage(page);
-    await use(loginPage);
-  },
-});
-```
-
-**Usage:**
-```typescript
-test('should login in French', async ({ loginPage }) => {
-  test.use({ locale: 'fr' });
-  await loginPage.login('user@test.com', 'password');
-  await expect(loginPage.page.getByText('Bienvenue')).toBeVisible();
-});
-```
-
----
-
-### Fixtures Quick Reference
-
-#### Fixtures Checklist
-
-##### 🔴 BLOCKING
-- [ ] Use fixtures for repeated setup
-- [ ] Provide cleanup in fixture teardown
-- [ ] Worker-scoped for expensive setup (database, containers)
-- [ ] Test-scoped for isolated state (page objects, test data)
-- [ ] Export custom `test` and `expect` from fixtures file
-
-##### 🟡 WARNING
-- [ ] Fixtures don't have side effects (idempotent)
-- [ ] Dependencies declared explicitly
-- [ ] Cleanup runs even if test fails
-- [ ] Avoid complex fixture dependency chains
-
-##### 🟢 BEST PRACTICE
-- [ ] Type-safe fixture definitions
-- [ ] Page objects as fixtures
-- [ ] API helpers as fixtures
-- [ ] Test data factories as fixtures
-- [ ] Authenticated pages as fixtures
-
----
-
-### Fixtures Common Patterns
-
-#### Pattern: Fixture Composition
-
-```typescript
-// Base fixtures
-export const baseTest = base.extend<{ apiHelper: ApiHelper }>({
-  apiHelper: async ({ request }, use) => {
-    await use(new ApiHelper(request));
-  },
-});
-
-// Auth fixtures (extends base)
-export const authTest = baseTest.extend<{ authenticatedPage: Page }>({
-  authenticatedPage: async ({ page, apiHelper }, use) => {
-    const token = await apiHelper.login('user@test.com', 'password');
-    await page.goto('/');
-    await page.evaluate(t => localStorage.setItem('token', t), token);
-    await use(page);
-  },
-});
-
-// Test data fixtures (extends auth)
-export const test = authTest.extend<{ testOrder: Order }>({
-  testOrder: async ({ apiHelper }, use) => {
-    const order = await apiHelper.createOrder({ items: [] });
-    await use(order);
-    await apiHelper.deleteOrder(order.id);
-  },
-});
-```
-
-#### Pattern: Conditional Fixtures
-
-```typescript
-export const test = base.extend<{ slowOperation: string }>({
-  slowOperation: async ({}, use, testInfo) => {
-    // Skip fixture for tests tagged @fast
-    if (testInfo.tags.includes('@fast')) {
-      await use('skipped');
-      return;
-    }
-
-    // Run expensive operation
-    const result = await expensiveSetup();
-    await use(result);
-    await expensiveCleanup(result);
-  },
-});
-```
-
----
-
-### Fixtures Anti-Patterns
-
-#### 🔴 WRONG - Shared Mutable State
-
-```typescript
-// ❌ Don't do this
-let sharedUser: User;
-
-export const test = base.extend<{ user: User }>({
-  user: async ({}, use) => {
-    sharedUser = await createUser(); // ❌ Shared across tests
-    await use(sharedUser);
-  },
-});
-```
-
-#### ✅ CORRECT - Isolated State
-
-```typescript
-// ✅ Do this instead
-export const test = base.extend<{ user: User }>({
-  user: async ({}, use) => {
-    const user = await createUser(); // ✅ New user per test
-    await use(user);
-    await deleteUser(user.id);
-  },
-});
-```
-
-#### 🔴 WRONG - Missing Cleanup
-
-```typescript
-// ❌ Don't do this
-export const test = base.extend<{ tempData: TempData }>({
-  tempData: async ({}, use) => {
-    const data = await createTempData();
-    await use(data);
-    // ❌ No cleanup - data leaks
-  },
-});
-```
-
-#### ✅ CORRECT - Always Cleanup
-
-```typescript
-// ✅ Do this instead
-export const test = base.extend<{ tempData: TempData }>({
-  tempData: async ({}, use) => {
-    const data = await createTempData();
-    await use(data);
-    await cleanupTempData(data); // ✅ Cleanup
-  },
-});
-```
+When a test needs to assert directly against the database, a **worker-scoped**
+Testcontainers Postgres fixture (`new GenericContainer('postgres:15')`, exposed
+port 5432, one `pg` `Pool`) starts the container once per worker and stops it in
+teardown. Reach for it only when API/UI assertions cannot express the check —
+it is the slowest strategy.
