@@ -97,7 +97,7 @@ export class AuthenticatedPage {
 
 **Via API (faster)** — `AuthHelper` performs both grants over the API and stores
 the token in `localStorage`. This is what the authenticated-page fixture uses
-(see [custom-fixtures.md](custom-fixtures.md#authenticated-page-fixture-two-tier-auth)).
+(see `custom-fixtures.md`).
 
 ```typescript
 // utils/auth-helper.ts

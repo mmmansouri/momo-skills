@@ -52,7 +52,7 @@ await expect(async () => {
 House auth is two-tier OAuth2: a **client_credentials** grant followed by a
 **password** grant, both hitting `/oauth/token`. When exercising login through
 the UI, wait for **both** token responses so the assertion never races the
-second grant (see also [flaky-tests.md](flaky-tests.md#two-tier-auth-timing)).
+second grant (see also `flaky-tests.md`).
 
 ```typescript
 test('should authenticate and load dashboard', async ({ page }) => {

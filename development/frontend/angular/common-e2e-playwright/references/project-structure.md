@@ -75,7 +75,7 @@ cross-cutting helpers (API client, auth) in `utils/`.
 ```
 
 The backoffice tree is lighter (serial admin runs — see
-[playwright-config.md](playwright-config.md#backoffice-e2e-config)).
+`playwright-config.md`).
 
 ---
 

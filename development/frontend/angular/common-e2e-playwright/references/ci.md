@@ -22,7 +22,7 @@ setup: the **local-mode** workflow (`local-e2e` Spring profile, frontend on port
 Local mode runs the three processes side by side: a Postgres service, the
 backend under the **`local-e2e`** Spring profile, and the frontend served with
 **`npm run start:local-e2e`** on **port 4201**. Playwright then targets
-`http://localhost:4201` (see [playwright-config.md](playwright-config.md), the
+`http://localhost:4201` (see `playwright-config.md`, the
 `E2E_MODE=local` branch).
 
 ```yaml

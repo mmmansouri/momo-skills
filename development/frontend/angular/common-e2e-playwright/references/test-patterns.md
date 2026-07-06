@@ -5,7 +5,7 @@
 Test foundations — Arrange–Act–Assert, isolation, `beforeEach`/`afterEach`,
 descriptive naming, parameterized cases, `skip`/`only`/`fixme`, factories — are
 owned by `common-developer` (§ When Writing Tests) and `SKILL.md`, and factories
-live in [test-data.md](test-data.md). This reference keeps the two house **spec
+live in `test-data.md`. This reference keeps the two house **spec
 skeletons** that anchor two-tier auth and the naming convention end-to-end.
 
 ## Table of Contents

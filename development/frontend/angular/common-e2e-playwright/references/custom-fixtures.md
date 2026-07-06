@@ -98,7 +98,7 @@ test('should access admin panel', async ({ adminPage }) => {
 ```
 
 The `AuthHelper.loginViaApi` implementation (the two `/oauth/token` POSTs) lives
-in [page-objects-playwright.md](page-objects-playwright.md#two-tier-authentication-integration).
+in `page-objects-playwright.md`.
 
 ---
 
@@ -121,7 +121,7 @@ export const test = base.extend<{ testProduct: Product }>({
 
 Never share a mutable entity through a module-level variable — create a fresh one
 per test (test scope) so the suite stays parallelizable. Data-factory fixtures
-are covered in [test-data.md](test-data.md).
+are covered in `test-data.md`.
 
 ---
 

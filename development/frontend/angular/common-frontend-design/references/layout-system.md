@@ -1,6 +1,6 @@
 # Layout & Spacing System
 
-> **Ownership:** the BLOCKING layout rules (spacing-scale-exclusively, touch targets ≥ 44 px, generous whitespace, mobile-first) are owned by **SKILL.md** (`## When Composing Layouts`). Responsive layout patterns live in [responsive-patterns.md](responsive-patterns.md); common component layouts (card, header) live in [component-patterns.md](component-patterns.md). Generic flexbox utilities are native to the model.
+> **Ownership:** the BLOCKING layout rules (spacing-scale-exclusively, touch targets ≥ 44 px, generous whitespace, mobile-first) are owned by **SKILL.md** (`## When Composing Layouts`). Responsive layout patterns live in `responsive-patterns.md`; common component layouts (card, header) live in `component-patterns.md`. Generic flexbox utilities are native to the model.
 > This file keeps the house token scales: spacing, the grid, whitespace rhythm, and the z-index tiers.
 
 ## Table of Contents

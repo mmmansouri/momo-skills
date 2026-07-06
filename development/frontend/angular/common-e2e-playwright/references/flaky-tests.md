@@ -4,7 +4,7 @@
 
 The universal flake cures — explicit waits over fixed timeouts, isolated data,
 `page.clock` for time, seeded randomness — are covered generically in the
-official docs and in [async-waits.md](async-waits.md). This reference keeps the
+official docs and in `async-waits.md`. This reference keeps the
 cause→fix lookup and the one house-specific flake: **two-tier auth timing**.
 
 ## Table of Contents
@@ -87,7 +87,7 @@ await expect(page.getByText('Good morning')).toBeVisible();
 ## Debugging: Trace Viewer
 
 Reproduce a flake from CI artifacts (trace uploaded on failure — see
-[ci.md](ci.md)):
+`ci.md`):
 
 ```bash
 npx playwright show-trace trace.zip
