@@ -1,26 +1,19 @@
 # Layout & Spacing System
 
-> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+> **Ownership:** the BLOCKING layout rules (spacing-scale-exclusively, touch targets ≥ 44 px, generous whitespace, mobile-first) are owned by **SKILL.md** (`## When Composing Layouts`). Responsive layout patterns live in [responsive-patterns.md](responsive-patterns.md); common component layouts (card, header) live in [component-patterns.md](component-patterns.md). Generic flexbox utilities are native to the model.
+> This file keeps the house token scales: spacing, the grid, whitespace rhythm, and the z-index tiers.
 
 ## Table of Contents
 
 - [Spacing Scale (8px Base)](#spacing-scale-8px-base)
-- [BLOCKING Rules](#-blocking-rules)
 - [Spacing Usage Guide](#spacing-usage-guide)
 - [Grid System](#grid-system)
-- [Flexbox Layouts](#flexbox-layouts)
 - [Whitespace Strategy](#whitespace-strategy)
-- [Responsive Layout Patterns](#responsive-layout-patterns)
-- [Touch Target Sizes](#touch-target-sizes)
 - [Z-Index Scale](#z-index-scale)
-- [Common Layout Patterns](#common-layout-patterns)
-- [Layout Checklist](#layout-checklist)
 
 ---
 
 ## Spacing Scale (8px Base)
-
-A consistent spacing system creates visual harmony and speeds up development:
 
 ```css
 :root {
@@ -39,22 +32,7 @@ A consistent spacing system creates visual harmony and speeds up development:
 }
 ```
 
-**Why 8px base?**
-- Most screen sizes are divisible by 8
-- Aligns with common UI component sizes
-- Easy to scale (4px increments)
-- Industry standard (iOS, Material Design)
-
----
-
-## 🔴 BLOCKING Rules
-
-| Rule | Why |
-|------|-----|
-| **Consistent spacing** | Use scale values, never arbitrary numbers |
-| **Generous whitespace** | Improves readability and focus |
-| **Mobile-first breakpoints** | Most users are mobile |
-| **Touch targets ≥ 44px** | Apple/Google accessibility requirement |
+House convention: 8 px base (most screen sizes divide by 8, aligns with common component sizes, matches iOS / Material). Always pick a scale token, never an arbitrary px value.
 
 ---
 
@@ -119,7 +97,6 @@ A consistent spacing system creates visual harmony and speeds up development:
 .col-span-12 { grid-column: span 12; }
 ```
 
-**Example Usage:**
 ```html
 <div class="grid">
   <!-- Sidebar + Main content -->
@@ -137,39 +114,7 @@ A consistent spacing system creates visual harmony and speeds up development:
 
 ---
 
-## Flexbox Layouts
-
-```css
-/* Common flex patterns */
-.flex-row {
-  display: flex;
-  gap: var(--space-4);
-}
-
-.flex-col {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.flex-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.flex-between {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-```
-
----
-
 ## Whitespace Strategy
-
-**The Golden Rule:** Whitespace is not wasted space - it's a design tool.
 
 ### Vertical Rhythm
 
@@ -205,70 +150,6 @@ A consistent spacing system creates visual harmony and speeds up development:
 
 ---
 
-## Responsive Layout Patterns
-
-### Stack to Row
-
-```css
-/* Mobile: stacked, Desktop: side-by-side */
-.responsive-grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-@media (min-width: 768px) {
-  .responsive-grid {
-    flex-direction: row;
-    gap: var(--space-6);
-  }
-}
-```
-
-### Responsive Grid Columns
-
-```css
-/* Auto-fit columns */
-.auto-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: var(--space-6);
-}
-
-/* Result:
-   Mobile: 1 column
-   Tablet: 2 columns
-   Desktop: 3-4 columns
-*/
-```
-
----
-
-## Touch Target Sizes
-
-**🔴 BLOCKING:** All interactive elements MUST be at least 44x44px on mobile.
-
-```css
-/* Minimum touch target */
-.btn {
-  min-width: 44px;
-  min-height: 44px;
-  padding: var(--space-3) var(--space-5);
-}
-
-/* Icon button with proper spacing */
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  padding: var(--space-2);
-}
-```
-
----
-
 ## Z-Index Scale
 
 Avoid z-index chaos with a predefined scale:
@@ -293,83 +174,3 @@ Avoid z-index chaos with a predefined scale:
 - **Modal (400):** Dialog boxes
 - **Toast (500):** Notifications
 - **Tooltip (600):** Always on top
-
----
-
-## Common Layout Patterns
-
-### Card Layout
-
-```css
-.card {
-  background: white;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  padding: var(--space-6);
-
-  /* Prevent content overflow */
-  overflow: hidden;
-}
-
-.card__header {
-  margin-bottom: var(--space-4);
-}
-
-.card__footer {
-  margin-top: var(--space-6);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-neutral-200);
-}
-```
-
-### Header Layout
-
-```css
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-4) var(--space-6);
-  background: white;
-  box-shadow: var(--shadow-sm);
-}
-
-.header__logo {
-  height: 40px;
-}
-
-.header__nav {
-  display: flex;
-  gap: var(--space-6);
-}
-```
-
-### Section Spacing
-
-```css
-.section {
-  padding-block: var(--space-12); /* 48px top/bottom */
-}
-
-@media (min-width: 1024px) {
-  .section {
-    padding-block: var(--space-20); /* 80px on desktop */
-  }
-}
-```
-
----
-
-## Layout Checklist
-
-Before finalizing layout:
-
-- [ ] Spacing uses defined scale (no arbitrary values)
-- [ ] Touch targets are 44x44px minimum on mobile
-- [ ] Content max-width prevents overly wide text
-- [ ] Generous whitespace around elements
-- [ ] Mobile-first responsive design
-- [ ] Grid/flex gaps are consistent
-- [ ] Z-index uses predefined scale
-- [ ] Tested on 320px width (small phones)
-- [ ] No horizontal scrolling at any breakpoint

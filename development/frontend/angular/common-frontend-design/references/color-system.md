@@ -1,25 +1,20 @@
 # Color System Guide
 
-> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+> **Ownership:** the BLOCKING color rules (contrast ≥ 4.5:1 text / ≥ 3:1 UI, never-color-alone, test-in-grayscale) and the WCAG contrast table are owned by **SKILL.md** (`## When Working with Color`).
+> Generic color theory (color psychology, dark-mode tips, common mistakes) is native to the model — it is **not** restated here.
+> This file keeps the house token conventions: the `--color-{name}-{shade}` scale, the semantic-color set, and the eco-brand palette.
 
 ## Table of Contents
 
 - [Color System Structure](#color-system-structure)
-- [BLOCKING Rules](#-blocking-rules)
-- [Color Scale System](#color-scale-system)
-- [Color Psychology for E-Commerce](#color-psychology-for-e-commerce)
-- [AVOID - Common Color Mistakes](#-avoid---common-color-mistakes)
 - [Semantic Color Usage](#semantic-color-usage)
-- [Contrast Requirements (WCAG AA)](#contrast-requirements-wcag-aa)
-- [Dark Mode Support](#dark-mode-support)
 - [Eco Brand Color Palette Example](#eco-brand-color-palette-example)
-- [Color Application Checklist](#color-application-checklist)
 
 ---
 
 ## Color System Structure
 
-A well-structured color system has clear categories and consistent naming:
+House convention: every color is a token named `--color-{name}-{shade}`, with the shade running from `50` (lightest) to `900` (darkest).
 
 ```css
 :root {
@@ -55,76 +50,13 @@ A well-structured color system has clear categories and consistent naming:
 }
 ```
 
----
-
-## 🔴 BLOCKING Rules
-
-| Rule | Why |
-|------|-----|
-| **Contrast ratio ≥ 4.5:1 for text** | WCAG AA accessibility requirement |
-| **Contrast ratio ≥ 3:1 for UI elements** | Buttons, icons must be visible |
-| **Don't rely on color alone** | Use icons + color for status |
-| **Test in grayscale** | Hierarchy must work without color |
-
----
-
-## Color Scale System
-
-Each color should have a scale from 50 (lightest) to 900 (darkest):
-
-| Shade | Usage |
-|-------|-------|
-| 50-100 | Subtle backgrounds, hover states |
-| 200-300 | Borders, dividers |
-| 400-500 | Accents, secondary elements |
-| 500-600 | Main color, primary actions |
-| 700-800 | Text on light backgrounds |
-| 900 | Text, strong emphasis |
-
-**Example in Practice:**
-```css
-.btn-primary {
-  background-color: var(--color-primary-500); /* Main */
-  color: white;
-}
-
-.btn-primary:hover {
-  background-color: var(--color-primary-600); /* Darker on hover */
-}
-
-.bg-subtle {
-  background-color: var(--color-primary-50); /* Very light background */
-}
-```
-
----
-
-## Color Psychology for E-Commerce
-
-| Color | Association | Use For | Eco Brand Context |
-|-------|-------------|---------|-------------------|
-| Green | Nature, eco, growth | Primary brand color | Perfect for eco-friendly products |
-| Dark Green | Luxury eco, premium | Premium products | High-end sustainable items |
-| Blue | Trust, stability | Payment, security | Checkout, account pages |
-| Orange | Urgency, action | CTAs, sales | Limited-time offers |
-| White/Cream | Clean, premium | Backgrounds | Product showcases |
-| Brown/Earth | Natural, organic | Accents | Supporting brand elements |
-
----
-
-## 🔴 AVOID - Common Color Mistakes
-
-| Mistake | Why | Alternative |
-|---------|-----|-------------|
-| Purple gradients on white | AI slop cliché | Solid brand colors |
-| Rainbow gradients | Unprofessional | 2-3 color maximum |
-| Neon colors without purpose | Hurts eyes | Muted, natural tones |
-| Low contrast text | Inaccessible | Test with contrast checker |
-| Red/green for status only | Color blindness | Add icons/text |
+Shade → usage (house convention): `50-100` subtle backgrounds/hover · `200-300` borders/dividers · `400-500` accents · `500-600` main color / primary actions · `700-800` text on light backgrounds · `900` strong emphasis text.
 
 ---
 
 ## Semantic Color Usage
+
+Each semantic color ships a base plus a `-light` and `-dark` companion token:
 
 ```css
 :root {
@@ -150,7 +82,6 @@ Each color should have a scale from 50 (lightest) to 900 (darkest):
 }
 ```
 
-**Usage Example:**
 ```html
 <!-- Success message -->
 <div class="alert alert--success">
@@ -167,55 +98,9 @@ Each color should have a scale from 50 (lightest) to 900 (darkest):
 
 ---
 
-## Contrast Requirements (WCAG AA)
-
-| Content Type | Minimum Contrast | Example |
-|--------------|------------------|---------|
-| Normal text (< 18px) | 4.5:1 | Black text on white: 21:1 ✓ |
-| Large text (≥ 18px) | 3:1 | Gray text on white |
-| UI components (buttons, icons) | 3:1 | Button border on background |
-| Decorative elements | No requirement | Background patterns |
-
-**Testing Contrast:**
-- Use browser DevTools contrast checker
-- Online tool: [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
-- Figma/Sketch plugins
-
----
-
-## Dark Mode Support
-
-```css
-/* Light mode (default) */
-:root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --text-primary: #171717;
-  --text-secondary: #737373;
-}
-
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: #171717;
-    --bg-secondary: #262626;
-    --text-primary: #fafafa;
-    --text-secondary: #a3a3a3;
-  }
-}
-```
-
-**Dark Mode Tips:**
-- Don't just invert colors - adjust for comfort
-- Pure black (#000) is too harsh - use #171717
-- Reduce saturation of accent colors in dark mode
-- Test readability in both modes
-
----
-
 ## Eco Brand Color Palette Example
 
-Example palette for an eco-friendly brand identity:
+Reference palette for an eco-friendly brand identity:
 
 ```css
 :root {
@@ -241,22 +126,7 @@ Example palette for an eco-friendly brand identity:
 ```
 
 **Usage Guidelines:**
-- **Primary Green** - CTAs, brand elements, navigation
-- **Earth Tones** - Backgrounds, subtle accents
-- **Sky Blue** - Information, trust elements
-- **Terracotta** - Urgency, promotions (use sparingly)
-
----
-
-## Color Application Checklist
-
-Before finalizing colors:
-
-- [ ] All text meets 4.5:1 contrast ratio
-- [ ] UI elements meet 3:1 contrast ratio
-- [ ] Tested in grayscale (hierarchy still clear)
-- [ ] Status indicators have icons + color
-- [ ] Dark mode considered (if applicable)
-- [ ] Brand colors used consistently
-- [ ] Semantic colors used correctly (success/error/warning/info)
-- [ ] No reliance on color alone for meaning
+- **Primary Green** — CTAs, brand elements, navigation.
+- **Earth Tones** — backgrounds, subtle accents.
+- **Sky Blue** — information, trust elements.
+- **Terracotta** — urgency, promotions (use sparingly).

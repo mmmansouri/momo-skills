@@ -64,7 +64,7 @@ Palette: 50/100/500/600/900 scale generated from the brand hue
 
 ## When Choosing Typography
 
-📚 **When pairing display + body fonts, defining a type scale, setting line-height/line-length, or auditing typography accessibility → read [typography-guide.md](references/typography-guide.md).**
+📚 **When defining the type-scale tokens or picking house-approved fonts (never generic families) → read [typography-guide.md](references/typography-guide.md).**
 
 ### Type Scale
 ```
@@ -101,7 +101,7 @@ body { font-family: var(--font-body), serif; font-size: 1rem; line-height: 1.5; 
 
 ## When Working with Color
 
-📚 **When building a 50→900 color scale, defining semantic colors, checking WCAG contrast ratios, or designing dark-mode palettes → read [color-system.md](references/color-system.md).**
+📚 **When building a 50→900 color scale, defining semantic color tokens, or applying the eco-brand palette → read [color-system.md](references/color-system.md).**
 
 ### Color System Structure
 ```css
@@ -158,7 +158,7 @@ body { font-family: var(--font-body), serif; font-size: 1rem; line-height: 1.5; 
 
 ## When Composing Layouts
 
-📚 **When applying the 8 px spacing scale, choosing grid vs flexbox, sizing touch targets, setting z-index tiers, or composing common page layouts → read [layout-system.md](references/layout-system.md).**
+📚 **When applying the 8 px spacing scale (token→usage guide), writing the house grid CSS, tuning whitespace, or setting z-index tiers → read [layout-system.md](references/layout-system.md).**
 
 ### Spacing Scale (8 px base)
 ```css
@@ -186,7 +186,7 @@ body { font-family: var(--font-body), serif; font-size: 1rem; line-height: 1.5; 
 
 ## When Designing Components
 
-📚 **When specifying buttons, forms, cards, modals, or the 5 interactive states (default/hover/focus-visible/active/disabled) plus loading/error → read [component-patterns.md](references/component-patterns.md).**
+📚 **When writing the house CSS for buttons, forms, cards, or modals → read [component-patterns.md](references/component-patterns.md).**
 
 ### Button Hierarchy
 
@@ -225,7 +225,7 @@ body { font-family: var(--font-body), serif; font-size: 1rem; line-height: 1.5; 
 
 ## When Ensuring Accessibility (WCAG AA)
 
-📚 **When auditing WCAG AA compliance, validating semantic HTML, applying ARIA attributes, designing keyboard navigation, or testing with screen readers → read [accessibility-checklist.md](references/accessibility-checklist.md).**
+📚 **When applying the e-commerce accessibility specifics (product cards, cart, checkout priorities) → read [accessibility-checklist.md](references/accessibility-checklist.md)** — generic WCAG/ARIA techniques are native knowledge; the rules live in this SKILL.
 
 | Requirement | Pass criterion |
 |-------------|----------------|
@@ -260,7 +260,7 @@ body { font-family: var(--font-body), serif; font-size: 1rem; line-height: 1.5; 
 
 ## When Building Responsive Layouts
 
-📚 **When writing mobile-first media queries, designing responsive grids, sizing touch targets, using container queries, or auditing responsive performance → read [responsive-patterns.md](references/responsive-patterns.md).**
+📚 **When applying the breakpoint tokens or the e-commerce responsive patterns (product grid, cart) → read [responsive-patterns.md](references/responsive-patterns.md).**
 
 ### Breakpoints
 ```css

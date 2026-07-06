@@ -1,55 +1,14 @@
 # Component Design Patterns
 
-> **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
+> **Ownership:** the button hierarchy + BLOCKING button rules (one primary CTA, verb labels, the 5 interactive states) are owned by **SKILL.md** (`## When Designing Components`); component accessibility (semantic tags, `:focus-visible`, focus trap) is owned by **SKILL.md** (`## When Ensuring Accessibility`).
+> This file is the house **component CSS** — concrete, ready-to-adapt styles for buttons, forms, cards, and modals. Generic HTML state-pattern markup is native to the model and not restated here.
 
 ## Table of Contents
 
-- [Button Hierarchy](#button-hierarchy)
-- [BLOCKING - Button Rules](#-blocking---button-rules)
 - [Button Implementation](#button-implementation)
 - [Form Components](#form-components)
 - [Card Components](#card-components)
-- [State Patterns](#state-patterns)
 - [Modal/Dialog Pattern](#modaldialog-pattern)
-- [Accessibility Requirements](#accessibility-requirements)
-- [Component Checklist](#component-checklist)
-
----
-
-## Button Hierarchy
-
-Visual hierarchy guides users to the most important actions:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  PRIMARY BUTTON                                          │
-│  Filled, brand color, high contrast                     │
-│  Use: Main action per view (Add to Cart, Submit)        │
-├─────────────────────────────────────────────────────────┤
-│  SECONDARY BUTTON                                        │
-│  Outlined or muted fill                                 │
-│  Use: Alternative actions (Learn More, Details)         │
-├─────────────────────────────────────────────────────────┤
-│  TERTIARY / GHOST BUTTON                                │
-│  Text only or minimal styling                           │
-│  Use: Dismissive actions (Cancel, Skip)                 │
-├─────────────────────────────────────────────────────────┤
-│  DESTRUCTIVE BUTTON                                     │
-│  Red/danger color                                       │
-│  Use: Dangerous actions (Delete, Remove)                │
-└─────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🔴 BLOCKING - Button Rules
-
-| Rule | Why |
-|------|-----|
-| **One primary CTA per view** | Clear action hierarchy - don't confuse users |
-| **Button labels are verbs** | "Add to Cart" not "Cart" - action-oriented |
-| **Loading states for async** | User knows action is processing |
-| **Disabled state is clear** | But don't disable without explaining why |
 
 ---
 
@@ -270,41 +229,6 @@ Visual hierarchy guides users to the most important actions:
 
 ---
 
-## State Patterns
-
-### Loading State
-
-```html
-<div class="loading-state">
-  <div class="spinner"></div>
-  <p>Loading products...</p>
-</div>
-```
-
-### Empty State
-
-```html
-<div class="empty-state">
-  <svg class="empty-state__icon">...</svg>
-  <h3 class="empty-state__title">No products found</h3>
-  <p class="empty-state__message">Try adjusting your filters</p>
-  <button class="btn btn--primary">Clear Filters</button>
-</div>
-```
-
-### Error State
-
-```html
-<div class="error-state">
-  <svg class="error-state__icon">⚠️</svg>
-  <h3 class="error-state__title">Something went wrong</h3>
-  <p class="error-state__message">We couldn't load the products</p>
-  <button class="btn btn--primary">Try Again</button>
-</div>
-```
-
----
-
 ## Modal/Dialog Pattern
 
 ```html
@@ -378,50 +302,3 @@ Visual hierarchy guides users to the most important actions:
   border-top: 1px solid var(--color-neutral-200);
 }
 ```
-
----
-
-## Accessibility Requirements
-
-### 🔴 BLOCKING - Component Accessibility
-
-| Component | Requirements |
-|-----------|-------------|
-| **Buttons** | `<button>` tag, clear focus state, keyboard accessible |
-| **Forms** | Labels linked with `for`/`id`, error messages with `aria-describedby` |
-| **Modals** | `role="dialog"`, `aria-modal="true"`, focus trap, Escape to close |
-| **Images** | Meaningful `alt` text, decorative images use `alt=""` |
-| **Links** | Descriptive text (not "click here"), underlined or clearly styled |
-
-### Focus Management
-
-```css
-/* Visible focus indicator */
-*:focus-visible {
-  outline: 2px solid var(--color-primary-500);
-  outline-offset: 2px;
-}
-
-/* Custom focus for buttons */
-.btn:focus-visible {
-  outline: 3px solid var(--color-primary-500);
-  outline-offset: 2px;
-}
-```
-
----
-
-## Component Checklist
-
-Before shipping a component:
-
-- [ ] Works without JavaScript (progressive enhancement)
-- [ ] Keyboard accessible (Tab, Enter, Escape work)
-- [ ] Focus states are visible
-- [ ] Screen reader friendly (ARIA labels, semantic HTML)
-- [ ] Loading states implemented
-- [ ] Error states designed
-- [ ] Empty states designed
-- [ ] Responsive on all screen sizes
-- [ ] Touch targets ≥ 44px on mobile
-- [ ] Color contrast meets WCAG AA
