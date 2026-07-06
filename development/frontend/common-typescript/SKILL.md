@@ -1,7 +1,7 @@
 ---
 name: common-typescript
 description: >-
-  Modern TypeScript (5.x → 6.0) authoring guide. Use whenever the user mentions
+  Modern TypeScript (5.x) authoring guide. Use whenever the user mentions
   TypeScript, `tsconfig.json`, `strict` mode, generics, discriminated unions,
   `unknown` vs `any`, `satisfies`, type predicates, `NoInfer`, branded types,
   `noUncheckedIndexedAccess`, `verbatimModuleSyntax`, `--erasableSyntaxOnly`
@@ -14,14 +14,14 @@ description: >-
   Node runtime errors, or build tooling configuration (Vite/esbuild/webpack).
 ---
 
-# TypeScript Developer Guide (5.x — 6.0)
+# TypeScript Developer Guide (5.x)
 
 > **Severity Levels:** 🔴 BLOCKING | 🟡 WARNING | 🟢 BEST PRACTICE
-> **Stack baseline (May 2026):** TypeScript 6.0 · Node 22 LTS · `strict: true` · `moduleResolution: "bundler"` or `nodenext` · ESM-first
+> **Stack baseline:** TypeScript 5.x (tested with 5.8) · Node 22 LTS · `strict: true` · `moduleResolution: "bundler"` or `nodenext` · ESM-first. Features tied to a minor version are tagged inline (e.g. TS 5.4+).
 
-📚 **When working with `Partial<T>` / `Pick<T,K>` / `Omit<T,K>` / `Awaited<T>` / `NoInfer<T>`, or building custom helpers like `DeepPartial` / `Mutable` / `ValueOf` → read [utility-types.md](references/utility-types.md).**
+📚 **When picking a utility type or copying custom helpers (`DeepPartial` / `Mutable` / `ValueOf` / `Prettify`) → read the quick-reference table in [utility-types.md](references/utility-types.md).**
 
-📚 **When designing discriminated unions, type guards, conditional types, mapped types, template-literal types, branded/nominal types, builder patterns, or type-safe API clients / event emitters → read [advanced-patterns.md](references/advanced-patterns.md).**
+📚 **When choosing a type-level pattern (cheat sheet) or copying the non-obvious ones — type guards, distributive conditionals, branded/nominal types, recursive dotted paths, staged builders → read [advanced-patterns.md](references/advanced-patterns.md).**
 
 ---
 
@@ -55,10 +55,8 @@ description: >-
 | **5.6** | Sep 2024 | Iterator Helper methods, dead-code detection, `--noCheck`, region-prioritized diagnostics |
 | **5.7** | Nov 2024 | `--rewriteRelativeImportExtensions`, uninitialized checks in nested functions |
 | **5.8** | Mar 2025 | Granular conditional return-type checks, `--erasableSyntaxOnly` (Node native TS), `--module node18` stable |
-| **5.9** | Q1 2026 | Stabilized TC39 Decorator Metadata, `--strictInference` (under `--strict`), perf improvements |
-| **6.0** | Mar 2026 | New defaults (`strict: true`, `target: es2025`, `noUncheckedSideEffectImports: true`), `#/` subpath imports, Temporal types in lib, `--stableTypeOrdering` migration flag |
 
-> **TS 7.0 Beta** is the native-Go port (≈10× faster). Stay on 6.0 until 7.0 GA.
+For releases newer than this table, check the official TypeScript release notes — do not assume features or flags from memory.
 
 ---
 
@@ -66,7 +64,7 @@ description: >-
 
 ### 🔴 BLOCKING — `strict: true` is mandatory
 
-**Why** : every flag inside `strict` (`strictNullChecks`, `noImplicitAny`, `strictFunctionTypes`, `strictBindCallApply`, `strictPropertyInitialization`, `alwaysStrict`, `useUnknownInCatchVariables`, `strictBuiltinIteratorReturn`) closes a soundness hole that turns into a runtime crash. Disabling any of them silently re-introduces `any` in dozens of code paths. TS 6.0 makes `strict: true` the default; explicit declaration is still required for older versions.
+**Why** : every flag inside `strict` (`strictNullChecks`, `noImplicitAny`, `strictFunctionTypes`, `strictBindCallApply`, `strictPropertyInitialization`, `alwaysStrict`, `useUnknownInCatchVariables`, `strictBuiltinIteratorReturn`) closes a soundness hole that turns into a runtime crash. Disabling any of them silently re-introduces `any` in dozens of code paths.
 
 ```jsonc
 {
@@ -77,7 +75,7 @@ description: >-
     "noPropertyAccessFromIndexSignature": true,
     "exactOptionalPropertyTypes": true,      // `?:` ≠ `| undefined`
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true     // TS 5.6+, default in 6.0
+    "noUncheckedSideEffectImports": true     // TS 5.6+
   }
 }
 ```

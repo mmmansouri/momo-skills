@@ -234,6 +234,51 @@ return invoice.isB2C ? raw - (raw * VAT_RATE) : raw
 
 ---
 
+## When Writing Tests (Any Language or Framework)
+
+These foundations are language-agnostic and owned here. Framework mechanics live in the satellite skills (`common-java-testing`, `common-frontend-testing`, `common-e2e-playwright`) — they apply these rules, they don't restate them.
+
+### 🔴 BLOCKING
+
+#### Test behavior, not implementation
+**Why:** tests coupled to internals (private methods, call counts on collaborators, DOM structure) break on every refactor even when behavior is intact — the team learns to ignore red builds. A test that exercises observable behavior survives any refactor that preserves the contract.
+
+##### WRONG
+```
+expect(service.internalCache.size).toBe(3)      // internal state
+verify(repository, times(2)).findById(any())    // call-count choreography
+```
+##### CORRECT
+```
+expect(getCartTotal()).toBe(59.98)              // observable outcome
+assertThat(response.status).isEqualTo(201)
+```
+
+#### Each test is isolated — fresh state, no shared mutable fixtures, no order dependence
+**Why:** a test that depends on another test's leftovers passes or fails depending on execution order and parallelism. The failure appears in the wrong test, pointing away from the actual defect.
+
+#### One behavior per test, structured Arrange-Act-Assert (Given-When-Then)
+**Why:** a test asserting N behaviors fails on the first and hides the other N−1; the AAA sections make the tested contract readable at a glance. Multiple asserts are fine when they verify facets of the *same* behavior.
+
+#### Mock only process boundaries (HTTP, DB, clock, randomness, file system) — never the code under test's collaborators within the same process
+**Why:** mocking internal collaborators re-encodes the implementation in the test — it passes when the real wiring is broken and breaks when the wiring is refactored. Real objects in-process, test doubles at the boundary.
+
+#### Fixed test data, never random or time-dependent
+**Why:** random input makes failures non-reproducible ("works on re-run"); `now()` makes tests flake at midnight, month ends, and DST. Pin values (`2026-01-15T10:00:00Z`, `"user-42"`) and inject clocks.
+
+### 🟡 WARNING
+
+#### Test names state behavior + condition, not method names
+`rejects_checkout_when_cart_is_empty` beats `testProcessOrder2` — the failure list should read as a spec.
+
+#### One scenario, one level of the pyramid
+Cover a rule in a unit test; do not re-test it in an integration test and again in E2E. Higher levels verify *wiring*, not re-verify *logic* — duplicated coverage multiplies maintenance without adding confidence.
+
+#### Select UI elements by an explicit test contract, not styling or structure
+A dedicated test attribute (e.g. `data-testid`) survives redesigns; CSS classes and XPath positions do not. Framework-specific selector ladders live in the satellite skills.
+
+---
+
 ## When Performing Self-Code-Review (Definition of Done)
 
 ### 🔴 BLOCKING

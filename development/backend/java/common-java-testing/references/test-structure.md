@@ -1,61 +1,24 @@
 # Test Structure Reference
 
-> Patterns for structuring, naming, isolating, and organising tests.
+> Java-specific patterns for naming, test data, TDD, organisation, and coverage.
+> The language-agnostic foundations (Given-When-Then layout, one-behavior-per-test,
+> isolation, test pyramid) are owned by `common-developer` § When Writing Tests — load it.
 
 ---
 
 ## Table of Contents
 
-1. [Given-When-Then Pattern (AAA)](#given-when-then-pattern-aaa)
-2. [Test Naming Conventions](#test-naming-conventions)
-3. [Test Isolation](#test-isolation)
-4. [Test Data Patterns](#test-data-patterns)
-5. [TDD Workflow (Red → Green → Refactor)](#tdd-workflow-red--green--refactor)
-6. [Test Organization](#test-organization)
-7. [Coverage Checklist](#coverage-checklist)
-8. [Test Pyramid — Avoiding Overlap](#test-pyramid--avoiding-overlap)
-
----
-
-## Given-When-Then Pattern (AAA)
-
-### Structure
-
-```java
-@Test
-void whenValidOrder_shouldCalculateTotal() {
-    // Given — Arrange: setup test data
-    var item1 = new OrderItem("product-1", 10.00, 2);
-    var item2 = new OrderItem("product-2", 15.00, 1);
-    var order = Order.create(List.of(item1, item2));
-
-    // When — Act: execute the action under test
-    var total = order.calculateTotal();
-
-    // Then — Assert: verify the results
-    assertThat(total).isEqualTo(35.00);
-}
-```
-
-### 🔴 BLOCKING — One When Per Test
-
-**Why:** if a test has two `// When` calls, a failure can't tell you which call broke. Reviewers also can't read the test as a single behaviour.
-**How to apply:** if you find yourself adding a second action, write a second test instead.
-
-### Key Rules
-
-1. **Blank lines separate sections** → Visual clarity
-2. **Given sets up preconditions** → All test data created here
-3. **When executes ONE action** → Single method call
-4. **Then verifies outcome** → Assertions only
+1. [Test Naming Conventions](#test-naming-conventions)
+2. [Test Data Patterns](#test-data-patterns)
+3. [TDD Workflow (Red → Green → Refactor)](#tdd-workflow-red--green--refactor)
+4. [Test Organization](#test-organization)
+5. [Coverage Checklist](#coverage-checklist)
 
 ---
 
 ## Test Naming Conventions
 
-### 🔴 BLOCKING — Tests Must Describe Behaviour
-
-**Why:** failing test names appear in CI logs without their body. `test1` failing tells nobody anything; `whenInvalidId_shouldReturn404` failing tells the reviewer where to look.
+Foundation (names state behavior + condition) is owned by `common-developer`. The house Java patterns:
 
 ### Pattern 1 — `when_should`
 
@@ -84,72 +47,6 @@ void premiumDiscount() { /* ... */ }
 void calculateTotal_withEmptyCart_shouldReturnZero()
 void calculateTotal_withDiscountCode_shouldApplyDiscount()
 void findById_whenUserExists_shouldReturnUser()
-```
-
----
-
-## Test Isolation
-
-### 🔴 BLOCKING — No Shared Mutable State
-
-**Why:** order-dependent tests fail randomly when JUnit reorders, parallelises, or filters them — and the failure points at the wrong test.
-**How to apply:** if a test passes alone but fails in the suite (or vice-versa), that's a shared-state bug — fix it before merging.
-
-```java
-// 🔴 WRONG — Shared mutable state
-private static List<Order> orders = new ArrayList<>();
-
-@Test
-void test1() {
-    orders.add(new Order());  // Pollutes state for test2
-}
-
-// ✅ CORRECT — Fresh state per test
-@BeforeEach
-void setUp() {
-    orders = new ArrayList<>();
-}
-```
-
-### Unique Identifiers
-
-```java
-// Pattern: Descriptive name + context
-String uniqueEmail = "test.user+" + testInfo.getDisplayName() + "@example.com";
-
-// Pattern: Deterministic UUID for reproducible failures
-UUID id = UUID.fromString("00000000-0000-0000-0000-000000000001");
-```
-
-### 🔴 BLOCKING — No Order Dependency
-
-**Why:** JUnit 5 reorders tests by default for stability. `@Order` annotations bind your suite to today's execution model and silently rot the moment someone deletes a test.
-
-```java
-// 🔴 WRONG — test2 depends on test1's side effect
-@Test @Order(1)
-void test1_createOrder() {
-    createdOrderId = service.create(order).getId();
-}
-
-@Test @Order(2)
-void test2_verifyOrder() {
-    var order = service.findById(createdOrderId);  // Fails if test1 skipped!
-}
-
-// ✅ CORRECT — Each test is independent
-@Test
-void shouldCreateOrder() {
-    var created = service.create(order);
-    assertThat(created.getId()).isNotNull();
-}
-
-@Test
-void shouldFindOrder() {
-    var created = service.create(order);  // Setup within test
-    var found = service.findById(created.getId());
-    assertThat(found).isPresent();
-}
 ```
 
 ---
@@ -226,15 +123,14 @@ public class TestData {
 }
 ```
 
-### Fixed vs Random Data
+### Unique Identifiers
 
 ```java
-// 🔴 WRONG — Random makes failures hard to reproduce
-String email = "user" + Math.random() + "@test.com";
+// Pattern: Descriptive name + context
+String uniqueEmail = "test.user+" + testInfo.getDisplayName() + "@example.com";
 
-// ✅ CORRECT — Fixed, reproducible
-String validEmail = "john.doe@example.com";
-String invalidEmail = "not-an-email";
+// Pattern: Deterministic UUID for reproducible failures
+UUID id = UUID.fromString("00000000-0000-0000-0000-000000000001");
 ```
 
 ---
@@ -360,69 +256,4 @@ class CreateOrder {
 }
 ```
 
----
-
-## Test Pyramid — Avoiding Overlap
-
-```
-         /\
-        /  \     E2E (few, slow, expensive)
-       /----\    Real browser / full HTTP cycle
-      /      \
-     /--------\  Integration (some)
-    /          \ @SpringBootTest, @DataJpaTest, @WebMvcTest
-   /------------\
-  /              \ Unit (many, fast, cheap)
- /----------------\ Plain JUnit, no framework
-```
-
-### 🟡 WARNING — One scenario, one test level
-
-**Why:** the same assertion at three levels triples CI cost without adding signal — and when the behaviour changes, three places need updating.
-**How to apply:** before writing a test, check if the scenario is already covered higher up the pyramid.
-
-### Anti-Pattern — Duplicate Scenarios
-
-```java
-// 🔴 WRONG — Same scenario tested at TWO levels
-
-// Unit test
-@Test
-void whenPremiumCustomer_shouldApply10PercentDiscount() {
-    var order = Order.create(premiumCustomer, items);
-    assertThat(order.getDiscount()).isEqualTo(new BigDecimal("10.00"));
-}
-
-// Integration test — same logic, redundant
-@Test
-void whenPremiumCustomer_shouldApply10PercentDiscount() {
-    var order = orderService.createOrder(premiumCustomerRequest);
-    assertThat(order.getDiscount()).isEqualTo(new BigDecimal("10.00"));
-}
-```
-
-```java
-// ✅ CORRECT — Each level tests what only IT can test
-
-// Unit test — pure business logic
-@Test
-void whenPremiumCustomer_shouldApply10PercentDiscount() {
-    var order = Order.create(premiumCustomer, items);
-    assertThat(order.getDiscount()).isEqualTo(new BigDecimal("10.00"));
-}
-
-// Integration test — persistence behaviour only (not the discount math)
-@Test
-void shouldPersistWithCorrectStatus() {
-    var saved = orderRepository.save(OrderEntity.fromDomain(order));
-    assertThat(orderRepository.findById(saved.getId()))
-        .get().extracting(OrderEntity::getStatus).isEqualTo(OrderStatus.PENDING);
-}
-```
-
-### Ownership Rules
-
-1. **Unit tests own business logic** — pure computation, no Spring, no DB
-2. **Integration tests own infrastructure** — DB queries, serialisation, external client wiring
-3. **E2E tests own user flows** — multi-step scenarios crossing service boundaries
-4. If a unit test validates a calculation, the integration test must **not** re-validate it
+**Pyramid ownership** (foundation in `common-developer`): unit tests own business logic; integration tests own infrastructure (DB queries, serialisation, client wiring); E2E tests own user flows. If a unit test validates a calculation, the integration test must **not** re-validate it.

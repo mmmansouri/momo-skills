@@ -52,78 +52,18 @@ What are you testing?
 
 ## Testing Philosophy
 
-### 🔴 No-Mock Philosophy
+The language-agnostic foundations (behavior-over-implementation, per-test isolation, Given-When-Then structure, mock-boundaries-only, fixed data, behavior naming) are **owned by `common-developer`** (§ When Writing Tests) — load it. Java application of those rules:
 
-```
-PREFER: Real objects wired together (slice tests, integration tests)
-MOCK:   Process boundaries only (HTTP, SMTP, payment, filesystem, clock)
-NEVER:  Internal services, repositories, value objects, records
-```
-
-**Why:** mocks of internal collaborators hide integration bugs and freeze the design — the test passes against a fake that no longer matches the real collaborator.
-**How to apply:** if a class lives in your codebase and you own its source, instantiate it. Mock only at the wire (external API, OS resource, time).
-
-### 🔴 Test Isolation
-
-- Each test creates its own data — no shared mutable state
-- Use `@BeforeEach` for test-scoped setup; never `static` mutable fields
-- Never depend on test execution order
-- Never re-use entity IDs across tests in the same class
-
-**Why:** order-dependent tests fail randomly when JUnit reorders, parallelises, or filters them — and the failure points at the wrong test.
-**How to apply:** if a test passes alone but fails in the suite (or vice-versa), that's a shared-state bug — fix it before merging.
-
-### 🟢 Fixed Test Data
-
-```java
-// 🔴 WRONG — Random data makes failures un-reproducible
-String name = "User_" + UUID.randomUUID();
-
-// ✅ CORRECT — Fixed values, reproducible
-String name = "TestUser_ValidCase";
-```
-
-For UUIDs, use deterministic seeds: `UUID.fromString("00000000-0000-0000-0000-000000000001")`.
+- **No-Mock:** real objects wired together (slice tests, integration tests); mock process boundaries only (HTTP, SMTP, payment, filesystem, clock) — NEVER internal services, repositories, value objects, records.
+- **Isolation:** `@BeforeEach` for test-scoped setup — never `static` mutable fields; never re-use entity IDs across tests in the same class.
+- **Fixed data:** deterministic UUIDs (`UUID.fromString("00000000-0000-0000-0000-000000000001")`), never `UUID.randomUUID()` in asserted values.
+- **KISS > DRY in tests:** duplicating a 3-line setup is fine when it makes the scenario obvious.
 
 ---
 
 ## When Structuring Tests
 
-📚 **When structuring a test — Given-When-Then layout, `whenX_shouldY` naming, one-behaviour-per-test, KISS-over-DRY in test code → read [test-structure.md](references/test-structure.md).**
-
-### 🔴 Given-When-Then Pattern
-
-```java
-@Test
-void whenValidInput_shouldReturnExpectedResult() {
-    // Given
-    var request = new OrderRequest("item-1", 2);
-
-    // When
-    var result = orderService.create(request);
-
-    // Then
-    assertThat(result.getStatus()).isEqualTo(OrderStatus.CREATED);
-}
-```
-
-**Why:** the three-block layout makes scope obvious — reviewers can spot a test that does too much (multiple When/Then) at a glance.
-**How to apply:** if a test has more than one `// When`, split it.
-
-### 🔴 Naming Convention — `whenX_shouldY`
-
-| Pattern | Example |
-|---------|---------|
-| `when<Condition>_should<Result>` | `whenInvalidId_shouldReturn404` |
-| `<method>_given<Condition>_<expectation>` | `findById_givenMissing_throws` |
-| `@DisplayName` for human-readable runner output | `"Should return 404 when ID not found"` |
-
-**Why:** failing test names appear in CI logs and PR comments without their body — `test1` failing tells nobody anything; `whenInvalidId_shouldReturn404` failing tells a reviewer where to look.
-
-### 🟡 WARNING
-
-- **One test = one behaviour** — don't extend a green test with "just one more thing"
-- **KISS > DRY in tests** — duplicating a 3-line setup is fine when it makes the scenario obvious
+📚 **When naming tests (`whenX_shouldY` patterns), building test data (builders / factories), running TDD, organising test classes (`@Nested`), or covering endpoint status codes → read [test-structure.md](references/test-structure.md).**
 
 ---
 

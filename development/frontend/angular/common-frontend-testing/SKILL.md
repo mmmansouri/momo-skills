@@ -21,62 +21,11 @@ description: >-
 
 ## When Reasoning About Frontend Tests
 
-Apply these foundational stances:
+The testing foundations (behavior-over-implementation, per-test isolation, AAA structure, mock-boundaries-only, fixed data, naming) are **owned by `common-developer`** (§ When Writing Tests) — load it; this skill applies them with Angular mechanics:
 
-1. **Test behavior**, not implementation details.
-2. **Isolation** — each test sets up its own state, no shared mutable globals.
-3. **Fast** — milliseconds per test; no real HTTP, no real timers.
-4. **Readable** — `should X when Y` test names; AAA structure.
-5. **Boundaries first** — mock external collaborators, exercise the real internals.
-
-### 🔴 BLOCKING
-
-#### Test observable behavior, never private internals
-**Why:** tests on private methods couple the suite to the current implementation. The first refactor that renames `_calculateTotal()` breaks every test that spied on it, even when the externally-visible behavior is unchanged. Tests on rendered output (DOM, return value, emitted event) survive any refactor that preserves the contract.
-
-##### WRONG
-```typescript
-it('should call private method _calculateTotal', () => {
-  const spy = spyOn(component as any, '_calculateTotal');
-  component.updateCart();
-  expect(spy).toHaveBeenCalled();
-});
-```
-##### CORRECT
-```typescript
-it('should display updated total when cart changes', () => {
-  component.addItem({ id: '1', price: 10 });
-  fixture.detectChanges();
-
-  const total = fixture.nativeElement.querySelector('[data-testid="cart-total"]');
-  expect(total.textContent).toContain('10');
-});
-```
-
-#### Each test is independent — fresh state in `beforeEach`, cleanup in `afterEach`
-**Why:** order-dependent tests fail unpredictably under parallelism, hide the real defect when one breaks (N false positives downstream), and make the suite hostile to flake investigation. Independence is the property that makes the suite trustworthy.
-
-##### WRONG
-```typescript
-let counter = 0;
-
-it('should increment counter', () => {
-  counter++;
-  expect(counter).toBe(1);
-});
-it('should have counter at 1', () => {
-  expect(counter).toBe(1);   // fails if previous test didn't run
-});
-```
-##### CORRECT
-```typescript
-beforeEach(() => { component.counter = 0; });
-
-it('should increment counter', () => {
-  component.increment();
-  expect(component.counter).toBe(1);
-});
-```
+- Fresh state in `beforeEach`, cleanup in `afterEach` — never shared mutable module-level state.
+- Assert on rendered output (DOM via `data-testid`, emitted events, returned values) — never on private members or `spyOn(component as any, '_private')`.
+- **Fast** — milliseconds per test; no real HTTP (use `HttpClientTestingModule`), no real timers (use `fakeAsync`).
 
 ---
 
@@ -328,9 +277,6 @@ describe('ProductCardComponent', () => {
 ```
 
 ### 🟡 WARNING
-
-#### Each test follows AAA — Arrange, Act, Assert — clearly separated
-**Why:** mixed setup and assertions hide the test's intent. AAA makes the input, the trigger, and the expectation legible at a glance — when the test fails, the diagnosis is immediate.
 
 #### Don't test framework code (decorators, untouched lifecycle shells)
 **Why:** Angular already tests `@Input` binding and `ngOnInit` plumbing. A test that asserts `component.title === 'Test'` after assignment proves nothing about your code — it slows the suite for zero coverage value.
