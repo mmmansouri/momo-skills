@@ -179,9 +179,10 @@ gh api repos/<owner>/<repo>/pulls/<n>/comments \
 
 ### Resolve a thread (GraphQL — see `thread-resolution-graphql.md`)
 ```bash
-buy-nature-ai/skills/common-code-reviewer/scripts/resolve-thread.sh <thread_id>
+<this-skill>/scripts/resolve-thread.sh <thread_id>
 ```
-(Path depends on how this skill is installed; adapt accordingly.)
+(`scripts/resolve-thread.sh` ships with this skill — resolve the path from
+wherever the skill is installed, e.g. `.claude/skills/common-code-reviewer/`.)
 
 ### Reply to a thread (when posting an addendum)
 

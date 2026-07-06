@@ -60,11 +60,9 @@ re-verifies against the current code, and *then* resolves the thread.
 **Identity note (GitHub Apps vs user PATs):** a GitHub **App** installation
 token with `pull_requests: write` can edit review comments AND reviews
 authored by a **different** actor — authorship is *not* required for App
-tokens. Verified empirically: a `dev` App `PATCH`ing a `reviewer` App's
-inline comment and `PUT`ting its review body both returned HTTP 200 and the
-content actually changed. So a split reviewer/fix-author identity (two
-distinct Apps, the Buy Nature model) still lets the fix author flip
-`- [ ]` → `- [x]` directly via PATCH/PUT — no fallback needed.
+tokens. So a split reviewer/fix-author identity (two distinct Apps) still
+lets the fix author flip `- [ ]` → `- [x]` directly via PATCH/PUT — no
+fallback needed.
 This differs from **user PATs**: a user may only edit comments they
 authored. If (and only if) a fix author runs under a user PAT that did not
 author the comment, fall back to **replying** to the thread with a
